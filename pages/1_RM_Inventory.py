@@ -76,10 +76,9 @@ def load_forecast():
     xl = pd.ExcelFile(file_path)
     sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
     if not sheet:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=["Item code", "Forecast"])
     df = pd.read_excel(file_path, sheet_name=sheet)
     df.columns = df.columns.str.strip()
-    # Filter only Plant location and non-zero forecast
     if "Location" in df.columns:
         df = df[df["Location"].astype(str).str.strip().str.lower() == "plant"]
     if "Forecast" in df.columns:
@@ -93,7 +92,7 @@ df_raw = load_rm()
 df_forecast = load_forecast()
 
 # ---------------------------------------------------
-# ALLOWED WAREHOUSES
+# ALLOWED WAREHOUSES (display)
 # ---------------------------------------------------
 allowed_warehouses = [
     "Central", "Central Production -Bar Line", "Central Production - Oats Line",
@@ -106,28 +105,20 @@ allowed_warehouses = [
 df_raw = df_raw[df_raw["Warehouse"].isin([w.strip() for w in allowed_warehouses])]
 
 # ---------------------------------------------------
-# SOH WAREHOUSES FOR DAYS OF STOCK CALCULATION
+# SOH WAREHOUSES FOR DAYS OF STOCK
 # ---------------------------------------------------
 soh_warehouses = [
-    "Central",
-    "RM Warehouse Tumkur",
-    "Central Warehouse - Cold Storage RM",
-    "Tumkur Warehouse",
-    "Tumkur New Warehouse",
-    "HF Factory FG Warehouse",
-    "Sproutlife Foods Private Ltd (SNOWMAN)"
+    "Central", "RM Warehouse Tumkur", "Central Warehouse - Cold Storage RM",
+    "Tumkur Warehouse", "Tumkur New Warehouse",
+    "HF Factory FG Warehouse", "Sproutlife Foods Private Ltd (SNOWMAN)"
 ]
-
-# Calculate SOH per SKU from SOH warehouses only
-df_soh = df_raw[df_raw["Warehouse"].isin(soh_warehouses)].copy()
+df_soh = df_raw[df_raw["Warehouse"].isin(soh_warehouses)]
 soh_by_sku = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
 soh_by_sku.columns = ["Item SKU", "SOH"]
 
-# Merge forecast into SOH
+# Merge forecast into SOH lookup
 soh_by_sku = soh_by_sku.merge(df_forecast, left_on="Item SKU", right_on="Item code", how="left")
 soh_by_sku["Forecast"] = soh_by_sku["Forecast"].fillna(0)
-
-# Days of Stock = SOH / (Forecast / 26), avoid division by zero
 soh_by_sku["Days of Stock"] = soh_by_sku.apply(
     lambda r: round(r["SOH"] / (r["Forecast"] / 26), 1) if r["Forecast"] > 0 else None,
     axis=1
@@ -189,16 +180,22 @@ elif stock_filter == "Zero / Negative Stock":
     df = df[df["Qty Available"] <= 0]
 
 # ---------------------------------------------------
-# KPI CARDS
+# KPI — based on filtered data + matched forecast/DOS
 # ---------------------------------------------------
 st.divider()
-total_qty = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
 
-# Forecast KPIs from SOH warehouses (not filtered)
-total_forecast   = df_forecast["Forecast"].sum() if "Forecast" in df_forecast.columns else 0
-items_with_dos   = soh_by_sku[soh_by_sku["Days of Stock"].notna()]
-avg_dos          = items_with_dos["Days of Stock"].mean() if len(items_with_dos) > 0 else 0
-low_dos          = (items_with_dos["Days of Stock"] < 7).sum()
+# Get unique SKUs from filtered data
+filtered_skus = df["Item SKU"].unique().tolist()
+
+# SOH for filtered SKUs (from SOH warehouses only)
+filtered_soh = soh_by_sku[soh_by_sku["Item SKU"].isin(filtered_skus)]
+
+total_qty       = df["Qty Available"].sum()
+total_forecast  = filtered_soh["Forecast"].sum()
+avg_dos         = filtered_soh[filtered_soh["Days of Stock"].notna()]["Days of Stock"].mean()
+low_dos         = (filtered_soh["Days of Stock"] < 7).sum()
+
+avg_dos = round(avg_dos, 1) if pd.notna(avg_dos) else 0
 
 if selected_warehouse != "All Warehouses":
     card_label = f"Qty Available — {selected_warehouse}"
@@ -222,25 +219,25 @@ with k1:
 with k2:
     st.markdown(f"""
     <div class="metric-card" style="background: linear-gradient(135deg, #1a5c38 0%, #27855a 100%);">
-        <div class="label">Total Forecast</div>
+        <div class="label">Forecast</div>
         <div class="value">{total_forecast:,.0f}</div>
-        <div class="sub">Plant location demand</div>
+        <div class="sub">For filtered SKUs</div>
     </div>""", unsafe_allow_html=True)
 
 with k3:
     st.markdown(f"""
     <div class="metric-card" style="background: linear-gradient(135deg, #4a2070 0%, #6d35a0 100%);">
         <div class="label">Avg Days of Stock</div>
-        <div class="value">{avg_dos:,.1f}</div>
-        <div class="sub">Across forecasted SKUs</div>
+        <div class="value">{avg_dos}</div>
+        <div class="sub">SOH ÷ (Forecast ÷ 26)</div>
     </div>""", unsafe_allow_html=True)
 
 with k4:
     st.markdown(f"""
     <div class="metric-card" style="background: linear-gradient(135deg, #7b2d2d 0%, #b94040 100%);">
-        <div class="label">Low Stock (< 7 Days)</div>
+        <div class="label">Critical (< 7 Days)</div>
         <div class="value">{low_dos:,}</div>
-        <div class="sub">SKUs needing urgent replenishment</div>
+        <div class="sub">SKUs needing urgent action</div>
     </div>""", unsafe_allow_html=True)
 
 st.divider()
@@ -264,12 +261,11 @@ with r2:
     )
 
 # ---------------------------------------------------
-# DISPLAY TABLE — merge Forecast + Days of Stock
+# DISPLAY TABLE — with Forecast + Days of Stock columns
 # ---------------------------------------------------
 if df.empty:
     st.warning("No records match your current filters.")
 else:
-    # Merge forecast and days of stock into display
     df_display_merge = df.merge(
         soh_by_sku[["Item SKU", "Forecast", "Days of Stock"]],
         on="Item SKU", how="left"
