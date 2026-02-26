@@ -128,25 +128,24 @@ st.divider()
 # ---------------------------------------------------
 st.markdown('<div class="section-title">🔍 Filters</div>', unsafe_allow_html=True)
 
-f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
+f1, f2, f3 = st.columns([3, 2, 2])
 
 with f1:
     search = st.text_input("Search (Item Name / GRN No / Vendor)", placeholder="Type to search...")
 with f2:
-    po_options = ["All POs"] + sorted(df_raw[col_po].dropna().unique().tolist()) if col_po in df_raw.columns else ["All POs"]
-    selected_po = st.selectbox("PO Number", po_options)
-with f3:
     if col_grn_month and col_grn_month in df_raw.columns:
         month_options = ["All Months"] + sorted(df_raw[col_grn_month].dropna().unique().tolist())
         selected_month = st.selectbox("Month", month_options)
     else:
         selected_month = "All Months"
-with f4:
+with f3:
     if col_vendor and col_vendor in df_raw.columns:
         vendor_options = ["All Vendors"] + sorted(df_raw[col_vendor].dropna().unique().tolist())
         selected_vendor = st.selectbox("Vendor", vendor_options)
     else:
         selected_vendor = "All Vendors"
+
+selected_po = "All POs"  # PO filter removed from UI, kept for PO summary logic
 
 # ---------------------------------------------------
 # APPLY FILTERS
