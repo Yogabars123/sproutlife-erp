@@ -41,13 +41,6 @@ st.markdown("""
         letter-spacing: 1px;
         margin: 18px 0 8px 0;
     }
-    .po-summary-card {
-        background: #f8f9fa;
-        border-left: 4px solid #2d5986;
-        border-radius: 8px;
-        padding: 16px 20px;
-        margin-bottom: 8px;
-    }
     div[data-testid="stDataFrame"] {
         border-radius: 10px;
         overflow: hidden;
@@ -64,25 +57,44 @@ def load_grn():
     if not os.path.exists(file_path):
         file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
     df = pd.read_excel(file_path, sheet_name="GRN-Data")
+
+    # Normalize column names: strip spaces
+    df.columns = df.columns.str.strip()
     df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
     df["PO No"] = df["PO No"].astype(str).str.strip()
 
-    for col in ["GRN Date", "Delivery Date", "PO Date", "Invoice Date", "Expiry Date"]:
-        if col in df.columns:
+    for col in df.columns:
+        if any(x in col.lower() for x in ["date"]):
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
-    for col in ["Quantity Ordered", "Quantity Received", "Quantity Rejected",
-                "Percentage Rejection", "Rate of Goods Received(₹)",
-                "Values of Goods Received without taxes(₹)",
-                "Values of Goods Received with taxes(₹)",
-                "Values of Goods Rejected without taxes(₹)",
-                "Values of Goods Rejected with taxes(₹)"]:
-        if col in df.columns:
+    for col in df.columns:
+        if any(x in col.lower() for x in ["quantity", "qty", "value", "rate", "percentage", "rejection"]):
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
     return df
 
 df_raw = load_grn()
+
+# ---------------------------------------------------
+# AUTO-DETECT COLUMN NAMES
+# ---------------------------------------------------
+def find_col(df, keywords):
+    """Find column name by matching keywords (case-insensitive)"""
+    for col in df.columns:
+        col_lower = col.lower().replace(" ", "").replace("(", "").replace(")", "")
+        if all(k.lower().replace(" ", "") in col_lower for k in keywords):
+            return col
+    return None
+
+col_ordered   = find_col(df_raw, ["quantity", "ordered"]) or find_col(df_raw, ["qty", "ordered"])
+col_received  = find_col(df_raw, ["quantity", "received"]) or find_col(df_raw, ["qty", "received"])
+col_rejected  = find_col(df_raw, ["quantity", "rejected"]) or find_col(df_raw, ["qty", "rejected"])
+col_rejection_pct = find_col(df_raw, ["percentage", "rejection"]) or find_col(df_raw, ["rejection", "%"])
+col_grn_no    = find_col(df_raw, ["grn", "no"])
+col_grn_month = find_col(df_raw, ["grn", "month"])
+col_vendor    = find_col(df_raw, ["vendor", "name"])
+col_po        = "PO No"
+col_value_with_tax = find_col(df_raw, ["value", "received", "tax"]) or find_col(df_raw, ["values", "received", "with"])
 
 # ---------------------------------------------------
 # FILTER: Central WH + Has PO Number
@@ -91,8 +103,7 @@ df_raw = df_raw[df_raw["Warehouse"].str.lower() == "central"]
 df_raw = df_raw[
     df_raw["PO No"].notna() &
     (df_raw["PO No"] != "") &
-    (df_raw["PO No"].str.upper() != "NAN") &
-    (df_raw["PO No"].str.upper() != "NONE")
+    (~df_raw["PO No"].str.upper().isin(["NAN", "NONE", "NAT"]))
 ]
 
 # ---------------------------------------------------
@@ -118,21 +129,18 @@ f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
 
 with f1:
     search = st.text_input("Search (Item Name / GRN No / Vendor)", placeholder="Type to search...")
-
 with f2:
     po_options = ["All POs"] + sorted(df_raw["PO No"].dropna().unique().tolist())
     selected_po = st.selectbox("PO Number", po_options)
-
 with f3:
-    if "GRN Month" in df_raw.columns:
-        month_options = ["All Months"] + sorted(df_raw["GRN Month"].dropna().unique().tolist())
+    if col_grn_month and col_grn_month in df_raw.columns:
+        month_options = ["All Months"] + sorted(df_raw[col_grn_month].dropna().unique().tolist())
         selected_month = st.selectbox("Month", month_options)
     else:
         selected_month = "All Months"
-
 with f4:
-    if "Vendor Name" in df_raw.columns:
-        vendor_options = ["All Vendors"] + sorted(df_raw["Vendor Name"].dropna().unique().tolist())
+    if col_vendor and col_vendor in df_raw.columns:
+        vendor_options = ["All Vendors"] + sorted(df_raw[col_vendor].dropna().unique().tolist())
         selected_vendor = st.selectbox("Vendor", vendor_options)
     else:
         selected_vendor = "All Vendors"
@@ -149,22 +157,22 @@ if search:
 if selected_po != "All POs":
     df = df[df["PO No"] == selected_po]
 
-if selected_month != "All Months" and "GRN Month" in df.columns:
-    df = df[df["GRN Month"] == selected_month]
+if selected_month != "All Months" and col_grn_month:
+    df = df[df[col_grn_month] == selected_month]
 
-if selected_vendor != "All Vendors" and "Vendor Name" in df.columns:
-    df = df[df["Vendor Name"] == selected_vendor]
+if selected_vendor != "All Vendors" and col_vendor:
+    df = df[df[col_vendor] == selected_vendor]
 
 # ---------------------------------------------------
 # KPI CARDS
 # ---------------------------------------------------
 st.divider()
 
-total_ordered = df["Quantity Ordered"].sum() if "Quantity Ordered" in df.columns else 0
-total_received = df["Quantity Received"].sum() if "Quantity Received" in df.columns else 0
-total_pending = total_ordered - total_received
-total_rejected = df["Quantity Rejected"].sum() if "Quantity Rejected" in df.columns else 0
-total_grns = df["GRN No"].nunique() if "GRN No" in df.columns else len(df)
+total_ordered  = df[col_ordered].sum()  if col_ordered  and col_ordered  in df.columns else 0
+total_received = df[col_received].sum() if col_received and col_received in df.columns else 0
+total_rejected = df[col_rejected].sum() if col_rejected and col_rejected in df.columns else 0
+total_pending  = max(total_ordered - total_received, 0)
+total_grns     = df[col_grn_no].nunique() if col_grn_no and col_grn_no in df.columns else len(df)
 
 k1, k2, k3, k4 = st.columns(4)
 
@@ -185,11 +193,10 @@ with k2:
     </div>""", unsafe_allow_html=True)
 
 with k3:
-    pending_color = "#7b5a1a" if total_pending > 0 else "#1a5c38"
     st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, {pending_color} 0%, #b88a30 100%);">
+    <div class="metric-card" style="background: linear-gradient(135deg, #7b5a1a 0%, #b88a30 100%);">
         <div class="label">Pending Qty</div>
-        <div class="value">{max(total_pending, 0):,.0f}</div>
+        <div class="value">{total_pending:,.0f}</div>
         <div class="sub">Yet to be received</div>
     </div>""", unsafe_allow_html=True)
 
@@ -209,11 +216,11 @@ if selected_po != "All POs":
     st.markdown(f'<div class="section-title">📦 PO Summary — {selected_po}</div>', unsafe_allow_html=True)
 
     po_df = df[df["PO No"] == selected_po]
-    po_ordered = po_df["Quantity Ordered"].sum()
-    po_received = po_df["Quantity Received"].sum()
-    po_pending = max(po_ordered - po_received, 0)
-    po_rejected = po_df["Quantity Rejected"].sum()
-    po_value = po_df["Values of Goods Received with taxes(₹)"].sum() if "Values of Goods Received with taxes(₹)" in po_df.columns else 0
+    po_ordered  = po_df[col_ordered].sum()  if col_ordered  else 0
+    po_received = po_df[col_received].sum() if col_received else 0
+    po_pending  = max(po_ordered - po_received, 0)
+    po_rejected = po_df[col_rejected].sum() if col_rejected else 0
+    po_value    = po_df[col_value_with_tax].sum() if col_value_with_tax and col_value_with_tax in po_df.columns else 0
     fulfillment_pct = (po_received / po_ordered * 100) if po_ordered > 0 else 0
 
     p1, p2, p3, p4, p5 = st.columns(5)
@@ -255,41 +262,9 @@ with r2:
 if df.empty:
     st.warning("No records match your current filters.")
 else:
-    priority_cols = [
-        "GRN No", "GRN Date", "GRN Month", "Vendor Name", "PO No", "PO Date",
-        "Item Name", "Item Code", "Warehouse",
-        "Quantity Ordered", "Quantity Received", "Quantity Rejected",
-        "Percentage Rejection",
-        "Values of Goods Received with taxes(₹)",
-        "Values of Goods Received without taxes(₹)",
-        "Values of Goods Rejected with taxes(₹)",
-        "Rate of Goods Received(₹)",
-        "Invoice No", "Invoice Date", "Delivery Date",
-        "Expiry Date", "Batch No", "GRN Notes", "Type", "GRN Created By"
-    ]
-    display_cols = [c for c in priority_cols if c in df.columns]
-    display_cols += [c for c in df.columns if c not in display_cols]
-
-    df_display = df[display_cols].copy()
-
-    for col in ["GRN Date", "Delivery Date", "PO Date", "Invoice Date", "Expiry Date"]:
-        if col in df_display.columns:
-            df_display[col] = df_display[col].dt.strftime("%d-%b-%Y").fillna("")
-
-    for col in ["Values of Goods Received with taxes(₹)", "Values of Goods Received without taxes(₹)",
-                "Values of Goods Rejected with taxes(₹)", "Rate of Goods Received(₹)"]:
-        if col in df_display.columns:
-            df_display[col] = df_display[col].apply(lambda x: f"₹{x:,.2f}" if x else "")
-
     st.dataframe(
-        df_display,
+        df,
         use_container_width=True,
         height=500,
         hide_index=True,
-        column_config={
-            "Quantity Ordered": st.column_config.NumberColumn("Qty Ordered", format="%.2f"),
-            "Quantity Received": st.column_config.NumberColumn("Qty Received", format="%.2f"),
-            "Quantity Rejected": st.column_config.NumberColumn("Qty Rejected", format="%.2f"),
-            "Percentage Rejection": st.column_config.NumberColumn("Rejection %", format="%.1f%%"),
-        }
     )
