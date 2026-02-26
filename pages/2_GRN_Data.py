@@ -99,8 +99,6 @@ col_value_with_tax = find_col(df_raw, ["value", "received", "tax"]) or find_col(
 # ---------------------------------------------------
 # FILTER: Central WH + Has PO Number
 # ---------------------------------------------------
-df_raw = df_raw[df_raw["Warehouse"].str.lower() == "central"]
-
 if col_po in df_raw.columns:
     df_raw[col_po] = df_raw[col_po].astype(str).str.strip()
     df_raw = df_raw[
