@@ -48,9 +48,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------
-# LOAD DATA
-# ---------------------------------------------------
 @st.cache_data
 def load_fg():
     file_path = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
@@ -68,23 +65,21 @@ def load_fg():
 
 df_raw = load_fg()
 
-# ---------------------------------------------------
-# CALCULATE REMAINING SHELF LIFE
-# ---------------------------------------------------
+# CALCULATE SHELF LIFE
 today = pd.Timestamp(datetime.today().date())
 
 if "Expiry Date" in df_raw.columns and "MFG Date" in df_raw.columns:
-    df_raw["Remaining Shelf Life (Days)"] = (df_raw["Expiry Date"] - today).dt.days
-    df_raw["Total Shelf Life (Days)"] = (df_raw["Expiry Date"] - df_raw["MFG Date"]).dt.days
-    df_raw["Shelf Life Used (%)"] = (
-        (df_raw["Current Aging (Days)"] / df_raw["Total Shelf Life (Days)"]) * 100
-    ).round(1)
-    df_raw["Shelf Life Used (%)"] = df_raw["Shelf Life Used (%)"].clip(0, 100)
-    df_raw["Remaining Shelf Life (Days)"] = df_raw["Remaining Shelf Life (Days)"].fillna(0).astype(int)
+    remaining_days = (df_raw["Expiry Date"] - today).dt.days
+    total_days = (df_raw["Expiry Date"] - df_raw["MFG Date"]).dt.days
 
-# ---------------------------------------------------
+    # Remaining shelf life as percentage
+    df_raw["Remaining Shelf Life (%)"] = ((remaining_days / total_days) * 100).round(1).clip(0, 100)
+    df_raw["Remaining Shelf Life (%)"] = df_raw["Remaining Shelf Life (%)"].fillna(0)
+
+    # Keep days for filtering logic internally
+    df_raw["_remaining_days"] = remaining_days.fillna(0).astype(int)
+
 # HEADER
-# ---------------------------------------------------
 st.title("📦 FG Inventory")
 st.caption("Live view of finished goods stock across all warehouses")
 
@@ -96,9 +91,7 @@ with col_refresh:
 
 st.divider()
 
-# ---------------------------------------------------
 # FILTERS
-# ---------------------------------------------------
 st.markdown('<div class="section-title">🔍 Filters</div>', unsafe_allow_html=True)
 
 f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
@@ -123,9 +116,7 @@ with f4:
         "Expired"
     ])
 
-# ---------------------------------------------------
 # APPLY FILTERS
-# ---------------------------------------------------
 df = df_raw.copy()
 
 if search:
@@ -138,23 +129,21 @@ if selected_warehouse != "All Warehouses":
 if selected_category != "All Categories" and "Category" in df.columns:
     df = df[df["Category"].astype(str) == selected_category]
 
-if "Remaining Shelf Life (Days)" in df.columns:
+if "_remaining_days" in df.columns:
     if shelf_filter == "Expiring in 30 days":
-        df = df[(df["Remaining Shelf Life (Days)"] >= 0) & (df["Remaining Shelf Life (Days)"] <= 30)]
+        df = df[(df["_remaining_days"] >= 0) & (df["_remaining_days"] <= 30)]
     elif shelf_filter == "Expiring in 60 days":
-        df = df[(df["Remaining Shelf Life (Days)"] >= 0) & (df["Remaining Shelf Life (Days)"] <= 60)]
+        df = df[(df["_remaining_days"] >= 0) & (df["_remaining_days"] <= 60)]
     elif shelf_filter == "Expiring in 90 days":
-        df = df[(df["Remaining Shelf Life (Days)"] >= 0) & (df["Remaining Shelf Life (Days)"] <= 90)]
+        df = df[(df["_remaining_days"] >= 0) & (df["_remaining_days"] <= 90)]
     elif shelf_filter == "Expired":
-        df = df[df["Remaining Shelf Life (Days)"] < 0]
+        df = df[df["_remaining_days"] < 0]
 
-# ---------------------------------------------------
-# KPI CARD — FILTERED TOTAL
-# ---------------------------------------------------
+# KPI CARDS
 st.divider()
 total_qty = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
-expiring_soon = (df["Remaining Shelf Life (Days)"] <= 30).sum() if "Remaining Shelf Life (Days)" in df.columns else 0
-expired_count = (df["Remaining Shelf Life (Days)"] < 0).sum() if "Remaining Shelf Life (Days)" in df.columns else 0
+expiring_soon = (df["_remaining_days"] <= 30).sum() if "_remaining_days" in df.columns else 0
+expired_count = (df["_remaining_days"] < 0).sum() if "_remaining_days" in df.columns else 0
 
 if selected_warehouse != "All Warehouses":
     card_label = f"Qty Available — {selected_warehouse}"
@@ -193,16 +182,16 @@ with k3:
 
 st.divider()
 
-# ---------------------------------------------------
 # RESULTS COUNT + DOWNLOAD
-# ---------------------------------------------------
 r1, r2 = st.columns([6, 2])
 with r1:
     st.markdown(f'<div class="section-title">📋 Showing {len(df):,} records</div>', unsafe_allow_html=True)
 with r2:
     buffer = io.BytesIO()
+    # Remove internal column before export
+    export_df = df.drop(columns=["_remaining_days"], errors="ignore")
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="FG Inventory")
+        export_df.to_excel(writer, index=False, sheet_name="FG Inventory")
     st.download_button(
         label="⬇️ Download as Excel",
         data=buffer.getvalue(),
@@ -211,9 +200,7 @@ with r2:
         use_container_width=True
     )
 
-# ---------------------------------------------------
 # DISPLAY TABLE
-# ---------------------------------------------------
 if df.empty:
     st.warning("No records match your current filters.")
 else:
@@ -221,12 +208,12 @@ else:
         "Item Name", "Item SKU", "Category", "Primary Category",
         "Warehouse", "Batch No", "UoM", "Qty Available", "Qty Inward",
         "Qty (Issue / Hold)", "MFG Date", "Expiry Date",
-        "Remaining Shelf Life (Days)", "Shelf Life Used (%)",
+        "Remaining Shelf Life (%)",
         "Current Aging (Days)", "Value (Inc Tax)", "Value (Ex Tax)",
         "Inventory Date", "Item Type"
     ]
     display_cols = [c for c in priority_cols if c in df.columns]
-    display_cols += [c for c in df.columns if c not in display_cols]
+    display_cols += [c for c in df.columns if c not in display_cols and c != "_remaining_days"]
 
     df_display = df[display_cols].copy()
 
@@ -248,9 +235,8 @@ else:
             "Qty Inward": st.column_config.NumberColumn("Qty Inward", format="%.2f"),
             "Qty (Issue / Hold)": st.column_config.NumberColumn("Qty (Issue / Hold)", format="%.2f"),
             "Current Aging (Days)": st.column_config.NumberColumn("Aging (Days)", format="%d"),
-            "Remaining Shelf Life (Days)": st.column_config.NumberColumn("Remaining Shelf Life (Days)", format="%d"),
-            "Shelf Life Used (%)": st.column_config.ProgressColumn(
-                "Shelf Life Used (%)",
+            "Remaining Shelf Life (%)": st.column_config.ProgressColumn(
+                "Remaining Shelf Life (%)",
                 format="%.1f%%",
                 min_value=0,
                 max_value=100,
