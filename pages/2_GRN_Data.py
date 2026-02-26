@@ -123,47 +123,9 @@ with col_refresh:
 
 st.divider()
 
-# ---------------------------------------------------
-# FILTERS
-# ---------------------------------------------------
-st.markdown('<div class="section-title">🔍 Filters</div>', unsafe_allow_html=True)
-
-f1, f2, f3 = st.columns([3, 2, 2])
-
-with f1:
-    search = st.text_input("Search (Item Name / GRN No / Vendor)", placeholder="Type to search...")
-with f2:
-    if col_grn_month and col_grn_month in df_raw.columns:
-        month_options = ["All Months"] + sorted(df_raw[col_grn_month].dropna().unique().tolist())
-        selected_month = st.selectbox("Month", month_options)
-    else:
-        selected_month = "All Months"
-with f3:
-    if col_vendor and col_vendor in df_raw.columns:
-        vendor_options = ["All Vendors"] + sorted(df_raw[col_vendor].dropna().unique().tolist())
-        selected_vendor = st.selectbox("Vendor", vendor_options)
-    else:
-        selected_vendor = "All Vendors"
-
-selected_po = "All POs"  # PO filter removed from UI, kept for PO summary logic
-
-# ---------------------------------------------------
-# APPLY FILTERS
-# ---------------------------------------------------
+# No filters - show all Central WH data with PO numbers
+selected_po = "All POs"
 df = df_raw.copy()
-
-if search:
-    mask = df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
-    df = df[mask]
-
-if selected_po != "All POs" and col_po in df.columns:
-    df = df[df[col_po] == selected_po]
-
-if selected_month != "All Months" and col_grn_month:
-    df = df[df[col_grn_month] == selected_month]
-
-if selected_vendor != "All Vendors" and col_vendor:
-    df = df[df[col_vendor] == selected_vendor]
 
 # ---------------------------------------------------
 # KPI CARDS
