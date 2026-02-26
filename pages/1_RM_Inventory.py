@@ -73,7 +73,11 @@ def load_forecast():
     file_path = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
     if not os.path.exists(file_path):
         file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df = pd.read_excel(file_path, sheet_name="forecast")
+    xl = pd.ExcelFile(file_path)
+    sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
+    if not sheet:
+        return pd.DataFrame()
+    df = pd.read_excel(file_path, sheet_name=sheet)
     df.columns = df.columns.str.strip()
     # Filter only Plant location and non-zero forecast
     if "Location" in df.columns:
