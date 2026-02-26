@@ -93,18 +93,21 @@ col_rejection_pct = find_col(df_raw, ["percentage", "rejection"]) or find_col(df
 col_grn_no    = find_col(df_raw, ["grn", "no"])
 col_grn_month = find_col(df_raw, ["grn", "month"])
 col_vendor    = find_col(df_raw, ["vendor", "name"])
-col_po        = "PO No"
+col_po        = find_col(df_raw, ["po", "no"]) or find_col(df_raw, ["po", "number"]) or "PO No"
 col_value_with_tax = find_col(df_raw, ["value", "received", "tax"]) or find_col(df_raw, ["values", "received", "with"])
 
 # ---------------------------------------------------
 # FILTER: Central WH + Has PO Number
 # ---------------------------------------------------
 df_raw = df_raw[df_raw["Warehouse"].str.lower() == "central"]
-df_raw = df_raw[
-    df_raw["PO No"].notna() &
-    (df_raw["PO No"] != "") &
-    (~df_raw["PO No"].str.upper().isin(["NAN", "NONE", "NAT"]))
-]
+
+if col_po in df_raw.columns:
+    df_raw[col_po] = df_raw[col_po].astype(str).str.strip()
+    df_raw = df_raw[
+        df_raw[col_po].notna() &
+        (df_raw[col_po] != "") &
+        (~df_raw[col_po].str.upper().isin(["NAN", "NONE", "NAT", "NA", ""]))
+    ]
 
 # ---------------------------------------------------
 # HEADER
@@ -130,7 +133,7 @@ f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
 with f1:
     search = st.text_input("Search (Item Name / GRN No / Vendor)", placeholder="Type to search...")
 with f2:
-    po_options = ["All POs"] + sorted(df_raw["PO No"].dropna().unique().tolist())
+    po_options = ["All POs"] + sorted(df_raw[col_po].dropna().unique().tolist()) if col_po in df_raw.columns else ["All POs"]
     selected_po = st.selectbox("PO Number", po_options)
 with f3:
     if col_grn_month and col_grn_month in df_raw.columns:
@@ -154,8 +157,8 @@ if search:
     mask = df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
     df = df[mask]
 
-if selected_po != "All POs":
-    df = df[df["PO No"] == selected_po]
+if selected_po != "All POs" and col_po in df.columns:
+    df = df[df[col_po] == selected_po]
 
 if selected_month != "All Months" and col_grn_month:
     df = df[df[col_grn_month] == selected_month]
@@ -215,7 +218,7 @@ if selected_po != "All POs":
     st.divider()
     st.markdown(f'<div class="section-title">📦 PO Summary — {selected_po}</div>', unsafe_allow_html=True)
 
-    po_df = df[df["PO No"] == selected_po]
+    po_df = df[df[col_po] == selected_po] if col_po in df.columns else df
     po_ordered  = po_df[col_ordered].sum()  if col_ordered  else 0
     po_received = po_df[col_received].sum() if col_received else 0
     po_pending  = max(po_ordered - po_received, 0)
