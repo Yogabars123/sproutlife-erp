@@ -61,10 +61,44 @@ col_received = find_col(df, ["quantity", "received"])
 col_rejected = find_col(df, ["quantity", "rejected"])
 col_grn_no   = find_col(df, ["grn", "no"])
 
-# Search
-search = st.text_input("Search GRN")
+# Filters
+f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
+
+with f1:
+    search = st.text_input("Search GRN")
+
+with f2:
+    po_col = find_col(df, ["po", "no"]) or find_col(df, ["po", "number"])
+    if po_col and po_col in df.columns:
+        po_options = ["All POs"] + sorted(df[po_col].dropna().astype(str).unique().tolist())
+        selected_po = st.selectbox("PO Number", po_options)
+    else:
+        selected_po = "All POs"
+
+with f3:
+    vendor_col = find_col(df, ["vendor", "name"])
+    if vendor_col and vendor_col in df.columns:
+        vendor_options = ["All Vendors"] + sorted(df[vendor_col].dropna().astype(str).unique().tolist())
+        selected_vendor = st.selectbox("Vendor", vendor_options)
+    else:
+        selected_vendor = "All Vendors"
+
+with f4:
+    if "Warehouse" in df.columns:
+        wh_options = ["All Warehouses"] + sorted(df["Warehouse"].dropna().astype(str).unique().tolist())
+        selected_wh = st.selectbox("Warehouse", wh_options)
+    else:
+        selected_wh = "All Warehouses"
+
+# Apply filters
 if search:
     df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False).any(), axis=1)]
+if selected_po != "All POs" and po_col and po_col in df.columns:
+    df = df[df[po_col].astype(str) == selected_po]
+if selected_vendor != "All Vendors" and vendor_col and vendor_col in df.columns:
+    df = df[df[vendor_col].astype(str) == selected_vendor]
+if selected_wh != "All Warehouses" and "Warehouse" in df.columns:
+    df = df[df["Warehouse"].astype(str) == selected_wh]
 
 # KPI Cards
 total_ordered  = df[col_ordered].sum()  if col_ordered  and col_ordered  in df.columns else 0
