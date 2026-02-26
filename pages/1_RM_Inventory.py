@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import os
 
+# ---------------------------------------------------
+# PAGE TITLE
+# ---------------------------------------------------
 st.title("📦 RM Inventory")
 
 # ---------------------------------------------------
@@ -12,8 +15,13 @@ def load_rm():
     file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
     df = pd.read_excel(file_path, sheet_name="RM-Inventory")
 
+    # Ensure column exists
+    if "wh" not in df.columns:
+        st.error("Column 'wh' not found in Excel file")
+        st.stop()
+
     # Clean warehouse column
-    df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
+    df["wh"] = df["wh"].astype(str).str.strip().str.lower()
 
     return df
 
@@ -39,15 +47,16 @@ allowed_warehouses = [
     "Sproutlife Foods Private Ltd (SNOWMAN)"
 ]
 
-allowed_warehouses = [w.strip() for w in allowed_warehouses]
+# Convert to lowercase
+allowed_warehouses = [w.strip().lower() for w in allowed_warehouses]
 
 # ---------------------------------------------------
 # FILTER DATA
 # ---------------------------------------------------
-df = df[df["Warehouse"].isin(allowed_warehouses)]
+df = df[df["wh"].isin(allowed_warehouses)]
 
 # ---------------------------------------------------
-# SEARCH
+# SEARCH OPTION
 # ---------------------------------------------------
 search = st.text_input("Search RM")
 
@@ -58,6 +67,6 @@ if search:
     )]
 
 # ---------------------------------------------------
-# DISPLAY
+# DISPLAY DATA
 # ---------------------------------------------------
 st.dataframe(df, use_container_width=True)
