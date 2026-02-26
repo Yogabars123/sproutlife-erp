@@ -49,7 +49,12 @@ def load_data():
     file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
 
     # Load forecast - Plant only, non-zero
-    df_fc = pd.read_excel(file_path, sheet_name="forecast")
+    xl = pd.ExcelFile(file_path)
+    sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
+    if not sheet:
+        st.error("Forecast sheet not found in Excel file.")
+        return pd.DataFrame(), pd.DataFrame()
+    df_fc = pd.read_excel(file_path, sheet_name=sheet)
     df_fc.columns = df_fc.columns.str.strip()
     if "Location" in df_fc.columns:
         df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
