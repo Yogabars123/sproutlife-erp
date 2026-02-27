@@ -2,15 +2,13 @@ import streamlit as st
 import pandas as pd
 import os
 import io
-from streamlit_js_eval import streamlit_js_eval
 
 st.set_page_config(page_title="RM Inventory", layout="centered")
 
 # ---------------------------------------------------
-# MOBILE DETECTION
+# SIMPLE MOBILE TOGGLE (NO EXTRA LIBRARY)
 # ---------------------------------------------------
-screen_width = streamlit_js_eval(js_expressions='screen.width', key='WIDTH')
-is_mobile = screen_width is not None and screen_width < 768
+mobile_mode = st.toggle("📱 Mobile View", value=True)
 
 st.markdown("""
 <style>
@@ -65,14 +63,19 @@ def load_rm():
     file_path = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
     if not os.path.exists(file_path):
         file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
+
     df = pd.read_excel(file_path, sheet_name="RM-Inventory")
     df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
+
     for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
-    for col in ["Qty Available", "Qty Inward", "Qty (Issue / Hold)", "Value (Inc Tax)", "Value (Ex Tax)"]:
+
+    for col in ["Qty Available", "Qty Inward", "Qty (Issue / Hold)",
+                "Value (Inc Tax)", "Value (Ex Tax)"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
     return df
 
 df_raw = load_rm()
@@ -97,7 +100,8 @@ search = st.text_input("🔍 Search item name, SKU or batch")
 wh_opts = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
 selected_wh = st.selectbox("Warehouse", wh_opts)
 
-stock_filter = st.selectbox("Stock Status", ["All", "Available Only", "Zero / Negative Stock"])
+stock_filter = st.selectbox("Stock Status",
+                            ["All", "Available Only", "Zero / Negative Stock"])
 
 # ---------------------------------------------------
 # APPLY FILTERS
@@ -105,7 +109,9 @@ stock_filter = st.selectbox("Stock Status", ["All", "Available Only", "Zero / Ne
 df = df_raw.copy()
 
 if search:
-    df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
+    df = df[df.astype(str).apply(
+        lambda x: x.str.contains(search, case=False, na=False)
+    ).any(axis=1)]
 
 if selected_wh != "All Warehouses":
     df = df[df["Warehouse"] == selected_wh]
@@ -145,16 +151,20 @@ st.download_button(
     use_container_width=True
 )
 
+st.divider()
+
 # ---------------------------------------------------
 # DISPLAY DATA
 # ---------------------------------------------------
 if df.empty:
     st.warning("No records found.")
+
 else:
 
-    if is_mobile:
+    if mobile_mode:
         # 📱 MOBILE CARD VIEW
         for _, row in df.iterrows():
+
             expiry = row.get("Expiry Date", "")
             if pd.notna(expiry):
                 expiry = expiry.strftime("%d-%b-%Y")
@@ -167,7 +177,7 @@ else:
                 margin-bottom:10px;
                 border:1px solid #eee;">
                 
-                <b>{row.get('Item Name','')}</b><br>
+                <b style="font-size:14px;">{row.get('Item Name','')}</b><br>
                 SKU: {row.get('Item SKU','')}<br>
                 Warehouse: {row.get('Warehouse','')}<br>
                 Qty: <b>{row.get('Qty Available',0):,.0f}</b><br>
