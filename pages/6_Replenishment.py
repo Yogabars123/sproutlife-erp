@@ -128,7 +128,7 @@ total_order_qty   = df_critical["Suggested Order Qty"].sum()
 most_urgent       = df_critical["Days of Stock"].min() if len(df_critical) > 0 else 0
 zero_stock        = (df_critical["SOH"] <= 0).sum()
 
-k1, k2, k3, k4 = st.columns(4)
+k1, _, _ = st.columns(3)
 
 with k1:
     st.markdown(f"""
@@ -136,30 +136,6 @@ with k1:
         <div class="label">Critical Items (< 10 Days)</div>
         <div class="value">{total_critical:,}</div>
         <div class="sub">Need immediate ordering</div>
-    </div>""", unsafe_allow_html=True)
-
-with k2:
-    st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, #7b5a1a 0%, #b88a30 100%);">
-        <div class="label">Zero Stock Items</div>
-        <div class="value">{zero_stock:,}</div>
-        <div class="sub">SOH is 0 or negative</div>
-    </div>""", unsafe_allow_html=True)
-
-with k3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="label">Total Suggested Order Qty</div>
-        <div class="value">{total_order_qty:,.0f}</div>
-        <div class="sub">To reach {target_days} days of stock</div>
-    </div>""", unsafe_allow_html=True)
-
-with k4:
-    st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, #4a2070 0%, #6d35a0 100%);">
-        <div class="label">Most Urgent (Days)</div>
-        <div class="value">{most_urgent:,.1f}</div>
-        <div class="sub">Lowest days of stock</div>
     </div>""", unsafe_allow_html=True)
 
 st.divider()
