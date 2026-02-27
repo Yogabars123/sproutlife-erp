@@ -86,6 +86,9 @@ def load_forecast():
         df = df[df["Forecast"] > 0]
     if "Item code" in df.columns:
         df["Item code"] = df["Item code"].astype(str).str.strip()
+    elif "Item Code" in df.columns:
+        df = df.rename(columns={"Item Code": "Item code"})
+        df["Item code"] = df["Item code"].astype(str).str.strip()
     return df[["Item code", "Forecast"]].drop_duplicates(subset="Item code")
 
 df_raw = load_rm()
@@ -116,13 +119,18 @@ df_soh = df_raw[df_raw["Warehouse"].isin(soh_warehouses)]
 soh_by_sku = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
 soh_by_sku.columns = ["Item SKU", "SOH"]
 
+# Normalize both keys for matching (strip, uppercase)
+soh_by_sku["_key"] = soh_by_sku["Item SKU"].astype(str).str.strip().str.upper()
+df_forecast["_key"] = df_forecast["Item code"].astype(str).str.strip().str.upper()
+
 # Merge forecast into SOH lookup
-soh_by_sku = soh_by_sku.merge(df_forecast, left_on="Item SKU", right_on="Item code", how="left")
+soh_by_sku = soh_by_sku.merge(df_forecast[["_key", "Forecast"]], on="_key", how="left")
 soh_by_sku["Forecast"] = soh_by_sku["Forecast"].fillna(0)
 soh_by_sku["Days of Stock"] = soh_by_sku.apply(
     lambda r: round(r["SOH"] / (r["Forecast"] / 26), 1) if r["Forecast"] > 0 else None,
     axis=1
 )
+soh_by_sku = soh_by_sku.drop(columns=["_key"], errors="ignore")
 
 # ---------------------------------------------------
 # HEADER
