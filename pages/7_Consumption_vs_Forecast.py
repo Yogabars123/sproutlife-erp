@@ -165,7 +165,7 @@ over_count     = (merged["Variance"] > 0).sum()
 under_count    = (merged["Variance"] < 0).sum()
 total_variance = merged["Variance"].sum()
 
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3 = st.columns(3)
 
 with k1:
     st.markdown(f"""
@@ -191,14 +191,6 @@ with k3:
         <div class="label">Total Variance</div>
         <div class="value">{total_variance:+,.0f}</div>
         <div class="sub">{"Over consumed" if total_variance > 0 else "Under consumed"}</div>
-    </div>""", unsafe_allow_html=True)
-
-with k4:
-    st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, #7b5a1a 0%, #b88a30 100%);">
-        <div class="label">Over / Under Items</div>
-        <div class="value">{over_count} / {under_count}</div>
-        <div class="sub">Over consumed / Under consumed</div>
     </div>""", unsafe_allow_html=True)
 
 st.divider()
