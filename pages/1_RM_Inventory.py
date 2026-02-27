@@ -47,56 +47,47 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------
-# LOAD RM INVENTORY
-# ---------------------------------------------------
 @st.cache_data
-def load_rm():
-    file_path = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(file_path):
-        file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df = pd.read_excel(file_path, sheet_name="RM-Inventory")
-    df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
-    for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
-    for col in ["Qty Available", "Qty Inward", "Qty (Issue / Hold)", "Value (Inc Tax)", "Value (Ex Tax)"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    return df
+def load_all():
+    file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
 
-# ---------------------------------------------------
-# LOAD FORECAST
-# ---------------------------------------------------
-@st.cache_data
-def load_forecast():
-    file_path = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(file_path):
-        file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
+    # --- RM Inventory ---
+    df_rm = pd.read_excel(file_path, sheet_name="RM-Inventory")
+    df_rm.columns = df_rm.columns.str.strip()
+    df_rm["Warehouse"] = df_rm["Warehouse"].astype(str).str.strip()
+    for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
+        if col in df_rm.columns:
+            df_rm[col] = pd.to_datetime(df_rm[col], errors="coerce")
+    for col in ["Qty Available", "Qty Inward", "Qty (Issue / Hold)", "Value (Inc Tax)", "Value (Ex Tax)"]:
+        if col in df_rm.columns:
+            df_rm[col] = pd.to_numeric(df_rm[col], errors="coerce").fillna(0)
+
+    # --- Forecast ---
     xl = pd.ExcelFile(file_path)
     sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
-    if not sheet:
-        return pd.DataFrame(columns=["Item code", "Forecast"])
-    df = pd.read_excel(file_path, sheet_name=sheet)
-    df.columns = df.columns.str.strip()
-    if "Location" in df.columns:
-        df = df[df["Location"].astype(str).str.strip().str.lower() == "plant"]
-    if "Forecast" in df.columns:
-        df["Forecast"] = pd.to_numeric(df["Forecast"], errors="coerce").fillna(0)
-        df = df[df["Forecast"] > 0]
-    if "Item code" in df.columns:
-        df["Item code"] = df["Item code"].astype(str).str.strip()
-    elif "Item Code" in df.columns:
-        df = df.rename(columns={"Item Code": "Item code"})
-        df["Item code"] = df["Item code"].astype(str).str.strip()
-    return df[["Item code", "Forecast"]].drop_duplicates(subset="Item code")
+    df_fc = pd.DataFrame()
+    if sheet:
+        df_fc = pd.read_excel(file_path, sheet_name=sheet)
+        df_fc.columns = df_fc.columns.str.strip()
+        # Filter Plant only
+        if "Location" in df_fc.columns:
+            df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
+        # Numeric
+        if "Forecast" in df_fc.columns:
+            df_fc["Forecast"] = pd.to_numeric(df_fc["Forecast"], errors="coerce").fillna(0)
+            df_fc = df_fc[df_fc["Forecast"] > 0]
+        # Find item code column (case-insensitive)
+        item_col = next((c for c in df_fc.columns if c.lower().replace(" ","") == "itemcode"), None)
+        if item_col:
+            df_fc = df_fc.rename(columns={item_col: "Item code"})
+            df_fc["Item code"] = df_fc["Item code"].astype(str).str.strip().str.upper()
+            df_fc = df_fc[["Item code", "Forecast"]].drop_duplicates(subset="Item code")
 
-df_raw = load_rm()
-df_forecast = load_forecast()
+    return df_rm, df_fc
 
-# ---------------------------------------------------
-# ALLOWED WAREHOUSES (display)
-# ---------------------------------------------------
+df_raw, df_forecast = load_all()
+
+# Allowed warehouses for display
 allowed_warehouses = [
     "Central", "Central Production -Bar Line", "Central Production - Oats Line",
     "Central Production - Peanut Line", "Central Production - Muesli Line",
@@ -105,32 +96,33 @@ allowed_warehouses = [
     "Central Production -Packing", "Tumkur New Warehouse",
     "HF Factory FG Warehouse", "Sproutlife Foods Private Ltd (SNOWMAN)"
 ]
-df_raw = df_raw[df_raw["Warehouse"].isin([w.strip() for w in allowed_warehouses])]
+df_raw = df_raw[df_raw["Warehouse"].isin(allowed_warehouses)]
 
-# ---------------------------------------------------
-# SOH WAREHOUSES FOR DAYS OF STOCK
-# ---------------------------------------------------
+# SOH warehouses for Days of Stock
 soh_warehouses = [
     "Central", "RM Warehouse Tumkur", "Central Warehouse - Cold Storage RM",
     "Tumkur Warehouse", "Tumkur New Warehouse",
     "HF Factory FG Warehouse", "Sproutlife Foods Private Ltd (SNOWMAN)"
 ]
-df_soh = df_raw[df_raw["Warehouse"].isin(soh_warehouses)]
-soh_by_sku = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
-soh_by_sku.columns = ["Item SKU", "SOH"]
+df_soh = df_raw[df_raw["Warehouse"].isin(soh_warehouses)].copy()
+df_soh["_key"] = df_soh["Item SKU"].astype(str).str.strip().str.upper()
+soh_by_sku = df_soh.groupby("_key")["Qty Available"].sum().reset_index()
+soh_by_sku.columns = ["_key", "SOH"]
 
-# Normalize both keys for matching (strip, uppercase)
-soh_by_sku["_key"] = soh_by_sku["Item SKU"].astype(str).str.strip().str.upper()
-df_forecast["_key"] = df_forecast["Item code"].astype(str).str.strip().str.upper()
+# Merge forecast into SOH
+if not df_forecast.empty:
+    soh_by_sku = soh_by_sku.merge(df_forecast, left_on="_key", right_on="Item code", how="left")
+else:
+    soh_by_sku["Forecast"] = 0
 
-# Merge forecast into SOH lookup
-soh_by_sku = soh_by_sku.merge(df_forecast[["_key", "Forecast"]], on="_key", how="left")
 soh_by_sku["Forecast"] = soh_by_sku["Forecast"].fillna(0)
 soh_by_sku["Days of Stock"] = soh_by_sku.apply(
     lambda r: round(r["SOH"] / (r["Forecast"] / 26), 1) if r["Forecast"] > 0 else None,
     axis=1
 )
-soh_by_sku = soh_by_sku.drop(columns=["_key"], errors="ignore")
+
+# Add _key to df_raw for merging later
+df_raw["_key"] = df_raw["Item SKU"].astype(str).str.strip().str.upper()
 
 # ---------------------------------------------------
 # HEADER
@@ -150,7 +142,6 @@ st.divider()
 # FILTERS
 # ---------------------------------------------------
 st.markdown('<div class="section-title">🔍 Filters</div>', unsafe_allow_html=True)
-
 f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
 
 with f1:
@@ -175,35 +166,28 @@ df = df_raw.copy()
 if search:
     mask = df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
     df = df[mask]
-
 if selected_warehouse != "All Warehouses":
     df = df[df["Warehouse"] == selected_warehouse]
-
 if selected_category != "All Categories" and "Category" in df.columns:
     df = df[df["Category"].astype(str) == selected_category]
-
 if stock_filter == "Available Only":
     df = df[df["Qty Available"] > 0]
 elif stock_filter == "Zero / Negative Stock":
     df = df[df["Qty Available"] <= 0]
 
 # ---------------------------------------------------
-# KPI — based on filtered data + matched forecast/DOS
+# KPI — based on filtered SKUs
 # ---------------------------------------------------
 st.divider()
 
-# Get unique SKUs from filtered data
-filtered_skus = df["Item SKU"].unique().tolist()
+filtered_keys = df["_key"].unique().tolist()
+filtered_soh  = soh_by_sku[soh_by_sku["_key"].isin(filtered_keys)]
 
-# SOH for filtered SKUs (from SOH warehouses only)
-filtered_soh = soh_by_sku[soh_by_sku["Item SKU"].isin(filtered_skus)]
-
-total_qty       = df["Qty Available"].sum()
-total_forecast  = filtered_soh["Forecast"].sum()
-avg_dos         = filtered_soh[filtered_soh["Days of Stock"].notna()]["Days of Stock"].mean()
-low_dos         = (filtered_soh["Days of Stock"] < 7).sum()
-
-avg_dos = round(avg_dos, 1) if pd.notna(avg_dos) else 0
+total_qty      = df["Qty Available"].sum()
+total_forecast = filtered_soh["Forecast"].sum()
+dos_valid      = filtered_soh[filtered_soh["Days of Stock"].notna()]["Days of Stock"]
+avg_dos        = round(dos_valid.mean(), 1) if len(dos_valid) > 0 else 0
+low_dos        = (filtered_soh["Days of Stock"] < 7).sum()
 
 if selected_warehouse != "All Warehouses":
     card_label = f"Qty Available — {selected_warehouse}"
@@ -214,7 +198,7 @@ elif selected_category != "All Categories":
 else:
     card_label = "Total Qty Available"
 
-k1, k2, k3, k4 = st.columns(4)
+k1, _, _ = st.columns(3)
 
 with k1:
     st.markdown(f"""
@@ -224,34 +208,10 @@ with k1:
         <div class="sub">{len(df):,} records matching filters</div>
     </div>""", unsafe_allow_html=True)
 
-with k2:
-    st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, #1a5c38 0%, #27855a 100%);">
-        <div class="label">Forecast</div>
-        <div class="value">{total_forecast:,.0f}</div>
-        <div class="sub">For filtered SKUs</div>
-    </div>""", unsafe_allow_html=True)
-
-with k3:
-    st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, #4a2070 0%, #6d35a0 100%);">
-        <div class="label">Avg Days of Stock</div>
-        <div class="value">{avg_dos}</div>
-        <div class="sub">SOH ÷ (Forecast ÷ 26)</div>
-    </div>""", unsafe_allow_html=True)
-
-with k4:
-    st.markdown(f"""
-    <div class="metric-card" style="background: linear-gradient(135deg, #7b2d2d 0%, #b94040 100%);">
-        <div class="label">Critical (< 7 Days)</div>
-        <div class="value">{low_dos:,}</div>
-        <div class="sub">SKUs needing urgent action</div>
-    </div>""", unsafe_allow_html=True)
-
 st.divider()
 
 # ---------------------------------------------------
-# RESULTS COUNT + DOWNLOAD
+# DOWNLOAD + TABLE
 # ---------------------------------------------------
 r1, r2 = st.columns([6, 2])
 with r1:
@@ -259,7 +219,7 @@ with r1:
 with r2:
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="RM Inventory")
+        df.drop(columns=["_key"], errors="ignore").to_excel(writer, index=False, sheet_name="RM Inventory")
     st.download_button(
         label="⬇️ Download as Excel",
         data=buffer.getvalue(),
@@ -268,16 +228,14 @@ with r2:
         use_container_width=True
     )
 
-# ---------------------------------------------------
-# DISPLAY TABLE — with Forecast + Days of Stock columns
-# ---------------------------------------------------
 if df.empty:
     st.warning("No records match your current filters.")
 else:
-    df_display_merge = df.merge(
-        soh_by_sku[["Item SKU", "Forecast", "Days of Stock"]],
-        on="Item SKU", how="left"
-    )
+    # Merge Forecast + Days of Stock into display
+    df_display = df.merge(
+        soh_by_sku[["_key", "Forecast", "Days of Stock"]],
+        on="_key", how="left"
+    ).drop(columns=["_key"], errors="ignore")
 
     priority_cols = [
         "Item Name", "Item SKU", "Category", "Primary Category",
@@ -286,15 +244,13 @@ else:
         "Batch No", "MFG Date", "Expiry Date", "Current Aging (Days)",
         "Inventory Date", "Item Type"
     ]
-    display_cols = [c for c in priority_cols if c in df_display_merge.columns]
-    display_cols += [c for c in df_display_merge.columns if c not in display_cols]
-
-    df_display = df_display_merge[display_cols].copy()
+    display_cols = [c for c in priority_cols if c in df_display.columns]
+    display_cols += [c for c in df_display.columns if c not in display_cols]
+    df_display = df_display[display_cols].copy()
 
     for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
         if col in df_display.columns:
             df_display[col] = df_display[col].dt.strftime("%d-%b-%Y").fillna("")
-
     for col in ["Value (Inc Tax)", "Value (Ex Tax)"]:
         if col in df_display.columns:
             df_display[col] = df_display[col].apply(lambda x: f"₹{x:,.2f}" if x else "")
@@ -305,11 +261,11 @@ else:
         height=500,
         hide_index=True,
         column_config={
-            "Qty Available": st.column_config.NumberColumn("Qty Available", format="%.2f"),
-            "Forecast": st.column_config.NumberColumn("Forecast", format="%.0f"),
-            "Days of Stock": st.column_config.NumberColumn("Days of Stock", format="%.1f"),
-            "Qty Inward": st.column_config.NumberColumn("Qty Inward", format="%.2f"),
-            "Qty (Issue / Hold)": st.column_config.NumberColumn("Qty (Issue / Hold)", format="%.2f"),
+            "Qty Available":        st.column_config.NumberColumn("Qty Available", format="%.2f"),
+            "Forecast":             st.column_config.NumberColumn("Forecast", format="%.0f"),
+            "Days of Stock":        st.column_config.NumberColumn("Days of Stock", format="%.1f"),
+            "Qty Inward":           st.column_config.NumberColumn("Qty Inward", format="%.2f"),
+            "Qty (Issue / Hold)":   st.column_config.NumberColumn("Qty (Issue / Hold)", format="%.2f"),
             "Current Aging (Days)": st.column_config.NumberColumn("Aging (Days)", format="%d"),
         }
     )
