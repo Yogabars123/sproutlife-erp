@@ -104,14 +104,8 @@ soh_by_sku["Days of Stock"] = (soh_by_sku["SOH"] / soh_by_sku["Daily Req"]).roun
 # Filter < 10 days
 df_critical = soh_by_sku[soh_by_sku["Days of Stock"] < 10].copy()
 
-# ---------------------------------------------------
-# SLIDER — target days
-# ---------------------------------------------------
-st.divider()
-target_days = st.slider(
-    "🎯 Target Days of Stock (suggested order will bring stock up to this level)",
-    min_value=10, max_value=90, value=30, step=5
-)
+# Fixed target days
+target_days = 30
 
 # Suggested Order Qty = (Daily Req × target_days) - SOH
 df_critical["Suggested Order Qty"] = (
