@@ -44,6 +44,15 @@ st.markdown("""
         border-radius: 10px;
         overflow: hidden;
     }
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .metric-card .value { font-size: 22px; }
+        .metric-card .label { font-size: 11px; }
+        .metric-card { padding: 14px 16px; }
+        [data-testid="stHorizontalBlock"] > div { min-width: 0 !important; }
+    }
+    /* Hide sidebar toggle on mobile for cleaner look */
+    section[data-testid="stSidebar"] { min-width: 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -127,14 +136,17 @@ df_raw["_key"] = df_raw["Item SKU"].astype(str).str.strip().str.upper()
 # ---------------------------------------------------
 # HEADER
 # ---------------------------------------------------
-st.title("📦 RM Inventory")
-st.caption("Live view of raw material stock across all warehouses")
+st.markdown("""
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+    <span style="font-size:28px;">📦</span>
+    <span style="font-size:24px; font-weight:700;">RM Inventory</span>
+</div>
+<p style="color:#888; font-size:13px; margin:0 0 8px 0;">Live view of raw material stock</p>
+""", unsafe_allow_html=True)
 
-col_refresh, _ = st.columns([1, 9])
-with col_refresh:
-    if st.button("🔄 Refresh Data"):
-        st.cache_data.clear()
-        st.rerun()
+if st.button("🔄 Refresh", use_container_width=False):
+    st.cache_data.clear()
+    st.rerun()
 
 st.divider()
 
@@ -142,21 +154,20 @@ st.divider()
 # FILTERS
 # ---------------------------------------------------
 st.markdown('<div class="section-title">🔍 Filters</div>', unsafe_allow_html=True)
-f1, f2, f3, f4 = st.columns([3, 2, 2, 2])
+search = st.text_input("🔍 Search (Item Name / SKU / Batch)", placeholder="Type to search...")
 
+f1, f2 = st.columns(2)
 with f1:
-    search = st.text_input("Search (Item Name / SKU / Batch)", placeholder="Type to search...")
-with f2:
     warehouse_options = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
     selected_warehouse = st.selectbox("Warehouse", warehouse_options)
-with f3:
+with f2:
     if "Category" in df_raw.columns:
         cat_options = ["All Categories"] + sorted(df_raw["Category"].dropna().astype(str).unique().tolist())
         selected_category = st.selectbox("Category", cat_options)
     else:
         selected_category = "All Categories"
-with f4:
-    stock_filter = st.selectbox("Stock Status", ["All", "Available Only", "Zero / Negative Stock"])
+
+stock_filter = st.selectbox("Stock Status", ["All", "Available Only", "Zero / Negative Stock"])
 
 # ---------------------------------------------------
 # APPLY FILTERS
