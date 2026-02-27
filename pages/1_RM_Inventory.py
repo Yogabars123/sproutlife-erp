@@ -7,52 +7,73 @@ st.set_page_config(page_title="RM Inventory", layout="wide")
 
 st.markdown("""
 <style>
+    /* Hide deploy button and top bar clutter */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Reduce default padding on mobile */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
     .metric-card {
         background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 100%);
-        border-radius: 12px;
-        padding: 20px 24px;
+        border-radius: 10px;
+        padding: 12px 14px;
         color: white;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        margin-bottom: 8px;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
     .metric-card .label {
-        font-size: 13px;
+        font-size: 10px;
         opacity: 0.8;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
     }
     .metric-card .value {
-        font-size: 28px;
+        font-size: 20px;
         font-weight: 700;
-        letter-spacing: -0.5px;
     }
     .metric-card .sub {
-        font-size: 12px;
+        font-size: 10px;
         opacity: 0.65;
-        margin-top: 4px;
+        margin-top: 2px;
     }
     .section-title {
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 600;
         color: #666;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin: 18px 0 8px 0;
+        margin: 12px 0 6px 0;
     }
     div[data-testid="stDataFrame"] {
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
     }
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-        .metric-card .value { font-size: 22px; }
-        .metric-card .label { font-size: 11px; }
-        .metric-card { padding: 14px 16px; }
-        [data-testid="stHorizontalBlock"] > div { min-width: 0 !important; }
+    /* Make all text inputs and selects full width on mobile */
+    .stTextInput input {
+        font-size: 14px !important;
     }
-    /* Hide sidebar toggle on mobile for cleaner look */
-    section[data-testid="stSidebar"] { min-width: 0 !important; }
+    .stSelectbox select {
+        font-size: 13px !important;
+    }
+    /* Shrink download button text */
+    .stDownloadButton button {
+        font-size: 12px !important;
+        padding: 4px 8px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    /* Smaller heading */
+    h1 { font-size: 1.4rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -136,17 +157,12 @@ df_raw["_key"] = df_raw["Item SKU"].astype(str).str.strip().str.upper()
 # ---------------------------------------------------
 # HEADER
 # ---------------------------------------------------
-st.markdown("""
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
-    <span style="font-size:28px;">📦</span>
-    <span style="font-size:24px; font-weight:700;">RM Inventory</span>
-</div>
-<p style="color:#888; font-size:13px; margin:0 0 8px 0;">Live view of raw material stock</p>
-""", unsafe_allow_html=True)
-
-if st.button("🔄 Refresh", use_container_width=False):
-    st.cache_data.clear()
-    st.rerun()
+st.markdown('<p style="font-size:20px; font-weight:700; margin:0;">📦 RM Inventory</p>', unsafe_allow_html=True)
+c1, c2 = st.columns([3,1])
+with c2:
+    if st.button("🔄", help="Refresh Data", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
 st.divider()
 
@@ -232,7 +248,7 @@ with r2:
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         df.drop(columns=["_key"], errors="ignore").to_excel(writer, index=False, sheet_name="RM Inventory")
     st.download_button(
-        label="⬇️ Download as Excel",
+        label="⬇️ Excel",
         data=buffer.getvalue(),
         file_name="RM_Inventory_Filtered.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
