@@ -153,14 +153,11 @@ soh_by_sku = soh_by_sku.drop(columns=["_key"])
 # ---------------------------------------------------
 # HEADER
 # ---------------------------------------------------
-t1, t2 = st.columns([5, 1])
-with t1:
-    st.markdown('<p class="page-title">📦 RM Inventory</p>', unsafe_allow_html=True)
-    st.markdown('<p class="page-sub">Live raw material stock</p>', unsafe_allow_html=True)
-with t2:
-    if st.button("🔄", help="Refresh"):
-        st.cache_data.clear()
-        st.rerun()
+st.markdown('<p class="page-title">📦 RM Inventory</p>', unsafe_allow_html=True)
+st.markdown('<p class="page-sub">Live raw material stock</p>', unsafe_allow_html=True)
+if st.button("🔄 Refresh Data", use_container_width=True):
+    st.cache_data.clear()
+    st.rerun()
 
 st.divider()
 
@@ -168,15 +165,10 @@ st.divider()
 # FILTERS
 # ---------------------------------------------------
 search = st.text_input("🔍 Search item name, SKU or batch", placeholder="e.g. 10704 or Flakes")
-
-c1, c2 = st.columns(2)
-with c1:
-    wh_opts = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
-    selected_wh = st.selectbox("Warehouse", wh_opts)
-with c2:
-    cat_opts = ["All Categories"] + sorted(df_raw["Category"].dropna().astype(str).unique().tolist()) if "Category" in df_raw.columns else ["All Categories"]
-    selected_cat = st.selectbox("Category", cat_opts)
-
+wh_opts = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
+selected_wh = st.selectbox("Warehouse", wh_opts)
+cat_opts = ["All Categories"] + sorted(df_raw["Category"].dropna().astype(str).unique().tolist()) if "Category" in df_raw.columns else ["All Categories"]
+selected_cat = st.selectbox("Category", cat_opts)
 stock_filter = st.selectbox("Stock Status", ["All", "Available Only", "Zero / Negative Stock"])
 
 # ---------------------------------------------------
@@ -224,16 +216,13 @@ st.divider()
 # ---------------------------------------------------
 # TABLE
 # ---------------------------------------------------
-r1, r2 = st.columns([2, 1])
-with r1:
-    st.markdown(f'<div class="sec-label">📋 {len(df):,} records</div>', unsafe_allow_html=True)
-with r2:
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as w:
-        df.to_excel(w, index=False, sheet_name="RM")
-    st.download_button("⬇️ Excel", buf.getvalue(), "RM_Inventory.xlsx",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True)
+st.markdown(f'<div class="sec-label">📋 {len(df):,} records</div>', unsafe_allow_html=True)
+buf = io.BytesIO()
+with pd.ExcelWriter(buf, engine="openpyxl") as w:
+    df.to_excel(w, index=False, sheet_name="RM")
+st.download_button("⬇️ Download Excel", buf.getvalue(), "RM_Inventory.xlsx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    use_container_width=True)
 
 if df.empty:
     st.warning("No records found.")
