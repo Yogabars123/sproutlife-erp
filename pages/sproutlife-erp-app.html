@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sproutlife ERP</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --surface2: #f7f9fc;
+  --border: #e2e8f0;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --green-dark: #14532d;
+  --teal: #0d9488;
+  --blue: #2563eb;
+  --orange: #ea580c;
+  --red: #dc2626;
+  --yellow: #d97706;
+  --text: #0f172a;
+  --muted: #64748b;
+  --muted2: #94a3b8;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --card-shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ── SPLASH SCREEN ── */
+#splash {
+  position: fixed; inset: 0; background: var(--green-dark);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 9999; transition: opacity 0.5s;
+}
+.splash-logo { font-size: 52px; margin-bottom: 16px; }
+.splash-name { font-size: 26px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+.splash-sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+.splash-bar { width: 120px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; margin-top: 40px; overflow: hidden; }
+.splash-fill { height: 100%; background: #4ade80; border-radius: 2px; animation: load 1.2s ease forwards; }
+@keyframes load { from{width:0} to{width:100%} }
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--surface);
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 1px 0 var(--border);
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.topbar-logo { width: 32px; height: 32px; background: var(--green-dark); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.topbar-title { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+.topbar-title span { color: var(--green); }
+.topbar-page { font-size: 11px; color: var(--muted); font-weight: 500; }
+.topbar-right { display: flex; gap: 8px; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; cursor: pointer; transition: all 0.15s;
+}
+.icon-btn:active { background: var(--border); transform: scale(0.95); }
+
+/* ── PAGES ── */
+.page { display: none; padding-bottom: 90px; min-height: calc(100vh - 60px); }
+.page.active { display: block; animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+
+/* ── SEARCH BAR ── */
+.search-wrap { padding: 14px 16px 8px; position: relative; }
+.search-input {
+  width: 100%; background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 11px 14px 11px 40px;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px;
+  color: var(--text); outline: none; transition: border-color 0.2s;
+  box-shadow: var(--card-shadow);
+}
+.search-input:focus { border-color: var(--green); }
+.search-input::placeholder { color: var(--muted2); }
+.search-icon { position: absolute; left: 28px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+
+/* ── FILTER ROW ── */
+.filter-row { display: flex; gap: 8px; padding: 6px 16px 12px; overflow-x: auto; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.chip {
+  white-space: nowrap; padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: var(--surface); border: 1.5px solid var(--border); color: var(--muted);
+  cursor: pointer; transition: all 0.15s;
+}
+.chip.active { background: var(--green-dark); color: #fff; border-color: var(--green-dark); }
+.chip:active { transform: scale(0.95); }
+
+/* ── KPI STRIP ── */
+.kpi-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 14px; }
+.kpi-card {
+  background: var(--surface); border-radius: 14px; padding: 14px 16px;
+  border: 1px solid var(--border); box-shadow: var(--card-shadow);
+  position: relative; overflow: hidden;
+}
+.kpi-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--kc, var(--green));
+}
+.kpi-card.blue::after { --kc: var(--blue); }
+.kpi-card.orange::after { --kc: var(--orange); }
+.kpi-card.red::after { --kc: var(--red); }
+.kpi-card.yellow::after { --kc: var(--yellow); }
+.kpi-card.teal::after { --kc: var(--teal); }
+.kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; margin-bottom: 5px; }
+.kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: var(--text); }
+.kpi-sub { font-size: 10px; color: var(--muted2); margin-top: 3px; }
+
+/* ── SECTION TITLE ── */
+.section-title { padding: 4px 16px 10px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
+.section-count { background: var(--green-light); color: var(--green-dark); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+
+/* ── INVENTORY CARD ── */
+.card-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.inv-card {
+  background: var(--surface); border-radius: 16px; padding: 15px;
+  border: 1px solid var(--border); box-shadow: var(--card-shadow);
+  cursor: pointer; transition: all 0.15s; position: relative;
+}
+.inv-card:active { transform: scale(0.98); box-shadow: var(--card-shadow-lg); border-color: var(--green); }
+.inv-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.inv-name { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3; max-width: 220px; }
+.inv-sku { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.badge-green { background: var(--green-light); color: var(--green-dark); }
+.badge-yellow { background: #fef3c7; color: #92400e; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-gray { background: #f1f5f9; color: var(--muted); }
+.inv-warehouse { font-size: 12px; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
+.inv-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.stat-box { background: var(--surface2); border-radius: 8px; padding: 8px; text-align: center; }
+.stat-label { font-size: 9px; color: var(--muted2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+.stat-val.green { color: var(--green); }
+.stat-val.orange { color: var(--orange); }
+.stat-val.red { color: var(--red); }
+.expiry-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.expiry-label { font-size: 11px; color: var(--muted); }
+.expiry-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; }
+
+/* ── DETAIL MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,0.6); z-index: 500;
+  align-items: flex-end; backdrop-filter: blur(6px);
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--surface); border-radius: 24px 24px 0 0;
+  width: 100%; max-height: 88vh; overflow-y: auto;
+  padding-bottom: 40px;
+  animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 14px auto 0; }
+.modal-head { padding: 18px 20px 0; position: relative; }
+.modal-badge-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.modal-name { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+.modal-sku { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.modal-close { position: absolute; top: 16px; right: 20px; width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.modal-body { padding: 16px 20px; }
+.detail-section { margin-bottom: 16px; }
+.detail-section-title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.detail-item { background: var(--surface2); border-radius: 10px; padding: 11px 13px; }
+.detail-item.full { grid-column: 1 / -1; }
+.detail-lbl { font-size: 10px; color: var(--muted2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.detail-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+
+/* ── HOME PAGE ── */
+.home-hero {
+  background: var(--green-dark);
+  padding: 24px 20px 28px;
+  position: relative; overflow: hidden;
+}
+.home-hero::before {
+  content: '🌱'; position: absolute; right: -10px; top: -10px;
+  font-size: 100px; opacity: 0.08; transform: rotate(20deg);
+}
+.hero-greeting { font-size: 13px; color: rgba(255,255,255,0.6); font-weight: 500; margin-bottom: 4px; }
+.hero-title { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+.hero-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+.home-modules { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+.module-card {
+  background: var(--surface); border-radius: 16px; padding: 18px 14px;
+  border: 1px solid var(--border); box-shadow: var(--card-shadow);
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.module-card:active { transform: scale(0.96); box-shadow: var(--card-shadow-lg); }
+.module-icon { font-size: 28px; margin-bottom: 8px; }
+.module-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.module-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.module-count { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: var(--green); margin-top: 8px; }
+
+/* ── ALERT BANNER ── */
+.alert-banner { margin: 12px 16px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; }
+.alert-icon { font-size: 18px; }
+.alert-text { font-size: 12px; color: #92400e; font-weight: 500; line-height: 1.4; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; padding: 8px 0 20px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  z-index: 200;
+}
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 0; transition: all 0.15s; }
+.nav-icon { font-size: 20px; transition: transform 0.2s; }
+.nav-label { font-size: 10px; color: var(--muted2); font-weight: 600; }
+.nav-item.active .nav-label { color: var(--green-dark); font-weight: 700; }
+.nav-item.active .nav-icon { transform: translateY(-2px); }
+.nav-dot { width: 4px; height: 4px; background: var(--green); border-radius: 50%; display: none; }
+.nav-item.active .nav-dot { display: block; }
+
+/* ── CONSUMPTION TABLE-STYLE ── */
+.con-card {
+  background: var(--surface); border-radius: 14px; padding: 14px;
+  border: 1px solid var(--border); margin: 0 16px 10px; box-shadow: var(--card-shadow);
+}
+.con-item-name { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.con-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.con-row:last-child { border-bottom: none; }
+.con-key { font-size: 12px; color: var(--muted); }
+.con-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+
+/* ── FORECAST ── */
+.fc-card {
+  background: var(--surface); border-radius: 14px; padding: 15px;
+  border: 1px solid var(--border); margin: 0 16px 10px; box-shadow: var(--card-shadow);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.fc-info { flex: 1; }
+.fc-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.fc-period { font-size: 11px; color: var(--muted); }
+.fc-vals { text-align: right; }
+.fc-num { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--blue); }
+.fc-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+/* ── REPLENISHMENT ── */
+.rep-card {
+  background: var(--surface); border-radius: 14px; padding: 15px;
+  border-left: 4px solid var(--rc, var(--green)); border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  margin: 0 16px 10px; box-shadow: var(--card-shadow);
+}
+.rep-card.urgent { --rc: var(--red); }
+.rep-card.warn { --rc: var(--yellow); }
+.rep-top { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.rep-name { font-size: 14px; font-weight: 700; }
+.rep-qty { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: var(--green); }
+.rep-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap { margin-top: 8px; }
+.prog-bar { height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.5s; }
+.prog-fill.low { background: var(--red); }
+.prog-fill.mid { background: var(--yellow); }
+
+/* ── EMPTY ── */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon { font-size: 42px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; font-weight: 500; }
+.empty-sub { font-size: 12px; color: var(--muted2); margin-top: 4px; }
+
+/* ── GRN CARD ── */
+.grn-card {
+  background: var(--surface); border-radius: 14px; padding: 14px;
+  border: 1px solid var(--border); margin: 0 16px 10px; box-shadow: var(--card-shadow);
+  cursor: pointer; transition: all 0.15s;
+}
+.grn-card:active { transform: scale(0.98); border-color: var(--teal); }
+.grn-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.grn-po { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--teal); font-weight: 600; }
+.grn-vendor { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.grn-item { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.grn-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.grn-stat { background: var(--surface2); border-radius: 8px; padding: 8px; text-align: center; }
+.grn-stat-label { font-size: 9px; color: var(--muted2); font-weight: 600; text-transform: uppercase; }
+.grn-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  margin: 16px; padding: 28px 20px; border-radius: 16px;
+  border: 2px dashed var(--border); background: var(--surface);
+  text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.upload-zone:hover { border-color: var(--green); background: var(--green-light); }
+.upload-icon { font-size: 32px; margin-bottom: 8px; }
+.upload-text { font-size: 14px; font-weight: 600; color: var(--text); }
+.upload-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.upload-btn {
+  margin-top: 14px; background: var(--green-dark); color: #fff;
+  border: none; border-radius: 10px; padding: 10px 24px;
+  font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: all 0.15s;
+}
+.upload-btn:active { transform: scale(0.97); }
+#fileInput { display: none; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">🌱</div>
+  <div class="splash-name">Sproutlife ERP</div>
+  <div class="splash-sub">Inventory Management</div>
+  <div class="splash-bar"><div class="splash-fill"></div></div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">🌱</div>
+    <div>
+      <div class="topbar-title">Sprout<span>life</span></div>
+      <div class="topbar-page" id="topbarPage">Dashboard</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="icon-btn" onclick="openUpload()" title="Upload Excel">📂</div>
+    <div class="icon-btn" onclick="refreshData()" title="Refresh">🔄</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: HOME
+════════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="home-hero">
+    <div class="hero-greeting">Good day 👋</div>
+    <div class="hero-title">Inventory Dashboard</div>
+    <div class="hero-sub" id="heroDate"></div>
+  </div>
+
+  <div id="homeAlerts"></div>
+
+  <div class="home-modules" id="homeModules">
+    <div class="module-card" onclick="navTo('rm')">
+      <div class="module-icon">🏭</div>
+      <div class="module-name">RM Inventory</div>
+      <div class="module-desc">Raw Materials</div>
+      <div class="module-count" id="rmCount">—</div>
+    </div>
+    <div class="module-card" onclick="navTo('grn')">
+      <div class="module-icon">📥</div>
+      <div class="module-name">GRN Data</div>
+      <div class="module-desc">Goods Received</div>
+      <div class="module-count" id="grnCount">—</div>
+    </div>
+    <div class="module-card" onclick="navTo('fg')">
+      <div class="module-icon">📦</div>
+      <div class="module-name">FG Inventory</div>
+      <div class="module-desc">Finished Goods</div>
+      <div class="module-count" id="fgCount">—</div>
+    </div>
+    <div class="module-card" onclick="navTo('consumption')">
+      <div class="module-icon">📊</div>
+      <div class="module-name">Consumption</div>
+      <div class="module-desc">Usage Tracking</div>
+      <div class="module-count" id="conCount">—</div>
+    </div>
+    <div class="module-card" onclick="navTo('forecast')">
+      <div class="module-icon">📈</div>
+      <div class="module-name">Forecast</div>
+      <div class="module-desc">Demand Planning</div>
+      <div class="module-count" id="fcCount">—</div>
+    </div>
+    <div class="module-card" onclick="navTo('replenishment')">
+      <div class="module-icon">🔁</div>
+      <div class="module-name">Replenishment</div>
+      <div class="module-desc">Reorder Alerts</div>
+      <div class="module-count" id="repCount">—</div>
+    </div>
+  </div>
+
+  <!-- Upload zone -->
+  <div style="padding: 0 16px 8px;">
+    <div style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Load Your Data</div>
+  </div>
+  <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📊</div>
+    <div class="upload-text">Upload Sproutlife Inventory.xlsx</div>
+    <div class="upload-sub">Tap to select your Excel file — all sheets will load</div>
+    <button class="upload-btn">Choose File</button>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
+  <div id="uploadStatus" style="text-align:center; font-size:12px; color:var(--muted); padding:8px;"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: RM INVENTORY
+════════════════════════════════════════════ -->
+<div class="page" id="page-rm">
+  <div class="search-wrap" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="rmSearch" placeholder="Search item, SKU, batch, warehouse…" oninput="renderRM()">
+  </div>
+  <div class="filter-row" id="rmWHFilter"></div>
+  <div class="filter-row" id="rmStockFilter">
+    <div class="chip active" onclick="setRMStock('all',this)">All Stock</div>
+    <div class="chip" onclick="setRMStock('avail',this)">Available</div>
+    <div class="chip" onclick="setRMStock('zero',this)">Zero Stock</div>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Available</div>
+      <div class="kpi-value" id="rmTotalQty">0</div>
+      <div class="kpi-sub" id="rmTotalRec">0 records</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">Warehouses</div>
+      <div class="kpi-value" id="rmWHCount">0</div>
+      <div class="kpi-sub">Active locations</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Expiring Soon</div>
+      <div class="kpi-value" id="rmExpSoon">0</div>
+      <div class="kpi-sub">Within 90 days</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Expired</div>
+      <div class="kpi-value" id="rmExpired">0</div>
+      <div class="kpi-sub">Past expiry</div>
+    </div>
+  </div>
+  <div class="section-title">Items <span class="section-count" id="rmItemCount">0</span></div>
+  <div class="card-list" id="rmList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: GRN DATA
+════════════════════════════════════════════ -->
+<div class="page" id="page-grn">
+  <div class="search-wrap" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="grnSearch" placeholder="Search PO, vendor, item…" oninput="renderGRN()">
+  </div>
+  <div class="filter-row" id="grnStatusFilter">
+    <div class="chip active" onclick="setGRNFilter('all',this)">All</div>
+    <div class="chip" onclick="setGRNFilter('received',this)">Received</div>
+    <div class="chip" onclick="setGRNFilter('pending',this)">Pending</div>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-card teal">
+      <div class="kpi-label">Total GRNs</div>
+      <div class="kpi-value" id="grnTotal">0</div>
+      <div class="kpi-sub">All entries</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Qty In</div>
+      <div class="kpi-value" id="grnQtyTotal">0</div>
+      <div class="kpi-sub">Units received</div>
+    </div>
+  </div>
+  <div class="section-title">GRN Records <span class="section-count" id="grnCount2">0</span></div>
+  <div id="grnList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: FG INVENTORY
+════════════════════════════════════════════ -->
+<div class="page" id="page-fg">
+  <div class="search-wrap" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="fgSearch" placeholder="Search product, batch, warehouse…" oninput="renderFG()">
+  </div>
+  <div class="filter-row" id="fgWHFilter"></div>
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-label">FG Available</div>
+      <div class="kpi-value" id="fgTotalQty">0</div>
+      <div class="kpi-sub" id="fgTotalRec">0 SKUs</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Total Value</div>
+      <div class="kpi-value" id="fgTotalVal">₹0</div>
+      <div class="kpi-sub">Inc. Tax</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Expiring</div>
+      <div class="kpi-value" id="fgExpSoon">0</div>
+      <div class="kpi-sub">Within 90 days</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Expired</div>
+      <div class="kpi-value" id="fgExpired">0</div>
+      <div class="kpi-sub">Past expiry</div>
+    </div>
+  </div>
+  <div class="section-title">FG Items <span class="section-count" id="fgItemCount">0</span></div>
+  <div class="card-list" id="fgList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: CONSUMPTION
+════════════════════════════════════════════ -->
+<div class="page" id="page-consumption">
+  <div class="search-wrap" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="conSearch" placeholder="Search item or category…" oninput="renderConsumption()">
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Consumed</div>
+      <div class="kpi-value" id="conTotal">0</div>
+      <div class="kpi-sub">Units used</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Items Tracked</div>
+      <div class="kpi-value" id="conItems">0</div>
+      <div class="kpi-sub">Unique SKUs</div>
+    </div>
+  </div>
+  <div class="section-title">Consumption Records <span class="section-count" id="conCount2">0</span></div>
+  <div id="conList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: FORECAST
+════════════════════════════════════════════ -->
+<div class="page" id="page-forecast">
+  <div class="search-wrap" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="fcSearch" placeholder="Search item or period…" oninput="renderForecast()">
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Forecast Items</div>
+      <div class="kpi-value" id="fcItems">0</div>
+      <div class="kpi-sub">Tracked SKUs</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Forecast Qty</div>
+      <div class="kpi-value" id="fcQty">0</div>
+      <div class="kpi-sub">Units planned</div>
+    </div>
+  </div>
+  <div class="section-title">Forecast Plans <span class="section-count" id="fcCount2">0</span></div>
+  <div id="fcList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: REPLENISHMENT
+════════════════════════════════════════════ -->
+<div class="page" id="page-replenishment">
+  <div class="search-wrap" style="position:relative">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="repSearch" placeholder="Search item…" oninput="renderReplenishment()">
+  </div>
+  <div class="filter-row" id="repFilter">
+    <div class="chip active" onclick="setRepFilter('all',this)">All</div>
+    <div class="chip" onclick="setRepFilter('urgent',this)">🚨 Urgent</div>
+    <div class="chip" onclick="setRepFilter('warn',this)">⚠️ Low Stock</div>
+    <div class="chip" onclick="setRepFilter('ok',this)">✅ OK</div>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-card red">
+      <div class="kpi-label">Urgent Reorder</div>
+      <div class="kpi-value" id="repUrgent">0</div>
+      <div class="kpi-sub">Order immediately</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Low Stock</div>
+      <div class="kpi-value" id="repLow">0</div>
+      <div class="kpi-sub">Plan reorder soon</div>
+    </div>
+  </div>
+  <div class="section-title">Replenishment List <span class="section-count" id="repCount2">0</span></div>
+  <div id="repList"></div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <div class="modal-badge-row" id="modalBadges"></div>
+      <div class="modal-name" id="modalName"></div>
+      <div class="modal-sku" id="modalSku"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="navTo('home')" id="nav-home">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Home</div>
+    <div class="nav-dot"></div>
+  </div>
+  <div class="nav-item" onclick="navTo('rm')" id="nav-rm">
+    <div class="nav-icon">🏭</div>
+    <div class="nav-label">RM</div>
+    <div class="nav-dot"></div>
+  </div>
+  <div class="nav-item" onclick="navTo('fg')" id="nav-fg">
+    <div class="nav-icon">📦</div>
+    <div class="nav-label">FG</div>
+    <div class="nav-dot"></div>
+  </div>
+  <div class="nav-item" onclick="navTo('grn')" id="nav-grn">
+    <div class="nav-icon">📥</div>
+    <div class="nav-label">GRN</div>
+    <div class="nav-dot"></div>
+  </div>
+  <div class="nav-item" onclick="navTo('replenishment')" id="nav-replenishment">
+    <div class="nav-icon">🔁</div>
+    <div class="nav-label">Reorder</div>
+    <div class="nav-dot"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let DATA = { rm: [], grn: [], fg: [], consumption: [], forecast: [] };
+let FILTERS = { rmWH: 'all', rmStock: 'all', grnStatus: 'all', fgWH: 'all', rep: 'all' };
+let currentPage = 'home';
+let dataLoaded = false;
+
+// ── DEMO DATA (shown before upload) ──────
+const demoRM = [
+  {name:'Pea Protein Isolate', sku:'PPI-001', batch:'PPB011225', warehouse:'EMIZA - Mumbai', qtyAvail:1400, qtyIn:1400, qtyIssue:0, expiry:'19-Jun-2027', mfg:'01-Dec-2025', aging:31, uom:'Nos', valueInc:280000, valueEx:240000},
+  {name:'Pea Protein Isolate', sku:'PPI-001', batch:'PPB011225C', warehouse:'Emiza -Delhi', qtyAvail:900, qtyIn:900, qtyIssue:0, expiry:'19-Jun-2027', mfg:'01-Dec-2025', aging:41, uom:'Nos', valueInc:180000, valueEx:155000},
+  {name:'Brown Rice Protein', sku:'BRP-002', batch:'CPP220126A1', warehouse:'Emiza -Delhi', qtyAvail:1500, qtyIn:1500, qtyIssue:0, expiry:'23-Jul-2027', mfg:'24-Jan-2026', aging:10, uom:'Nos', valueInc:225000, valueEx:195000},
+  {name:'Whey Protein Conc.', sku:'WPC-003', batch:'APPA271125A', warehouse:'Emiza -Delhi', qtyAvail:500, qtyIn:500, qtyIssue:0, expiry:'26-May-2027', mfg:'27-Nov-2025', aging:71, uom:'Nos', valueInc:175000, valueEx:148000},
+  {name:'Soy Protein Isolate', sku:'SPI-004', batch:'311025PP', warehouse:'Emiza -Delhi', qtyAvail:45, qtyIn:69, qtyIssue:24, expiry:'30-Oct-2025', mfg:'31-Oct-2025', aging:94, uom:'Nos', valueInc:9000, valueEx:7800},
+  {name:'Hemp Protein', sku:'HMP-005', batch:'APPA111125A', warehouse:'Emiza -Delhi', qtyAvail:529, qtyIn:529, qtyIssue:0, expiry:'10-May-2027', mfg:'11-Nov-2025', aging:94, uom:'Nos', valueInc:105800, valueEx:90000},
+  {name:'Pea Protein Isolate', sku:'PPI-001', batch:'APPA2401256A1', warehouse:'Emiza 3 Warehouse', qtyAvail:300, qtyIn:300, qtyIssue:0, expiry:'27-Jul-2027', mfg:'24-Jan-2026', aging:8, uom:'Nos', valueInc:60000, valueEx:51000},
+  {name:'Brown Rice Protein', sku:'BRP-002', batch:'CPP220126A1', warehouse:'Emiza 3 Warehouse', qtyAvail:1200, qtyIn:1200, qtyIssue:0, expiry:'23-Jul-2027', mfg:'24-Jan-2026', aging:20, uom:'Nos', valueInc:180000, valueEx:155000},
+  {name:'Sunflower Protein', sku:'SFP-006', batch:'APPA171125A', warehouse:'Emiza 3 Warehouse', qtyAvail:960, qtyIn:1560, qtyIssue:600, expiry:'16-Jun-2027', mfg:'17-Dec-2025', aging:46, uom:'Nos', valueInc:192000, valueEx:165000},
+  {name:'Pumpkin Protein', sku:'PKP-007', batch:'APPA091225A', warehouse:'Emiza 3 Warehouse', qtyAvail:300, qtyIn:300, qtyIssue:0, expiry:'08-Jun-2027', mfg:'09-Dec-2025', aging:66, uom:'Nos', valueInc:75000, valueEx:64000},
+  {name:'Flaxseed Protein', sku:'FLP-008', batch:'APPA271025A', warehouse:'Emiza -Delhi', qtyAvail:2, qtyIn:2, qtyIssue:0, expiry:'26-Apr-2027', mfg:'27-Oct-2025', aging:94, uom:'Nos', valueInc:400, valueEx:340},
+  {name:'Chia Protein', sku:'CHP-009', batch:'APPA261125A1', warehouse:'Emiza 3 Warehouse', qtyAvail:1012, qtyIn:1012, qtyIssue:0, expiry:'25-May-2027', mfg:'26-Nov-2025', aging:77, uom:'Nos', valueInc:202400, valueEx:173000},
+  {name:'Delhi Stock', sku:'PPA-010', batch:'PPA131025AA', warehouse:'Delhi -CFA GHEVRA', qtyAvail:8, qtyIn:8, qtyIssue:0, expiry:'12-Apr-2027', mfg:'13-Oct-2025', aging:54, uom:'Nos', valueInc:1600, valueEx:1360},
+];
+
+const demoGRN = [
+  {po:'PO-2026-001', vendor:'Nature Proteins Ltd', item:'Pea Protein Isolate', qty:2000, received:2000, pending:0, date:'20-Jan-2026', status:'received'},
+  {po:'PO-2026-002', vendor:'Green Source India', item:'Brown Rice Protein', qty:1500, received:1200, pending:300, date:'22-Jan-2026', status:'partial'},
+  {po:'PO-2026-003', vendor:'HealthChem Pvt Ltd', item:'Whey Protein Conc.', qty:800, received:0, pending:800, date:'28-Jan-2026', status:'pending'},
+  {po:'PO-2026-004', vendor:'Nature Proteins Ltd', item:'Hemp Protein', qty:600, received:600, pending:0, date:'05-Feb-2026', status:'received'},
+  {po:'PO-2026-005', vendor:'AgriProtein Co.', item:'Sunflower Protein', qty:1200, received:1200, pending:0, date:'10-Feb-2026', status:'received'},
+  {po:'PO-2026-006', vendor:'Organic Farms Ltd', item:'Soy Protein Isolate', qty:500, received:200, pending:300, date:'15-Feb-2026', status:'partial'},
+];
+
+const demoFG = [
+  {name:'Plant Protein Powder 1kg', sku:'FG-PPP-001', batch:'FPP011225', warehouse:'EMIZA - Mumbai', qtyAvail:350, qtyIn:400, qtyIssue:50, expiry:'01-Jun-2027', aging:30, valueInc:875000},
+  {name:'Plant Protein Powder 500g', sku:'FG-PPP-002', batch:'FPP021225', warehouse:'Emiza -Delhi', qtyAvail:620, qtyIn:700, qtyIssue:80, expiry:'15-May-2027', aging:45, valueInc:930000},
+  {name:'Vegan Protein Blend 1kg', sku:'FG-VPB-001', batch:'FVB011126', warehouse:'Emiza 3 Warehouse', qtyAvail:180, qtyIn:200, qtyIssue:20, expiry:'20-Jul-2027', aging:20, valueInc:630000},
+  {name:'Sports Protein 2kg', sku:'FG-SPT-001', batch:'FSP011225', warehouse:'Delhi -CFA GHEVRA', qtyAvail:90, qtyIn:100, qtyIssue:10, expiry:'30-Oct-2025', aging:100, valueInc:450000},
+  {name:'Recovery Protein 750g', sku:'FG-REC-001', batch:'FRP011225', warehouse:'EMIZA - Mumbai', qtyAvail:210, qtyIn:250, qtyIssue:40, expiry:'12-Apr-2027', aging:55, valueInc:472500},
+];
+
+const demoConsumption = [
+  {item:'Pea Protein Isolate', sku:'PPI-001', qty:600, month:'Jan-2026', category:'RM'},
+  {item:'Brown Rice Protein', sku:'BRP-002', qty:300, month:'Jan-2026', category:'RM'},
+  {item:'Whey Protein Conc.', sku:'WPC-003', qty:150, month:'Jan-2026', category:'RM'},
+  {item:'Hemp Protein', sku:'HMP-005', qty:200, month:'Feb-2026', category:'RM'},
+  {item:'Sunflower Protein', sku:'SFP-006', qty:600, month:'Feb-2026', category:'RM'},
+  {item:'Chia Protein', sku:'CHP-009', qty:80, month:'Feb-2026', category:'RM'},
+];
+
+const demoForecast = [
+  {item:'Plant Protein Powder 1kg', sku:'FG-PPP-001', period:'Mar-2026', forecastQty:450, actualQty:0, variance:0},
+  {item:'Plant Protein Powder 500g', sku:'FG-PPP-002', period:'Mar-2026', forecastQty:700, actualQty:0, variance:0},
+  {item:'Vegan Protein Blend 1kg', sku:'FG-VPB-001', period:'Mar-2026', forecastQty:200, actualQty:0, variance:0},
+  {item:'Sports Protein 2kg', sku:'FG-SPT-001', period:'Mar-2026', forecastQty:120, actualQty:0, variance:0},
+  {item:'Plant Protein Powder 1kg', sku:'FG-PPP-001', period:'Apr-2026', forecastQty:500, actualQty:0, variance:0},
+];
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.onload = function() {
+  document.getElementById('heroDate').textContent = new Date().toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  setTimeout(() => {
+    document.getElementById('splash').style.opacity = '0';
+    setTimeout(() => document.getElementById('splash').style.display = 'none', 500);
+  }, 1400);
+  loadDemoData();
+};
+
+function loadDemoData() {
+  DATA.rm = demoRM;
+  DATA.grn = demoGRN;
+  DATA.fg = demoFG;
+  DATA.consumption = demoConsumption;
+  DATA.forecast = demoForecast;
+  updateHome();
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+const pageNames = {home:'Dashboard', rm:'RM Inventory', grn:'GRN Data', fg:'FG Inventory', consumption:'Consumption', forecast:'Forecast', replenishment:'Replenishment'};
+
+function navTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('topbarPage').textContent = pageNames[page] || page;
+  currentPage = page;
+  window.scrollTo(0,0);
+  if (page === 'rm') renderRM();
+  if (page === 'grn') renderGRN();
+  if (page === 'fg') renderFG();
+  if (page === 'consumption') renderConsumption();
+  if (page === 'forecast') renderForecast();
+  if (page === 'replenishment') renderReplenishment();
+}
+
+// ══════════════════════════════════════════
+// FILE UPLOAD
+// ══════════════════════════════════════════
+function openUpload() { document.getElementById('fileInput').click(); }
+
+function handleFileUpload(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  document.getElementById('uploadStatus').textContent = '⏳ Reading file...';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+      const sheetMap = {
+        'RM-Inventory': 'rm',
+        'GRN-Data': 'grn',
+        'GRN Data': 'grn',
+        'FG-Inventory': 'fg',
+        'FG Inventory': 'fg',
+        'Consumption': 'consumption',
+        'Forecast': 'forecast'
+      };
+      let loaded = [];
+      wb.SheetNames.forEach(sn => {
+        const key = sheetMap[sn];
+        if (key) {
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {defval:''});
+          DATA[key] = rows.map(r => normalizeRow(r, key));
+          loaded.push(sn);
+        }
+      });
+      dataLoaded = true;
+      document.getElementById('uploadStatus').textContent = `✅ Loaded: ${loaded.join(', ')}`;
+      updateHome();
+    } catch(err) {
+      document.getElementById('uploadStatus').textContent = '❌ Error reading file. Try again.';
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function normalizeRow(r, type) {
+  const get = (...keys) => { for(let k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
+  if (type === 'rm' || type === 'fg') {
+    return {
+      name: get('Item Name','item name','Name','name','Item Type','Category'),
+      sku: get('Item SKU','SKU','sku','Batch No','batch no','Batch'),
+      batch: get('Batch No','batch no','Batch','Batch Number'),
+      warehouse: get('Warehouse','warehouse','WH'),
+      qtyAvail: +get('Qty Available','qty available','Available','Qty Avail') || 0,
+      qtyIn: +get('Qty Inward','qty inward','Inward','Qty In') || 0,
+      qtyIssue: +get('Qty (Issue / Hold)','Issue','Hold','Qty Issue') || 0,
+      expiry: formatDate(get('Expiry Date','expiry date','Expiry')),
+      mfg: formatDate(get('MFG Date','mfg date','MFG','Manufacturing Date')),
+      aging: +get('Current Aging (Days)','Aging','aging') || 0,
+      uom: get('UoM','UOM','uom','Unit'),
+      valueInc: +get('Value (Inc Tax)','Value Inc','ValueInc') || 0,
+      valueEx: +get('Value (Ex Tax)','Value Ex','ValueEx') || 0,
+    };
+  }
+  if (type === 'grn') {
+    return {
+      po: get('PO No','PO','po','PO Number','Purchase Order'),
+      vendor: get('Vendor','vendor','Supplier','supplier'),
+      item: get('Item Name','Item','item','Product'),
+      qty: +get('Qty','Quantity','qty ordered') || 0,
+      received: +get('Qty Received','Received','received') || 0,
+      pending: +get('Qty Pending','Pending','pending') || 0,
+      date: formatDate(get('GRN Date','Date','date')),
+      status: get('Status','status') || 'received',
+    };
+  }
+  if (type === 'consumption') {
+    return {
+      item: get('Item Name','Item','item'),
+      sku: get('SKU','sku','Item SKU'),
+      qty: +get('Quantity','qty','Consumed','consumed qty') || 0,
+      month: get('Month','month','Period','period'),
+      category: get('Category','category','Type') || 'RM',
+    };
+  }
+  if (type === 'forecast') {
+    return {
+      item: get('Item Name','Item','item','Product'),
+      sku: get('SKU','sku','Item SKU'),
+      period: get('Period','period','Month','month'),
+      forecastQty: +get('Forecast Qty','Forecast','forecast','Projected Qty') || 0,
+      actualQty: +get('Actual Qty','Actual','actual') || 0,
+      variance: +get('Variance','variance') || 0,
+    };
+  }
+  return r;
+}
+
+function formatDate(val) {
+  if (!val) return '—';
+  if (val instanceof Date) return val.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+  return String(val);
+}
+
+function refreshData() {
+  document.getElementById('fileInput').click();
+}
+
+// ══════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════
+function updateHome() {
+  document.getElementById('rmCount').textContent = DATA.rm.length;
+  document.getElementById('grnCount').textContent = DATA.grn.length;
+  document.getElementById('fgCount').textContent = DATA.fg.length;
+  document.getElementById('conCount').textContent = DATA.consumption.length;
+  document.getElementById('fcCount').textContent = DATA.forecast.length;
+
+  const repUrgent = DATA.rm.filter(r => r.qtyAvail <= 0).length;
+  document.getElementById('repCount').textContent = repUrgent + ' alerts';
+
+  // Alerts
+  const expired = DATA.rm.filter(r => isExpired(r.expiry)).length;
+  const expiringSoon = DATA.rm.filter(r => isExpiringSoon(r.expiry)).length;
+  let alertsHTML = '';
+  if (expired > 0) alertsHTML += `<div class="alert-banner" style="background:#fee2e2;border-color:#fecaca"><div class="alert-icon">🚨</div><div class="alert-text"><b>${expired} RM items</b> have expired. Quarantine immediately.</div></div>`;
+  if (expiringSoon > 0) alertsHTML += `<div class="alert-banner"><div class="alert-icon">⚠️</div><div class="alert-text"><b>${expiringSoon} items</b> expiring within 90 days. Plan consumption or return.</div></div>`;
+  document.getElementById('homeAlerts').innerHTML = alertsHTML;
+}
+
+// ══════════════════════════════════════════
+// EXPIRY UTILS
+// ══════════════════════════════════════════
+function parseExpiry(str) {
+  if (!str || str === '—') return null;
+  const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const parts = str.split(/[-\/\s]/);
+  if (parts.length >= 3) {
+    const d = parseInt(parts[0]), m = months[parts[1].toLowerCase().substring(0,3)], y = parseInt(parts[2]);
+    if (!isNaN(d) && m !== undefined && !isNaN(y)) return new Date(y, m, d);
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+function daysToExpiry(str) {
+  const d = parseExpiry(str);
+  if (!d) return 9999;
+  return Math.ceil((d - new Date()) / 86400000);
+}
+function isExpired(str) { return daysToExpiry(str) < 0; }
+function isExpiringSoon(str) { const d = daysToExpiry(str); return d >= 0 && d < 90; }
+function expiryStatus(str) {
+  const d = daysToExpiry(str);
+  if (d < 0) return 'exp';
+  if (d < 90) return 'warn';
+  return 'ok';
+}
+function expiryBadge(str) {
+  const s = expiryStatus(str);
+  if (s === 'exp') return '<span class="badge badge-red">Expired</span>';
+  if (s === 'warn') return '<span class="badge badge-yellow">Expiring Soon</span>';
+  return '<span class="badge badge-green">Valid</span>';
+}
+
+// ══════════════════════════════════════════
+// RM INVENTORY
+// ══════════════════════════════════════════
+let rmStockFilter = 'all';
+
+function setRMStock(f, el) {
+  rmStockFilter = f;
+  document.querySelectorAll('#rmStockFilter .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderRM();
+}
+
+function getFilteredRM() {
+  const q = (document.getElementById('rmSearch')?.value || '').toLowerCase();
+  return DATA.rm.filter(r => {
+    const matchQ = !q || [r.name,r.sku,r.batch,r.warehouse].join(' ').toLowerCase().includes(q);
+    const matchStock = rmStockFilter === 'all' || (rmStockFilter === 'avail' && r.qtyAvail > 0) || (rmStockFilter === 'zero' && r.qtyAvail <= 0);
+    return matchQ && matchStock;
+  });
+}
+
+function renderRM() {
+  const data = getFilteredRM();
+  const warehouses = [...new Set(DATA.rm.map(r => r.warehouse))];
+  
+  // KPIs
+  document.getElementById('rmTotalQty').textContent = data.reduce((a,b)=>a+b.qtyAvail,0).toLocaleString();
+  document.getElementById('rmTotalRec').textContent = data.length + ' records';
+  document.getElementById('rmWHCount').textContent = [...new Set(data.map(r=>r.warehouse))].length;
+  document.getElementById('rmExpSoon').textContent = data.filter(r=>isExpiringSoon(r.expiry)).length;
+  document.getElementById('rmExpired').textContent = data.filter(r=>isExpired(r.expiry)).length;
+  document.getElementById('rmItemCount').textContent = data.length;
+
+  const list = document.getElementById('rmList');
+  if (!data.length) { list.innerHTML = emptyState('No RM records found'); return; }
+  list.innerHTML = data.map((r,i) => `
+    <div class="inv-card" onclick="showRMDetail(${DATA.rm.indexOf(r)})">
+      <div class="inv-card-header">
+        <div>
+          <div class="inv-name">${r.name || 'Unknown Item'}</div>
+          <div class="inv-sku">${r.batch || r.sku || '—'}</div>
+        </div>
+        ${expiryBadge(r.expiry)}
+      </div>
+      <div class="inv-warehouse">📍 ${r.warehouse || '—'}</div>
+      <div class="inv-stats">
+        <div class="stat-box">
+          <div class="stat-label">Available</div>
+          <div class="stat-val green">${r.qtyAvail.toLocaleString()}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Inward</div>
+          <div class="stat-val">${r.qtyIn.toLocaleString()}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Issued</div>
+          <div class="stat-val ${r.qtyIssue > 0 ? 'orange' : ''}">${r.qtyIssue}</div>
+        </div>
+      </div>
+      <div class="expiry-row">
+        <div class="expiry-label">Expiry: <b>${r.expiry}</b></div>
+        <div class="expiry-label">Aging: <b>${r.aging} days</b></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showRMDetail(idx) {
+  const r = DATA.rm[idx];
+  document.getElementById('modalBadges').innerHTML = expiryBadge(r.expiry) + `<span class="badge badge-gray">${r.uom}</span>`;
+  document.getElementById('modalName').textContent = r.name || 'Unknown Item';
+  document.getElementById('modalSku').textContent = `Batch: ${r.batch || '—'}  ·  SKU: ${r.sku || '—'}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">📍 Location</div>
+      <div class="detail-grid">
+        <div class="detail-item full"><div class="detail-lbl">Warehouse</div><div class="detail-val">${r.warehouse || '—'}</div></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">📦 Stock Quantities</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-lbl">Available</div><div class="detail-val" style="color:var(--green)">${r.qtyAvail.toLocaleString()}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Inward</div><div class="detail-val">${r.qtyIn.toLocaleString()}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Issued/Hold</div><div class="detail-val" style="color:var(--orange)">${r.qtyIssue}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Current Aging</div><div class="detail-val">${r.aging} days</div></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">📅 Dates</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-lbl">MFG Date</div><div class="detail-val">${r.mfg || '—'}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Expiry Date</div><div class="detail-val" style="color:${isExpired(r.expiry)?'var(--red)':isExpiringSoon(r.expiry)?'var(--yellow)':'var(--green)'}">${r.expiry || '—'}</div></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">💰 Value</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-lbl">Inc. Tax</div><div class="detail-val" style="color:var(--orange)">₹${(r.valueInc||0).toLocaleString()}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Ex. Tax</div><div class="detail-val">₹${(r.valueEx||0).toLocaleString()}</div></div>
+      </div>
+    </div>`;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+// ══════════════════════════════════════════
+// GRN
+// ══════════════════════════════════════════
+let grnStatusFilter = 'all';
+function setGRNFilter(f, el) {
+  grnStatusFilter = f;
+  document.querySelectorAll('#grnStatusFilter .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderGRN();
+}
+function renderGRN() {
+  const q = (document.getElementById('grnSearch')?.value||'').toLowerCase();
+  let data = DATA.grn.filter(r => {
+    const mq = !q || [r.po,r.vendor,r.item].join(' ').toLowerCase().includes(q);
+    const ms = grnStatusFilter === 'all' || r.status === grnStatusFilter || (grnStatusFilter==='received'&&r.status==='received') || (grnStatusFilter==='pending'&&(r.status==='pending'||r.status==='partial'));
+    return mq && ms;
+  });
+  document.getElementById('grnTotal').textContent = data.length;
+  document.getElementById('grnQtyTotal').textContent = data.reduce((a,b)=>a+(b.received||b.qty||0),0).toLocaleString();
+  document.getElementById('grnCount2').textContent = data.length;
+  const list = document.getElementById('grnList');
+  if (!data.length) { list.innerHTML = emptyState('No GRN records found'); return; }
+  list.innerHTML = data.map(r => {
+    const pct = r.qty > 0 ? Math.round((r.received / r.qty) * 100) : 0;
+    const sc = r.status === 'received' ? 'badge-green' : r.status === 'partial' ? 'badge-yellow' : 'badge-red';
+    const sl = r.status === 'received' ? 'Received' : r.status === 'partial' ? 'Partial' : 'Pending';
+    return `
+    <div class="grn-card">
+      <div class="grn-header">
+        <div class="grn-po">${r.po || '—'}</div>
+        <span class="badge ${sc}">${sl}</span>
+      </div>
+      <div class="grn-vendor">${r.vendor || '—'}</div>
+      <div class="grn-item">📦 ${r.item || '—'} · ${r.date || '—'}</div>
+      <div class="grn-stats">
+        <div class="grn-stat"><div class="grn-stat-label">Ordered</div><div class="grn-stat-val">${(r.qty||0).toLocaleString()}</div></div>
+        <div class="grn-stat"><div class="grn-stat-label">Received</div><div class="grn-stat-val" style="color:var(--green)">${(r.received||0).toLocaleString()}</div></div>
+        <div class="grn-stat"><div class="grn-stat-label">Pending</div><div class="grn-stat-val" style="color:${r.pending>0?'var(--orange)':'var(--muted)'}">${(r.pending||0).toLocaleString()}</div></div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-bar"><div class="prog-fill ${pct<30?'low':pct<70?'mid':''}" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// FG INVENTORY
+// ══════════════════════════════════════════
+function renderFG() {
+  const q = (document.getElementById('fgSearch')?.value||'').toLowerCase();
+  const data = DATA.fg.filter(r => !q || [r.name,r.sku,r.batch,r.warehouse].join(' ').toLowerCase().includes(q));
+  document.getElementById('fgTotalQty').textContent = data.reduce((a,b)=>a+b.qtyAvail,0).toLocaleString();
+  document.getElementById('fgTotalRec').textContent = data.length + ' SKUs';
+  document.getElementById('fgTotalVal').textContent = '₹' + (data.reduce((a,b)=>a+(b.valueInc||0),0)/1000).toFixed(0) + 'K';
+  document.getElementById('fgExpSoon').textContent = data.filter(r=>isExpiringSoon(r.expiry)).length;
+  document.getElementById('fgExpired').textContent = data.filter(r=>isExpired(r.expiry)).length;
+  document.getElementById('fgItemCount').textContent = data.length;
+  const list = document.getElementById('fgList');
+  if (!data.length) { list.innerHTML = emptyState('No FG records found'); return; }
+  list.innerHTML = data.map((r,i) => `
+    <div class="inv-card" onclick="showFGDetail(${DATA.fg.indexOf(r)})">
+      <div class="inv-card-header">
+        <div>
+          <div class="inv-name">${r.name||'Unknown'}</div>
+          <div class="inv-sku">${r.batch||r.sku||'—'}</div>
+        </div>
+        ${expiryBadge(r.expiry)}
+      </div>
+      <div class="inv-warehouse">📍 ${r.warehouse||'—'}</div>
+      <div class="inv-stats">
+        <div class="stat-box"><div class="stat-label">Available</div><div class="stat-val green">${r.qtyAvail.toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-label">Inward</div><div class="stat-val">${r.qtyIn.toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-label">Issued</div><div class="stat-val ${r.qtyIssue>0?'orange':''}">${r.qtyIssue}</div></div>
+      </div>
+      <div class="expiry-row">
+        <div class="expiry-label">Expiry: <b>${r.expiry}</b></div>
+        <div class="expiry-label" style="color:var(--orange)">₹${((r.valueInc||0)/1000).toFixed(0)}K</div>
+      </div>
+    </div>`).join('');
+}
+
+function showFGDetail(idx) {
+  const r = DATA.fg[idx];
+  document.getElementById('modalBadges').innerHTML = expiryBadge(r.expiry);
+  document.getElementById('modalName').textContent = r.name || 'Unknown';
+  document.getElementById('modalSku').textContent = `Batch: ${r.batch||'—'}  ·  SKU: ${r.sku||'—'}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">📍 Location</div>
+      <div class="detail-grid"><div class="detail-item full"><div class="detail-lbl">Warehouse</div><div class="detail-val">${r.warehouse||'—'}</div></div></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">📦 Stock</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-lbl">Available</div><div class="detail-val" style="color:var(--green)">${r.qtyAvail.toLocaleString()}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Inward</div><div class="detail-val">${r.qtyIn.toLocaleString()}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Issued</div><div class="detail-val">${r.qtyIssue}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Aging</div><div class="detail-val">${r.aging} days</div></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">💰 Value</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-lbl">Inc. Tax</div><div class="detail-val" style="color:var(--orange)">₹${(r.valueInc||0).toLocaleString()}</div></div>
+        <div class="detail-item"><div class="detail-lbl">Expiry</div><div class="detail-val" style="color:${isExpired(r.expiry)?'var(--red)':isExpiringSoon(r.expiry)?'var(--yellow)':'var(--green)'}">${r.expiry||'—'}</div></div>
+      </div>
+    </div>`;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+// ══════════════════════════════════════════
+// CONSUMPTION
+// ══════════════════════════════════════════
+function renderConsumption() {
+  const q = (document.getElementById('conSearch')?.value||'').toLowerCase();
+  const data = DATA.consumption.filter(r => !q || [r.item,r.sku,r.month,r.category].join(' ').toLowerCase().includes(q));
+  document.getElementById('conTotal').textContent = data.reduce((a,b)=>a+b.qty,0).toLocaleString();
+  document.getElementById('conItems').textContent = [...new Set(data.map(r=>r.sku||r.item))].length;
+  document.getElementById('conCount2').textContent = data.length;
+  const list = document.getElementById('conList');
+  if (!data.length) { list.innerHTML = emptyState('No consumption records'); return; }
+  list.innerHTML = data.map(r => `
+    <div class="con-card">
+      <div class="con-item-name">${r.item||'—'}</div>
+      <div class="con-row"><span class="con-key">SKU</span><span class="con-val">${r.sku||'—'}</span></div>
+      <div class="con-row"><span class="con-key">Period</span><span class="con-val">${r.month||'—'}</span></div>
+      <div class="con-row"><span class="con-key">Category</span><span class="con-val">${r.category||'—'}</span></div>
+      <div class="con-row"><span class="con-key">Qty Consumed</span><span class="con-val" style="color:var(--orange)">${r.qty.toLocaleString()}</span></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// FORECAST
+// ══════════════════════════════════════════
+function renderForecast() {
+  const q = (document.getElementById('fcSearch')?.value||'').toLowerCase();
+  const data = DATA.forecast.filter(r => !q || [r.item,r.sku,r.period].join(' ').toLowerCase().includes(q));
+  document.getElementById('fcItems').textContent = [...new Set(data.map(r=>r.sku||r.item))].length;
+  document.getElementById('fcQty').textContent = data.reduce((a,b)=>a+b.forecastQty,0).toLocaleString();
+  document.getElementById('fcCount2').textContent = data.length;
+  const list = document.getElementById('fcList');
+  if (!data.length) { list.innerHTML = emptyState('No forecast records'); return; }
+  list.innerHTML = data.map(r => `
+    <div class="fc-card">
+      <div class="fc-info">
+        <div class="fc-name">${r.item||'—'}</div>
+        <div class="fc-period">📅 ${r.period||'—'} · ${r.sku||'—'}</div>
+      </div>
+      <div class="fc-vals">
+        <div class="fc-num">${r.forecastQty.toLocaleString()}</div>
+        <div class="fc-sub">Forecast Qty</div>
+        ${r.actualQty > 0 ? `<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green);margin-top:4px">${r.actualQty} actual</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// REPLENISHMENT
+// ══════════════════════════════════════════
+let repStatusFilter = 'all';
+function setRepFilter(f, el) {
+  repStatusFilter = f;
+  document.querySelectorAll('#repFilter .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderReplenishment();
+}
+function renderReplenishment() {
+  const q = (document.getElementById('repSearch')?.value||'').toLowerCase();
+  // Build replenishment from RM + FG data
+  const allItems = [...DATA.rm, ...DATA.fg];
+  let rep = allItems.map(r => {
+    const level = r.qtyAvail <= 0 ? 'urgent' : r.qtyAvail < 100 ? 'warn' : 'ok';
+    return {...r, level};
+  }).filter(r => {
+    const mq = !q || (r.name||'').toLowerCase().includes(q);
+    const ms = repStatusFilter === 'all' || r.level === repStatusFilter;
+    return mq && ms;
+  });
+
+  const urgent = rep.filter(r=>r.level==='urgent').length;
+  const warn = rep.filter(r=>r.level==='warn').length;
+  document.getElementById('repUrgent').textContent = urgent;
+  document.getElementById('repLow').textContent = warn;
+  document.getElementById('repCount2').textContent = rep.length;
+  document.getElementById('repCount').textContent = (urgent + warn) + ' alerts';
+
+  const list = document.getElementById('repList');
+  if (!rep.length) { list.innerHTML = emptyState('No replenishment alerts'); return; }
+  list.innerHTML = rep.map(r => `
+    <div class="rep-card ${r.level}">
+      <div class="rep-top">
+        <div>
+          <div class="rep-name">${r.name||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.warehouse||'—'}</div>
+        </div>
+        <div>
+          <div class="rep-qty" style="color:${r.level==='urgent'?'var(--red)':r.level==='warn'?'var(--yellow)':'var(--green)'}">${r.qtyAvail.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--muted);text-align:right">available</div>
+        </div>
+      </div>
+      <div class="rep-row">
+        <span>${r.batch||r.sku||'—'}</span>
+        <span class="badge ${r.level==='urgent'?'badge-red':r.level==='warn'?'badge-yellow':'badge-green'}">${r.level==='urgent'?'🚨 Order Now':r.level==='warn'?'⚠️ Plan Order':'✅ OK'}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('detailModal')) {
+    document.getElementById('detailModal').classList.remove('open');
+  }
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function emptyState(msg) {
+  return `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">${msg}</div><div class="empty-sub">Upload your Excel file to load data</div></div>`;
+}
+</script>
+</body>
+</html>
