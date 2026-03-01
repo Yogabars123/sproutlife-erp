@@ -1,33 +1,120 @@
 import streamlit as st
 import pandas as pd
 
-# ── 1. PAGE CONFIG ────────────────────────────────────────────────────────────
 st.set_page_config(page_title="GRN Data", layout="wide", page_icon="📥")
 
-# ── 2. GLOBAL STYLES ─────────────────────────────────────────────────────────
-from style import apply_global_styles, stat_card, page_header, section_label
-apply_global_styles()
+# ─────────────────────────────────────────────────────────────────────────────
+# EMBEDDED STYLES — no external file needed
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-# ── 3. PAGE HEADER ───────────────────────────────────────────────────────────
+html, body, [class*="css"] { font-family: 'DM Sans', sans-serif !important; }
+.stApp { background: #F8FAFC !important; }
+
+[data-testid="stSidebar"] {
+    background: #FFFFFF !important;
+    border-right: 1px solid #E2E8F0 !important;
+    box-shadow: 2px 0 12px rgba(15,23,42,0.05) !important;
+}
+[data-testid="stSidebarNavLink"] {
+    border-radius: 8px !important; margin: 2px 8px !important;
+    padding: 8px 12px !important; font-weight: 500 !important;
+    transition: all 0.15s ease !important;
+}
+[data-testid="stSidebarNavLink"]:hover { background: #EBF2FF !important; color: #1A56DB !important; }
+[data-testid="stSidebarNavLink"][aria-selected="true"] {
+    background: #EBF2FF !important; color: #1A56DB !important;
+    font-weight: 600 !important; border-left: 3px solid #1A56DB !important;
+}
+.main .block-container { padding: 2rem 2.5rem 3rem !important; max-width: 1280px !important; }
+.stButton > button {
+    background: #1A56DB !important; color: #fff !important; border: none !important;
+    border-radius: 8px !important; font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important; font-size: 0.875rem !important;
+    transition: all 0.15s ease !important; box-shadow: 0 1px 3px rgba(26,86,219,0.25) !important;
+}
+.stButton > button:hover {
+    background: #1140A8 !important; transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(26,86,219,0.30) !important;
+}
+.stTextInput > div > div > input {
+    background: #fff !important; border: 1.5px solid #E2E8F0 !important;
+    border-radius: 8px !important; font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.875rem !important; box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: #93C5FD !important; box-shadow: 0 0 0 3px rgba(147,197,253,0.3) !important;
+}
+.stSelectbox > div > div {
+    background: #fff !important; border: 1.5px solid #E2E8F0 !important;
+    border-radius: 8px !important; font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.875rem !important;
+}
+[data-testid="stDataFrame"] {
+    border-radius: 12px !important; overflow: hidden !important;
+    border: 1px solid #E2E8F0 !important; box-shadow: 0 1px 4px rgba(15,23,42,0.06) !important;
+}
+[data-testid="stDataFrame"] th {
+    background: #F1F5F9 !important; font-weight: 600 !important; font-size: 0.75rem !important;
+    text-transform: uppercase !important; letter-spacing: 0.05em !important; color: #475569 !important;
+}
+[data-testid="stDataFrame"] td { font-family: 'DM Mono', monospace !important; font-size: 0.82rem !important; }
+#MainMenu { visibility: hidden; } footer { visibility: hidden; }
+[data-testid="stToolbar"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPER FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+def stat_card(label, value, sub="", color="#1A56DB", icon=""):
+    return f"""
+    <div style="background:linear-gradient(135deg,{color} 0%,{color}cc 100%);
+                border-radius:14px;padding:1.4rem 1.6rem;color:#fff;
+                box-shadow:0 6px 20px {color}40;margin-bottom:1rem;">
+        <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;
+                    text-transform:uppercase;opacity:0.8;margin-bottom:0.4rem;">{icon} {label}</div>
+        <div style="font-size:2rem;font-weight:800;letter-spacing:-0.03em;
+                    line-height:1.1;margin-bottom:0.25rem;">{value}</div>
+        <div style="font-size:0.78rem;opacity:0.7;">{sub}</div>
+    </div>"""
+
+def page_header(icon, title, subtitle=""):
+    st.markdown(f"""
+    <div style="margin-bottom:1.8rem;padding-bottom:1.2rem;border-bottom:1px solid #E2E8F0;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+            <span style="font-size:1.8rem;line-height:1;">{icon}</span>
+            <h1 style="margin:0;font-family:'DM Sans',sans-serif;font-size:1.75rem;
+                       font-weight:700;color:#0F172A;letter-spacing:-0.02em;">{title}</h1>
+        </div>
+        <p style="margin:0;font-size:0.875rem;color:#94A3B8;padding-left:2.6rem;">{subtitle}</p>
+    </div>""", unsafe_allow_html=True)
+
+def section_label(text):
+    st.markdown(f"""<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;
+                text-transform:uppercase;color:#94A3B8;margin-bottom:0.3rem;">{text}</div>""",
+                unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE CONTENT
+# ─────────────────────────────────────────────────────────────────────────────
 page_header("📥", "GRN Data", "Goods Receipt Note tracking & analysis")
 
-# ── 4. FILTERS ───────────────────────────────────────────────────────────────
 section_label("Search & Filter")
-
 col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
 with col1:
     search_grn = st.text_input("", placeholder="🔍  Search GRN…", label_visibility="collapsed")
 with col2:
-    po_number = st.selectbox("PO Number", ["All POs"], label_visibility="visible")
+    po_number = st.selectbox("PO Number", ["All POs"])
 with col3:
-    vendor = st.selectbox("Vendor", ["All Vendors"], label_visibility="visible")
+    vendor = st.selectbox("Vendor", ["All Vendors"])
 with col4:
-    warehouse = st.selectbox("Warehouse", ["All Warehouses"], label_visibility="visible")
+    warehouse = st.selectbox("Warehouse", ["All Warehouses"])
 
 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-# ── 5. KPI STAT CARDS ────────────────────────────────────────────────────────
-# Replace values with your actual computed totals
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown(stat_card("Total QTY Ordered", "304,726,587", "12,918 GRNs", "#1A56DB", "📋"), unsafe_allow_html=True)
@@ -39,14 +126,23 @@ with c4:
     st.markdown(stat_card("Total QTY Rejected", "31,429", "Rejection across GRNs", "#DC2626", "❌"), unsafe_allow_html=True)
 
 st.markdown("---")
-
-# ── 6. DATA TABLE ─────────────────────────────────────────────────────────────
 section_label("GRN Records")
 
-# ---- REPLACE THIS BLOCK with your actual data loading logic ----
-# Example:
+# ── YOUR EXISTING DATA LOGIC GOES HERE ──────────────────────────────────────
+# Paste your original data loading, filtering, and st.dataframe() code below:
+#
+# @st.cache_data
+# def load_grn_data():
+#     ...
+#     return df
+#
 # df = load_grn_data()
-# filtered = apply_filters(df, search_grn, po_number, vendor, warehouse)
-# st.dataframe(filtered, use_container_width=True, hide_index=True)
-
-st.info("Connect your GRN data source here — the styling will apply automatically.", icon="ℹ️")
+# if search_grn:
+#     df = df[df['grn_no'].str.contains(search_grn, case=False, na=False)]
+# if po_number != "All POs":
+#     df = df[df['po_number'] == po_number]
+# if vendor != "All Vendors":
+#     df = df[df['vendor_name'] == vendor]
+# if warehouse != "All Warehouses":
+#     df = df[df['warehouse'] == warehouse]
+# st.dataframe(df, use_container_width=True, hide_index=True)
