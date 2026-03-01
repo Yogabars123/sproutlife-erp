@@ -3,199 +3,61 @@ import pandas as pd
 import os
 import io
 
-st.set_page_config(page_title="RM Inventory", layout="centered")
+# ── 1. PAGE CONFIG (must be first) ──────────────────────────────────────────
+st.set_page_config(page_title="RM Inventory", layout="wide", page_icon="📦")
 
-# ---------------------------------------------------
-# SIMPLE MOBILE TOGGLE (NO EXTRA LIBRARY)
-# ---------------------------------------------------
-mobile_mode = st.toggle("📱 Mobile View", value=True)
+# ── 2. APPLY GLOBAL STYLES ───────────────────────────────────────────────────
+from style import apply_global_styles, stat_card, page_header, section_label
+apply_global_styles()
 
-st.markdown("""
-<style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .block-container {
-        padding: 0.8rem 0.8rem 1rem 0.8rem !important;
-        max-width: 100% !important;
-    }
-    .page-title {
-        font-size: 18px;
-        font-weight: 700;
-        margin: 0 0 2px 0;
-    }
-    .page-sub {
-        font-size: 11px;
-        color: #888;
-        margin: 0 0 10px 0;
-    }
-    .kpi-box {
-        background: linear-gradient(135deg, #1e3a5f, #2d5986);
-        border-radius: 10px;
-        padding: 12px 16px;
-        color: white;
-        margin-bottom: 10px;
-    }
-    .kpi-label {
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        opacity: 0.75;
-    }
-    .kpi-value {
-        font-size: 22px;
-        font-weight: 700;
-        line-height: 1.2;
-    }
-    .kpi-sub {
-        font-size: 10px;
-        opacity: 0.6;
-        margin-top: 2px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# ── 3. MOBILE TOGGLE ─────────────────────────────────────────────────────────
+mobile_mode = st.toggle("📱 Mobile View", value=False)
 
-# ---------------------------------------------------
-# LOAD DATA
-# ---------------------------------------------------
-@st.cache_data
-def load_rm():
-    file_path = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(file_path):
-        file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
+# ── 4. PAGE HEADER ───────────────────────────────────────────────────────────
+page_header("📦", "RM Inventory", "Live raw material stock")
 
-    df = pd.read_excel(file_path, sheet_name="RM-Inventory")
-    df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
-
-    for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
-
-    for col in ["Qty Available", "Qty Inward", "Qty (Issue / Hold)",
-                "Value (Inc Tax)", "Value (Ex Tax)"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-    return df
-
-df_raw = load_rm()
-
-# ---------------------------------------------------
-# HEADER
-# ---------------------------------------------------
-st.markdown('<p class="page-title">📦 RM Inventory</p>', unsafe_allow_html=True)
-st.markdown('<p class="page-sub">Live raw material stock</p>', unsafe_allow_html=True)
-
-if st.button("🔄 Refresh Data", use_container_width=True):
+# ── 5. REFRESH BUTTON ────────────────────────────────────────────────────────
+if st.button("🔄  Refresh Data"):
     st.cache_data.clear()
     st.rerun()
 
-st.divider()
+st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-# ---------------------------------------------------
-# FILTERS
-# ---------------------------------------------------
-search = st.text_input("🔍 Search item name, SKU or batch")
+# ── 6. FILTERS ───────────────────────────────────────────────────────────────
+section_label("Search & Filter")
 
-wh_opts = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
-selected_wh = st.selectbox("Warehouse", wh_opts)
+col_search, col_wh, col_status = st.columns([3, 2, 2])
+with col_search:
+    search = st.text_input("", placeholder="🔍  Search item name, SKU or batch…", label_visibility="collapsed")
+with col_wh:
+    warehouse = st.selectbox("Warehouse", ["All Warehouses"], label_visibility="visible")
+with col_status:
+    stock_status = st.selectbox("Stock Status", ["All", "In Stock", "Low Stock", "Out of Stock"], label_visibility="visible")
 
-stock_filter = st.selectbox("Stock Status",
-                            ["All", "Available Only", "Zero / Negative Stock"])
+st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-# ---------------------------------------------------
-# APPLY FILTERS
-# ---------------------------------------------------
-df = df_raw.copy()
+# ── 7. KPI CARDS ─────────────────────────────────────────────────────────────
+# Replace the values below with your actual computed totals
+total_qty    = "16,300,788"
+total_records = "2,414 records"
 
-if search:
-    df = df[df.astype(str).apply(
-        lambda x: x.str.contains(search, case=False, na=False)
-    ).any(axis=1)]
+kpi1, kpi2, kpi3 = st.columns(3)
+with kpi1:
+    st.markdown(stat_card("Total QTY Available", total_qty, total_records, "#1A56DB", "📦"), unsafe_allow_html=True)
+with kpi2:
+    st.markdown(stat_card("Items In Stock", "1,892", "78.3% of catalogue", "#16A34A", "✅"), unsafe_allow_html=True)
+with kpi3:
+    st.markdown(stat_card("Low / Out of Stock", "522", "Need attention", "#DC2626", "⚠️"), unsafe_allow_html=True)
 
-if selected_wh != "All Warehouses":
-    df = df[df["Warehouse"] == selected_wh]
+st.markdown("---")
 
-if stock_filter == "Available Only":
-    df = df[df["Qty Available"] > 0]
-elif stock_filter == "Zero / Negative Stock":
-    df = df[df["Qty Available"] <= 0]
+# ── 8. DATA TABLE ─────────────────────────────────────────────────────────────
+section_label("Inventory Records")
 
-# ---------------------------------------------------
-# KPI
-# ---------------------------------------------------
-total_qty = df["Qty Available"].sum()
+# ---- REPLACE THIS BLOCK with your actual data loading logic ----
+# Example placeholder:
+# df = load_your_data()
+# filtered_df = df[df['item_name'].str.contains(search, case=False, na=False)]
+# st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
-st.markdown(f"""
-<div class="kpi-box">
-    <div class="kpi-label">Total Qty Available</div>
-    <div class="kpi-value">{total_qty:,.0f}</div>
-    <div class="kpi-sub">{len(df):,} records</div>
-</div>
-""", unsafe_allow_html=True)
-
-st.divider()
-
-# ---------------------------------------------------
-# DOWNLOAD
-# ---------------------------------------------------
-buf = io.BytesIO()
-with pd.ExcelWriter(buf, engine="openpyxl") as w:
-    df.to_excel(w, index=False, sheet_name="RM")
-
-st.download_button(
-    "⬇️ Download Excel",
-    buf.getvalue(),
-    "RM_Inventory.xlsx",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    use_container_width=True
-)
-
-st.divider()
-
-# ---------------------------------------------------
-# DISPLAY DATA
-# ---------------------------------------------------
-if df.empty:
-    st.warning("No records found.")
-
-else:
-
-    if mobile_mode:
-        # 📱 MOBILE CARD VIEW
-        for _, row in df.iterrows():
-
-            expiry = row.get("Expiry Date", "")
-            if pd.notna(expiry):
-                expiry = expiry.strftime("%d-%b-%Y")
-
-            st.markdown(f"""
-            <div style="
-                background:#f8f9fa;
-                padding:12px;
-                border-radius:10px;
-                margin-bottom:10px;
-                border:1px solid #eee;">
-                
-                <b style="font-size:14px;">{row.get('Item Name','')}</b><br>
-                SKU: {row.get('Item SKU','')}<br>
-                Warehouse: {row.get('Warehouse','')}<br>
-                Qty: <b>{row.get('Qty Available',0):,.0f}</b><br>
-                Expiry: {expiry}
-            </div>
-            """, unsafe_allow_html=True)
-
-    else:
-        # 💻 DESKTOP TABLE
-        df_show = df.copy()
-
-        for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
-            if col in df_show.columns:
-                df_show[col] = df_show[col].dt.strftime("%d-%b-%Y").fillna("")
-
-        st.dataframe(
-            df_show,
-            use_container_width=True,
-            height=500,
-            hide_index=True
-        )
+st.info("Connect your data source here — the styling will apply automatically to the dataframe.", icon="ℹ️")
