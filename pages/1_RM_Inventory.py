@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # ─────────────────────────────────────────────
-# CONFIG
+# PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="RM Inventory | ERP",
@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# ENTERPRISE STYLE
+# ENTERPRISE STYLING
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -46,6 +46,31 @@ def load_data():
 df = load_data()
 
 # ─────────────────────────────────────────────
+# AUTO DETECT WAREHOUSE COLUMN
+# ─────────────────────────────────────────────
+warehouse_col = None
+for col in df.columns:
+    if "location" in col.lower() or "warehouse" in col.lower() or "plant" in col.lower():
+        warehouse_col = col
+        break
+
+if warehouse_col is None:
+    st.error("Warehouse column not found in Excel.")
+    st.write("Available columns:", df.columns)
+    st.stop()
+
+# ─────────────────────────────────────────────
+# AUTO DETECT STOCK COLUMN (NUMERIC LAST COLUMN)
+# ─────────────────────────────────────────────
+numeric_cols = df.select_dtypes(include="number").columns
+
+if len(numeric_cols) == 0:
+    st.error("No numeric stock column found.")
+    st.stop()
+
+stock_col = numeric_cols[-1]  # take last numeric column
+
+# ─────────────────────────────────────────────
 # DEFINE ALLOWED WAREHOUSES
 # ─────────────────────────────────────────────
 allowed_warehouses = [
@@ -60,7 +85,7 @@ allowed_warehouses = [
 ]
 
 # Filter only allowed warehouses
-df = df[df["Location"].isin(allowed_warehouses)]
+df = df[df[warehouse_col].isin(allowed_warehouses)]
 
 # ─────────────────────────────────────────────
 # SIDEBAR FILTER
@@ -75,7 +100,7 @@ selected_wh = st.sidebar.multiselect(
     default=allowed_warehouses
 )
 
-filtered_df = df[df["Location"].isin(selected_wh)]
+filtered_df = df[df[warehouse_col].isin(selected_wh)]
 
 # ─────────────────────────────────────────────
 # HEADER
@@ -83,13 +108,11 @@ filtered_df = df[df["Location"].isin(selected_wh)]
 st.markdown("<div class='section-title'>📦 Raw Material Inventory Overview</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# KPI SECTION (CALCULATED ONLY FROM SELECTED WAREHOUSES)
+# KPI CALCULATIONS
 # ─────────────────────────────────────────────
-qty_column = df.columns[-1]  # assumes last column is stock
-
-total_qty = filtered_df[qty_column].sum()
+total_qty = filtered_df[stock_col].sum()
 total_records = len(filtered_df)
-zero_stock = len(filtered_df[filtered_df[qty_column] == 0])
+zero_stock = len(filtered_df[filtered_df[stock_col] == 0])
 
 c1, c2, c3 = st.columns(3)
 
@@ -111,7 +134,7 @@ with c3:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# TABLE
+# DATA TABLE
 # ─────────────────────────────────────────────
 st.markdown("<div class='section-title'>📋 Inventory Records</div>", unsafe_allow_html=True)
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
