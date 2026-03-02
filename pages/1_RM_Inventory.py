@@ -15,13 +15,8 @@ st.set_page_config(
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-body {
-    background-color: #f4f6f9;
-}
-.main .block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
+body { background-color: #f4f6f9; }
+.main .block-container { padding-top: 2rem; padding-bottom: 2rem; }
 .kpi-card {
     background: white;
     padding: 20px;
@@ -37,7 +32,7 @@ body {
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# LOAD DATA (FROM GITHUB EXCEL)
+# LOAD DATA
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=600)
 def load_data():
@@ -51,22 +46,36 @@ def load_data():
 df = load_data()
 
 # ─────────────────────────────────────────────
-# SIDEBAR
+# DEFINE ALLOWED WAREHOUSES
+# ─────────────────────────────────────────────
+allowed_warehouses = [
+    "Central",
+    "RM Warehouse Tumkur",
+    "Central Warehouse - Cold Storage RM",
+    "Tumkur Warehouse",
+    "Tumkur New Warehouse",
+    "HF Factory FG Warehouse",
+    "Sproutlife Foods Private Ltd (SNOWMAN)",
+    "YB FG Warehouse"
+]
+
+# Filter only allowed warehouses
+df = df[df["Location"].isin(allowed_warehouses)]
+
+# ─────────────────────────────────────────────
+# SIDEBAR FILTER
 # ─────────────────────────────────────────────
 st.sidebar.title("Sproutlife ERP")
 st.sidebar.markdown("**Module:** RM Inventory")
 st.sidebar.markdown("---")
-search_sidebar = st.sidebar.text_input("🔎 Quick Search")
 
-filtered_df = df.copy()
+selected_wh = st.sidebar.multiselect(
+    "Select Warehouse",
+    allowed_warehouses,
+    default=allowed_warehouses
+)
 
-if search_sidebar:
-    filtered_df = filtered_df[
-        filtered_df.apply(
-            lambda row: row.astype(str).str.contains(search_sidebar, case=False).any(),
-            axis=1
-        )
-    ]
+filtered_df = df[df["Location"].isin(selected_wh)]
 
 # ─────────────────────────────────────────────
 # HEADER
@@ -74,9 +83,9 @@ if search_sidebar:
 st.markdown("<div class='section-title'>📦 Raw Material Inventory Overview</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# KPI SECTION
+# KPI SECTION (CALCULATED ONLY FROM SELECTED WAREHOUSES)
 # ─────────────────────────────────────────────
-qty_column = df.columns[-1]  # Uses last column as quantity
+qty_column = df.columns[-1]  # assumes last column is stock
 
 total_qty = filtered_df[qty_column].sum()
 total_records = len(filtered_df)
@@ -86,7 +95,7 @@ c1, c2, c3 = st.columns(3)
 
 with c1:
     st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
-    st.metric("Total Quantity", f"{total_qty:,.0f}")
+    st.metric("Total Stock", f"{total_qty:,.0f}")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with c2:
