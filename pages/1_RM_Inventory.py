@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import requests
+from io import BytesIO
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -11,14 +13,21 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# LOAD YOUR EXACT ONEDRIVE FILE
+# LOAD EXCEL FROM ONEDRIVE (CLOUD SAFE)
 # ─────────────────────────────────────────────
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)  # refresh every 10 minutes
 def load_data():
 
-    file_path = r"C:\Users\YOGA BAR\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
+    # 🔥 PASTE YOUR ONEDRIVE DIRECT DOWNLOAD LINK BELOW
+    file_url = "https://sproutlife01-my.sharepoint.com/:x:/r/personal/abinaya_m_yogabars_in/_layouts/15/Doc.aspx?sourcedoc=%7BE2429A27-4C87-4F4F-8B1E-B57704B0311C%7D&file=Sproutlife%20Inventory.xlsx&action=default&mobileredirect=true&DefaultItemOpen=1"
 
-    df = pd.read_excel(file_path)
+    response = requests.get(file_url)
+
+    if response.status_code != 200:
+        st.error("Failed to fetch Excel file from OneDrive.")
+        st.stop()
+
+    df = pd.read_excel(BytesIO(response.content))
     df.columns = df.columns.str.strip()
 
     return df
@@ -27,7 +36,7 @@ def load_data():
 df = load_data()
 
 # ─────────────────────────────────────────────
-# MOBILE MODE
+# UI
 # ─────────────────────────────────────────────
 mobile_mode = st.toggle("📱 Mobile View", value=False)
 
@@ -39,10 +48,6 @@ if st.button("🔄 Refresh Data"):
     st.rerun()
 
 st.markdown("---")
-
-# ─────────────────────────────────────────────
-# SEARCH & FILTER
-# ─────────────────────────────────────────────
 st.markdown("### 🔎 Search & Filter")
 
 if mobile_mode:
@@ -96,7 +101,7 @@ elif stock_status == "Low Stock":
         (filtered_df["Stock"] < 500)
     ]
 
-# KPIs
+# KPI calculations
 total_qty = filtered_df["Stock"].sum()
 total_records = len(filtered_df)
 in_stock = len(filtered_df[filtered_df["Stock"] > 0])
