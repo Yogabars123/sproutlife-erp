@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import os
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -12,20 +11,12 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# LOAD EXCEL FROM SAME pages FOLDER
+# LOAD YOUR EXACT ONEDRIVE FILE
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def load_data():
 
-    # Get current folder (pages folder)
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # 🔥 Change file name here EXACTLY as your Excel name
-    file_path = os.path.join(current_dir, "Inventory Data1.xlsx")
-
-    if not os.path.exists(file_path):
-        st.error(f"Excel file not found at: {file_path}")
-        st.stop()
+    file_path = r"C:\Users\YOGA BAR\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
 
     df = pd.read_excel(file_path)
     df.columns = df.columns.str.strip()
@@ -97,10 +88,8 @@ if warehouse != "All Warehouses":
 # Stock filter
 if stock_status == "In Stock":
     filtered_df = filtered_df[filtered_df["Stock"] > 0]
-
 elif stock_status == "Out of Stock":
     filtered_df = filtered_df[filtered_df["Stock"] == 0]
-
 elif stock_status == "Low Stock":
     filtered_df = filtered_df[
         (filtered_df["Stock"] > 0) &
