@@ -77,9 +77,14 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif !important; }
 # ─────────────────────────────────────────────────────────────────────────────
 # ANTHROPIC CLIENT SETUP
 # ─────────────────────────────────────────────────────────────────────────────
+import anthropic
+
+# ── PASTE YOUR FULL API KEY BETWEEN THE QUOTES BELOW ──────────────────────
+ANTHROPIC_API_KEY = "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"
+# ──────────────────────────────────────────────────────────────────────────
+
 try:
-    import anthropic
-    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     api_ready = True
 except Exception:
     api_ready = False
