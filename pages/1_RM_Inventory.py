@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# MOBILE DETECTION (Auto)
+# MOBILE TOGGLE
 # ─────────────────────────────────────────────
 mobile_mode = st.toggle("📱 Mobile View", value=False)
 
@@ -21,29 +21,23 @@ mobile_mode = st.toggle("📱 Mobile View", value=False)
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-
-html, body, [class*="css"] { font-family: 'DM Sans', sans-serif !important; }
 .stApp { background: #F8FAFC !important; }
 
-/* Reduce container width on mobile */
 @media (max-width: 768px) {
     .main .block-container {
         padding: 1rem !important;
         max-width: 100% !important;
     }
-
     section[data-testid="stSidebar"] {
         display: none !important;
     }
 }
 
-/* Desktop padding */
 .main .block-container {
     padding: 2rem 2.5rem 3rem !important;
     max-width: 1280px !important;
 }
 
-/* Buttons */
 .stButton > button {
     background: #1A56DB !important;
     color: white !important;
@@ -51,12 +45,10 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif !important; }
     font-weight: 600 !important;
 }
 
-/* Dataframe */
 [data-testid="stDataFrame"] {
     border-radius: 12px !important;
     border: 1px solid #E2E8F0 !important;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,90 +93,122 @@ def page_header(icon, title, subtitle=""):
 # ─────────────────────────────────────────────
 page_header("📦", "RM Inventory", "Live raw material stock")
 
-# Refresh Button
+# Refresh
 if st.button("🔄 Refresh Data"):
     st.cache_data.clear()
     st.rerun()
 
-st.markdown("### 🔎 Search & Filter")
-
 # ─────────────────────────────────────────────
-# RESPONSIVE FILTER SECTION
-# ─────────────────────────────────────────────
-if mobile_mode:
-    search = st.text_input("", placeholder="Search item name, SKU or batch…")
-    warehouse = st.selectbox("Warehouse", ["All Warehouses"])
-    stock_status = st.selectbox("Stock Status",
-                                ["All", "In Stock", "Low Stock", "Out of Stock"])
-else:
-    col_search, col_wh, col_status = st.columns([3,2,2])
-    with col_search:
-        search = st.text_input("", placeholder="Search item name, SKU or batch…")
-    with col_wh:
-        warehouse = st.selectbox("Warehouse", ["All Warehouses"])
-    with col_status:
-        stock_status = st.selectbox("Stock Status",
-                                    ["All", "In Stock", "Low Stock", "Out of Stock"])
-
-st.markdown("")
-
-# ─────────────────────────────────────────────
-# RESPONSIVE KPI CARDS
-# ─────────────────────────────────────────────
-if mobile_mode:
-    st.markdown(stat_card("Total QTY Available", "16,300,788",
-                          "2,414 records", "#1A56DB", "📦"),
-                unsafe_allow_html=True)
-
-    st.markdown(stat_card("Items In Stock", "1,892",
-                          "78.3% of catalogue", "#16A34A", "✅"),
-                unsafe_allow_html=True)
-
-    st.markdown(stat_card("Low / Out of Stock", "522",
-                          "Need attention", "#DC2626", "⚠️"),
-                unsafe_allow_html=True)
-
-else:
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown(stat_card("Total QTY Available", "16,300,788",
-                              "2,414 records", "#1A56DB", "📦"),
-                    unsafe_allow_html=True)
-
-    with c2:
-        st.markdown(stat_card("Items In Stock", "1,892",
-                              "78.3% of catalogue", "#16A34A", "✅"),
-                    unsafe_allow_html=True)
-
-    with c3:
-        st.markdown(stat_card("Low / Out of Stock", "522",
-                              "Need attention", "#DC2626", "⚠️"),
-                    unsafe_allow_html=True)
-
-st.markdown("---")
-st.markdown("### 📋 Inventory Records")
-
-# ─────────────────────────────────────────────
-# SAMPLE DATA (Replace With Your Logic)
+# LOAD DATA (REPLACE WITH YOUR REAL DATA)
 # ─────────────────────────────────────────────
 @st.cache_data
 def load_data():
+    # Replace this with your Excel file
     return pd.DataFrame({
-        "Item": ["Item A", "Item B", "Item C"],
-        "Warehouse": ["WH1", "WH2", "WH1"],
-        "Stock": [120, 45, 0]
+        "Item": ["Sugar", "Oats", "Almond", "Milk Powder"],
+        "Warehouse": ["WH1", "WH2", "WH1", "WH3"],
+        "Stock": [12000, 0, 4500, 200]
     })
 
 df = load_data()
 
-if search:
-    df = df[df["Item"].str.contains(search, case=False)]
+# ─────────────────────────────────────────────
+# SEARCH & FILTER
+# ─────────────────────────────────────────────
+st.markdown("### 🔎 Search & Filter")
 
-st.dataframe(df, use_container_width=True, hide_index=True)
+if mobile_mode:
+    search = st.text_input("", placeholder="Search item, SKU, batch...")
+    warehouse = st.selectbox("Warehouse",
+                             ["All Warehouses"] + sorted(df["Warehouse"].unique().tolist()))
+    stock_status = st.selectbox("Stock Status",
+                                ["All", "In Stock", "Low Stock", "Out of Stock"])
+else:
+    col1, col2, col3 = st.columns([3,2,2])
+    with col1:
+        search = st.text_input("", placeholder="Search item, SKU, batch...")
+    with col2:
+        warehouse = st.selectbox("Warehouse",
+                                 ["All Warehouses"] + sorted(df["Warehouse"].unique().tolist()))
+    with col3:
+        stock_status = st.selectbox("Stock Status",
+                                    ["All", "In Stock", "Low Stock", "Out of Stock"])
 
 # ─────────────────────────────────────────────
-# FUTURE CHATBOT SECTION
+# APPLY FILTERS SAFELY
+# ─────────────────────────────────────────────
+filtered_df = df.copy()
+
+# Search across all columns safely
+if search:
+    filtered_df = filtered_df[
+        filtered_df.apply(
+            lambda row: row.astype(str).str.contains(search, case=False).any(),
+            axis=1
+        )
+    ]
+
+# Warehouse filter
+if warehouse != "All Warehouses":
+    filtered_df = filtered_df[filtered_df["Warehouse"] == warehouse]
+
+# Stock status filter
+if stock_status == "In Stock":
+    filtered_df = filtered_df[filtered_df["Stock"] > 0]
+elif stock_status == "Out of Stock":
+    filtered_df = filtered_df[filtered_df["Stock"] == 0]
+elif stock_status == "Low Stock":
+    filtered_df = filtered_df[(filtered_df["Stock"] > 0) & (filtered_df["Stock"] < 500)]
+
+# ─────────────────────────────────────────────
+# KPI CALCULATIONS (BASED ON FILTERED DATA)
+# ─────────────────────────────────────────────
+total_qty = filtered_df["Stock"].sum()
+total_items = len(filtered_df)
+in_stock = len(filtered_df[filtered_df["Stock"] > 0])
+low_or_out = len(filtered_df[filtered_df["Stock"] <= 500])
+
+# ─────────────────────────────────────────────
+# KPI CARDS
+# ─────────────────────────────────────────────
+if mobile_mode:
+    st.markdown(stat_card("Total QTY Available", f"{total_qty:,}",
+                          f"{total_items} records", "#1A56DB", "📦"),
+                unsafe_allow_html=True)
+    st.markdown(stat_card("Items In Stock", f"{in_stock:,}",
+                          "Available items", "#16A34A", "✅"),
+                unsafe_allow_html=True)
+    st.markdown(stat_card("Low / Out of Stock", f"{low_or_out:,}",
+                          "Need attention", "#DC2626", "⚠️"),
+                unsafe_allow_html=True)
+else:
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(stat_card("Total QTY Available", f"{total_qty:,}",
+                              f"{total_items} records", "#1A56DB", "📦"),
+                    unsafe_allow_html=True)
+    with c2:
+        st.markdown(stat_card("Items In Stock", f"{in_stock:,}",
+                              "Available items", "#16A34A", "✅"),
+                    unsafe_allow_html=True)
+    with c3:
+        st.markdown(stat_card("Low / Out of Stock", f"{low_or_out:,}",
+                              "Need attention", "#DC2626", "⚠️"),
+                    unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# INVENTORY TABLE
+# ─────────────────────────────────────────────
+st.markdown("---")
+st.markdown("### 📋 Inventory Records")
+
+if filtered_df.empty:
+    st.warning("No records found for selected filters.")
+else:
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+
+# ─────────────────────────────────────────────
+# ERP CHATBOT SECTION (READY FOR GPT)
 # ─────────────────────────────────────────────
 st.markdown("---")
 st.subheader("🤖 ERP Assistant")
