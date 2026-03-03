@@ -10,63 +10,71 @@ from datetime import datetime
 st.set_page_config(page_title="FG Inventory", layout="wide", page_icon="📦")
 
 # ─────────────────────────────────────────────
-# PROFESSIONAL KPI + MOBILE CSS
+# COMPACT PROFESSIONAL CSS (MATCH GRN)
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
 
-/* Reduce extra padding */
+/* Reduce overall padding */
 .block-container {
-    padding-top: 1rem !important;
+    padding-top: 0.8rem !important;
+    padding-bottom: 1rem !important;
+}
+
+/* Remove large spacing */
+h1, h2, h3 {
+    margin-bottom: 0.3rem !important;
+}
+
+hr {
+    margin-top: 0.6rem !important;
+    margin-bottom: 0.6rem !important;
 }
 
 /* KPI Card */
 .kpi-card {
     border-radius: 14px;
-    padding: 18px 20px;
+    padding: 16px 18px;
     color: white;
     box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-    margin-bottom: 12px;
 }
 
 .kpi-title {
     font-size: 13px;
     font-weight: 600;
-    opacity: 0.85;
-    letter-spacing: 0.5px;
+    opacity: 0.9;
 }
 
 .kpi-value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 800;
-    margin-top: 6px;
+    margin-top: 4px;
 }
 
 .kpi-sub {
     font-size: 12px;
     opacity: 0.75;
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
 /* Section title */
 .section-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 18px 0 8px 0;
+    color: #6b7280;
+    letter-spacing: 0.5px;
+    margin: 0.5rem 0 0.4rem 0;
 }
 
-/* Mobile Optimization */
-@media (max-width: 768px) {
-    div[data-testid="column"] {
-        width: 100% !important;
-        flex: 100% !important;
-    }
-    .kpi-value {
-        font-size: 20px;
-    }
+/* Tighten filter spacing */
+div[data-testid="stHorizontalBlock"] {
+    gap: 0.8rem !important;
+}
+
+/* Dataframe styling */
+div[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 </style>
@@ -98,7 +106,7 @@ def load_fg():
 df_raw = load_fg()
 
 # ─────────────────────────────────────────────
-# SHELF LIFE CALCULATION
+# SHELF LIFE
 # ─────────────────────────────────────────────
 today = pd.Timestamp(datetime.today().date())
 
@@ -107,35 +115,32 @@ if "Expiry Date" in df_raw.columns and "MFG Date" in df_raw.columns:
     total_days = (df_raw["Expiry Date"] - df_raw["MFG Date"]).dt.days
 
     df_raw["Remaining Shelf Life (%)"] = ((remaining_days / total_days) * 100).round(1).clip(0, 100)
-    df_raw["Remaining Shelf Life (%)"] = df_raw["Remaining Shelf Life (%)"].fillna(0)
     df_raw["_remaining_days"] = remaining_days.fillna(0).astype(int)
 
 # ─────────────────────────────────────────────
-# HEADER
+# HEADER (COMPACT LIKE GRN)
 # ─────────────────────────────────────────────
-st.title("📦 FG Inventory")
-st.caption("Live view of finished goods stock across all warehouses")
+st.markdown("## 📦 FG Inventory")
+st.caption("Finished goods stock overview")
 
-st.divider()
+st.markdown("<hr>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# FILTERS
+# FILTERS (TIGHT)
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-title">Filters</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Search & Filter</div>', unsafe_allow_html=True)
 
 f1, f2, f3 = st.columns([3, 2, 2])
 
 with f1:
-    search = st.text_input("Search (Item / SKU / Batch)")
+    search = st.text_input("Search (Item / SKU / Batch)", label_visibility="collapsed", placeholder="Type to search...")
+
 with f2:
     warehouse_options = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
     selected_warehouse = st.selectbox("Warehouse", warehouse_options)
+
 with f3:
-    shelf_filter = st.selectbox("Shelf Life", [
-        "All",
-        "Expiring in 30 days",
-        "Expired"
-    ])
+    shelf_filter = st.selectbox("Shelf Life", ["All", "Expiring in 30 days", "Expired"])
 
 df = df_raw.copy()
 
@@ -153,15 +158,14 @@ if "_remaining_days" in df.columns:
         df = df[df["_remaining_days"] < 0]
 
 # ─────────────────────────────────────────────
-# KPI CALCULATION
+# KPI (COMPACT + PROFESSIONAL)
 # ─────────────────────────────────────────────
+st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
+
 total_qty = df["Qty Available"].sum()
 expiring_soon = (df["_remaining_days"] <= 30).sum() if "_remaining_days" in df.columns else 0
 expired_count = (df["_remaining_days"] < 0).sum() if "_remaining_days" in df.columns else 0
 
-# ─────────────────────────────────────────────
-# KPI DISPLAY (GRN STYLE)
-# ─────────────────────────────────────────────
 k1, k2, k3 = st.columns(3)
 
 with k1:
@@ -191,11 +195,13 @@ with k3:
     </div>
     """, unsafe_allow_html=True)
 
-st.divider()
+st.markdown("<hr>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # TABLE
 # ─────────────────────────────────────────────
+st.markdown('<div class="section-title">FG Records</div>', unsafe_allow_html=True)
+
 if df.empty:
     st.warning("No records match your filters.")
 else:
