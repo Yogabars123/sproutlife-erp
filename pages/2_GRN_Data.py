@@ -3,9 +3,9 @@ import pandas as pd
 
 st.set_page_config(page_title="GRN Data", layout="wide", page_icon="📥")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EMBEDDED STYLES — no external file needed
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# STYLING
+# ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -16,133 +16,136 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif !important; }
 [data-testid="stSidebar"] {
     background: #FFFFFF !important;
     border-right: 1px solid #E2E8F0 !important;
-    box-shadow: 2px 0 12px rgba(15,23,42,0.05) !important;
 }
-[data-testid="stSidebarNavLink"] {
-    border-radius: 8px !important; margin: 2px 8px !important;
-    padding: 8px 12px !important; font-weight: 500 !important;
-    transition: all 0.15s ease !important;
-}
-[data-testid="stSidebarNavLink"]:hover { background: #EBF2FF !important; color: #1A56DB !important; }
-[data-testid="stSidebarNavLink"][aria-selected="true"] {
-    background: #EBF2FF !important; color: #1A56DB !important;
-    font-weight: 600 !important; border-left: 3px solid #1A56DB !important;
-}
+
 .main .block-container { padding: 2rem 2.5rem 3rem !important; max-width: 1280px !important; }
-.stButton > button {
-    background: #1A56DB !important; color: #fff !important; border: none !important;
-    border-radius: 8px !important; font-family: 'DM Sans', sans-serif !important;
-    font-weight: 600 !important; font-size: 0.875rem !important;
-    transition: all 0.15s ease !important; box-shadow: 0 1px 3px rgba(26,86,219,0.25) !important;
-}
-.stButton > button:hover {
-    background: #1140A8 !important; transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(26,86,219,0.30) !important;
-}
-.stTextInput > div > div > input {
-    background: #fff !important; border: 1.5px solid #E2E8F0 !important;
-    border-radius: 8px !important; font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.875rem !important; box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
-}
-.stTextInput > div > div > input:focus {
-    border-color: #93C5FD !important; box-shadow: 0 0 0 3px rgba(147,197,253,0.3) !important;
-}
-.stSelectbox > div > div {
-    background: #fff !important; border: 1.5px solid #E2E8F0 !important;
-    border-radius: 8px !important; font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.875rem !important;
-}
-[data-testid="stDataFrame"] {
-    border-radius: 12px !important; overflow: hidden !important;
-    border: 1px solid #E2E8F0 !important; box-shadow: 0 1px 4px rgba(15,23,42,0.06) !important;
-}
-[data-testid="stDataFrame"] th {
-    background: #F1F5F9 !important; font-weight: 600 !important; font-size: 0.75rem !important;
-    text-transform: uppercase !important; letter-spacing: 0.05em !important; color: #475569 !important;
-}
-[data-testid="stDataFrame"] td { font-family: 'DM Mono', monospace !important; font-size: 0.82rem !important; }
-#MainMenu { visibility: hidden; } footer { visibility: hidden; }
+
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
 [data-testid="stToolbar"] { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPER FUNCTIONS
-# ─────────────────────────────────────────────────────────────────────────────
-def stat_card(label, value, sub="", color="#1A56DB", icon=""):
-    return f"""
-    <div style="background:linear-gradient(135deg,{color} 0%,{color}cc 100%);
-                border-radius:14px;padding:1.4rem 1.6rem;color:#fff;
-                box-shadow:0 6px 20px {color}40;margin-bottom:1rem;">
-        <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;
-                    text-transform:uppercase;opacity:0.8;margin-bottom:0.4rem;">{icon} {label}</div>
-        <div style="font-size:2rem;font-weight:800;letter-spacing:-0.03em;
-                    line-height:1.1;margin-bottom:0.25rem;">{value}</div>
-        <div style="font-size:0.78rem;opacity:0.7;">{sub}</div>
-    </div>"""
+# ─────────────────────────────────────────────────────────────
+# HEADER
+# ─────────────────────────────────────────────────────────────
+st.markdown("""
+<div style="margin-bottom:1.8rem;padding-bottom:1.2rem;border-bottom:1px solid #E2E8F0;">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+        <span style="font-size:1.8rem;">📥</span>
+        <h1 style="margin:0;font-size:1.75rem;font-weight:700;">GRN Data</h1>
+    </div>
+    <p style="margin:0;font-size:0.875rem;color:#94A3B8;padding-left:2.6rem;">
+        Goods Receipt Note tracking & analysis
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-def page_header(icon, title, subtitle=""):
-    st.markdown(f"""
-    <div style="margin-bottom:1.8rem;padding-bottom:1.2rem;border-bottom:1px solid #E2E8F0;">
-        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
-            <span style="font-size:1.8rem;line-height:1;">{icon}</span>
-            <h1 style="margin:0;font-family:'DM Sans',sans-serif;font-size:1.75rem;
-                       font-weight:700;color:#0F172A;letter-spacing:-0.02em;">{title}</h1>
-        </div>
-        <p style="margin:0;font-size:0.875rem;color:#94A3B8;padding-left:2.6rem;">{subtitle}</p>
-    </div>""", unsafe_allow_html=True)
+# ─────────────────────────────────────────────────────────────
+# LOAD DATA
+# ─────────────────────────────────────────────────────────────
+@st.cache_data
+def load_data():
+    df = pd.read_excel("Sproutlife Inventory.xlsx", sheet_name="GRN-Data")
+    df.columns = df.columns.str.strip()
+    return df
 
-def section_label(text):
-    st.markdown(f"""<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;
-                text-transform:uppercase;color:#94A3B8;margin-bottom:0.3rem;">{text}</div>""",
-                unsafe_allow_html=True)
+try:
+    df = load_data()
+except Exception as e:
+    st.error(f"Error loading Excel file: {e}")
+    st.stop()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PAGE CONTENT
-# ─────────────────────────────────────────────────────────────────────────────
-page_header("📥", "GRN Data", "Goods Receipt Note tracking & analysis")
+# Ensure numeric columns
+for col in ["Qty Ordered", "Qty Received", "Qty Rejected"]:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-section_label("Search & Filter")
-col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+# ─────────────────────────────────────────────────────────────
+# FILTER SECTION
+# ─────────────────────────────────────────────────────────────
+st.markdown("##### SEARCH & FILTER")
+
+col1, col2, col3, col4 = st.columns([3,2,2,2])
+
 with col1:
-    search_grn = st.text_input("", placeholder="🔍  Search GRN…", label_visibility="collapsed")
+    search_grn = st.text_input("Search GRN")
+
 with col2:
-    po_number = st.selectbox("PO Number", ["All POs"])
+    po_options = ["All POs"] + sorted(df["PO Number"].dropna().astype(str).unique().tolist())
+    po_number = st.selectbox("PO Number", po_options)
+
 with col3:
-    vendor = st.selectbox("Vendor", ["All Vendors"])
+    vendor_options = ["All Vendors"] + sorted(df["Vendor"].dropna().astype(str).unique().tolist())
+    vendor = st.selectbox("Vendor", vendor_options)
+
 with col4:
-    warehouse = st.selectbox("Warehouse", ["All Warehouses"])
+    warehouse_options = ["All Warehouses"] + sorted(df["Warehouse"].dropna().astype(str).unique().tolist())
+    warehouse = st.selectbox("Warehouse", warehouse_options)
 
-st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+# ─────────────────────────────────────────────────────────────
+# APPLY FILTERS
+# ─────────────────────────────────────────────────────────────
+filtered_df = df.copy()
 
+if search_grn and "GRN Number" in filtered_df.columns:
+    filtered_df = filtered_df[
+        filtered_df["GRN Number"].astype(str)
+        .str.contains(search_grn, case=False, na=False)
+    ]
+
+if po_number != "All POs":
+    filtered_df = filtered_df[filtered_df["PO Number"].astype(str) == po_number]
+
+if vendor != "All Vendors":
+    filtered_df = filtered_df[filtered_df["Vendor"].astype(str) == vendor]
+
+if warehouse != "All Warehouses":
+    filtered_df = filtered_df[filtered_df["Warehouse"].astype(str) == warehouse]
+
+# ─────────────────────────────────────────────────────────────
+# KPI CALCULATIONS
+# ─────────────────────────────────────────────────────────────
+total_ordered = filtered_df["Qty Ordered"].sum()
+total_received = filtered_df["Qty Received"].sum()
+total_rejected = filtered_df["Qty Rejected"].sum()
+pending_qty = total_ordered - total_received
+
+# ─────────────────────────────────────────────────────────────
+# KPI CARDS
+# ─────────────────────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns(4)
+
+def card(title, value, subtitle, color):
+    return f"""
+    <div style="background:{color};
+                border-radius:14px;padding:1.4rem 1.6rem;color:white;
+                box-shadow:0 6px 20px {color}40;">
+        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;">
+            {title}
+        </div>
+        <div style="font-size:1.8rem;font-weight:800;margin-top:5px;">
+            {value:,.0f}
+        </div>
+        <div style="font-size:0.8rem;opacity:0.8;">
+            {subtitle}
+        </div>
+    </div>
+    """
+
 with c1:
-    st.markdown(stat_card("Total QTY Ordered", "304,726,587", "12,918 GRNs", "#1A56DB", "📋"), unsafe_allow_html=True)
+    st.markdown(card("Total QTY Ordered", total_ordered, "Across GRNs", "#1A56DB"), unsafe_allow_html=True)
 with c2:
-    st.markdown(stat_card("Total QTY Received", "135,393,246", "Against ordered qty", "#16A34A", "✅"), unsafe_allow_html=True)
+    st.markdown(card("Total QTY Received", total_received, "Against ordered qty", "#16A34A"), unsafe_allow_html=True)
 with c3:
-    st.markdown(stat_card("Pending QTY", "169,333,341", "Yet to be received", "#B45309", "⏳"), unsafe_allow_html=True)
+    st.markdown(card("Pending QTY", pending_qty, "Yet to be received", "#B45309"), unsafe_allow_html=True)
 with c4:
-    st.markdown(stat_card("Total QTY Rejected", "31,429", "Rejection across GRNs", "#DC2626", "❌"), unsafe_allow_html=True)
+    st.markdown(card("Total QTY Rejected", total_rejected, "Rejection across GRNs", "#DC2626"), unsafe_allow_html=True)
 
 st.markdown("---")
-section_label("GRN Records")
+st.markdown("##### GRN Records")
 
-# ── YOUR EXISTING DATA LOGIC GOES HERE ──────────────────────────────────────
-# Paste your original data loading, filtering, and st.dataframe() code below:
-#
-# @st.cache_data
-# def load_grn_data():
-#     ...
-#     return df
-#
-# df = load_grn_data()
-# if search_grn:
-#     df = df[df['grn_no'].str.contains(search_grn, case=False, na=False)]
-# if po_number != "All POs":
-#     df = df[df['po_number'] == po_number]
-# if vendor != "All Vendors":
-#     df = df[df['vendor_name'] == vendor]
-# if warehouse != "All Warehouses":
-#     df = df[df['warehouse'] == warehouse]
-# st.dataframe(df, use_container_width=True, hide_index=True)
+# ─────────────────────────────────────────────────────────────
+# SHOW TABLE
+# ─────────────────────────────────────────────────────────────
+st.dataframe(filtered_df, use_container_width=True, hide_index=True)
