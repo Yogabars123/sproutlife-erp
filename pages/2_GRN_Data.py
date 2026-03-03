@@ -4,7 +4,7 @@ import pandas as pd
 st.set_page_config(page_title="GRN Data", layout="wide", page_icon="📥")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# EMBEDDED STYLES — no external file needed
+# EMBEDDED STYLES
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -97,52 +97,153 @@ def section_label(text):
                 text-transform:uppercase;color:#94A3B8;margin-bottom:0.3rem;">{text}</div>""",
                 unsafe_allow_html=True)
 
+def fmt(n):
+    return f"{n:,.0f}"
+
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE CONTENT
+# DATA LOADING
+# ─────────────────────────────────────────────────────────────────────────────
+EXCEL_PATH = r"C:\Users\YOGA BAR\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
+SHEET_NAME = "GRN-Data"
+
+@st.cache_data(ttl=300)
+def load_grn_data():
+    df = pd.read_excel(EXCEL_PATH, sheet_name=SHEET_NAME, engine="openpyxl")
+    df.columns = df.columns.str.strip()
+    df["GRN Date"] = pd.to_datetime(df["GRN Date"], errors="coerce").dt.date
+    for col in ["QuantityOrdered", "QuantityReceived", "QuantityRejected", "PercentageRejection"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    df["QuantityPending"] = (df["QuantityOrdered"] - df["QuantityReceived"]).clip(lower=0)
+    def get_status(row):
+        if row["QuantityRejected"] > 0:
+            return "Rejected"
+        elif row["QuantityPending"] == 0:
+            return "Fully Received"
+        elif row["QuantityReceived"] > 0:
+            return "Partial"
+        else:
+            return "Pending"
+    df["Status"] = df.apply(get_status, axis=1)
+    return df
+
+try:
+    df_full = load_grn_data()
+except FileNotFoundError:
+    st.error(f"❌ File not found at: `{EXCEL_PATH}`")
+    st.stop()
+except Exception as e:
+    st.error(f"❌ Error loading data: {e}")
+    st.stop()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE HEADER
 # ─────────────────────────────────────────────────────────────────────────────
 page_header("📥", "GRN Data", "Goods Receipt Note tracking & analysis")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# FILTERS — Row 1
+# ─────────────────────────────────────────────────────────────────────────────
 section_label("Search & Filter")
 col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
 with col1:
-    search_grn = st.text_input("", placeholder="🔍  Search GRN…", label_visibility="collapsed")
+    search_grn = st.text_input("", placeholder="🔍  Search GRN No / Item Name…", label_visibility="collapsed")
 with col2:
-    po_number = st.selectbox("PO Number", ["All POs"])
+    po_opts = ["All POs"] + sorted(df_full["PO No"].dropna().astype(str).unique().tolist())
+    po_sel  = st.selectbox("PO Number", po_opts)
 with col3:
-    vendor = st.selectbox("Vendor", ["All Vendors"])
+    vendor_opts = ["All Vendors"] + sorted(df_full["Vendor Name"].dropna().unique().tolist())
+    vendor_sel  = st.selectbox("Vendor", vendor_opts)
 with col4:
-    warehouse = st.selectbox("Warehouse", ["All Warehouses"])
+    wh_opts = ["All Warehouses"] + sorted(df_full["Warehouse"].dropna().unique().tolist())
+    wh_sel  = st.selectbox("Warehouse", wh_opts)
+
+# ── Row 2: Date range + Status + Item
+valid_dates = df_full["GRN Date"].dropna()
+min_d, max_d = valid_dates.min(), valid_dates.max()
+
+col5, col6, col7, col8 = st.columns([2, 2, 2, 2])
+with col5:
+    date_from = st.date_input("From Date", value=min_d, min_value=min_d, max_value=max_d)
+with col6:
+    date_to   = st.date_input("To Date",   value=max_d, min_value=min_d, max_value=max_d)
+with col7:
+    status_opts = ["All Statuses"] + sorted(df_full["Status"].unique().tolist())
+    status_sel  = st.selectbox("Status", status_opts)
+with col8:
+    item_opts = ["All Items"] + sorted(df_full["Item Name"].dropna().unique().tolist())
+    item_sel  = st.selectbox("Item", item_opts)
 
 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# APPLY FILTERS
+# ─────────────────────────────────────────────────────────────────────────────
+df = df_full.copy()
+
+if search_grn:
+    mask = (
+        df["GRN No"].astype(str).str.contains(search_grn, case=False, na=False) |
+        df["Item Name"].astype(str).str.contains(search_grn, case=False, na=False)
+    )
+    df = df[mask]
+
+if po_sel     != "All POs":        df = df[df["PO No"].astype(str) == po_sel]
+if vendor_sel != "All Vendors":    df = df[df["Vendor Name"]       == vendor_sel]
+if wh_sel     != "All Warehouses": df = df[df["Warehouse"]         == wh_sel]
+if status_sel != "All Statuses":   df = df[df["Status"]            == status_sel]
+if item_sel   != "All Items":      df = df[df["Item Name"]         == item_sel]
+
+df = df[df["GRN Date"].notna() & (df["GRN Date"] >= date_from) & (df["GRN Date"] <= date_to)]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAT CARDS
+# ─────────────────────────────────────────────────────────────────────────────
+total_ordered  = df["QuantityOrdered"].sum()
+total_received = df["QuantityReceived"].sum()
+total_pending  = df["QuantityPending"].sum()
+total_rejected = df["QuantityRejected"].sum()
+grn_count      = df["GRN No"].nunique()
+
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.markdown(stat_card("Total QTY Ordered", "304,726,587", "12,918 GRNs", "#1A56DB", "📋"), unsafe_allow_html=True)
+    st.markdown(stat_card("Total QTY Ordered",  fmt(total_ordered),  f"{grn_count} unique GRNs", "#1A56DB", "📋"), unsafe_allow_html=True)
 with c2:
-    st.markdown(stat_card("Total QTY Received", "135,393,246", "Against ordered qty", "#16A34A", "✅"), unsafe_allow_html=True)
+    st.markdown(stat_card("Total QTY Received", fmt(total_received), "Against ordered qty",       "#16A34A", "✅"), unsafe_allow_html=True)
 with c3:
-    st.markdown(stat_card("Pending QTY", "169,333,341", "Yet to be received", "#B45309", "⏳"), unsafe_allow_html=True)
+    st.markdown(stat_card("Pending QTY",        fmt(total_pending),  "Yet to be received",        "#B45309", "⏳"), unsafe_allow_html=True)
 with c4:
-    st.markdown(stat_card("Total QTY Rejected", "31,429", "Rejection across GRNs", "#DC2626", "❌"), unsafe_allow_html=True)
+    st.markdown(stat_card("Total QTY Rejected", fmt(total_rejected), "Rejection across GRNs",     "#DC2626", "❌"), unsafe_allow_html=True)
 
 st.markdown("---")
-section_label("GRN Records")
 
-# ── YOUR EXISTING DATA LOGIC GOES HERE ──────────────────────────────────────
-# Paste your original data loading, filtering, and st.dataframe() code below:
-#
-# @st.cache_data
-# def load_grn_data():
-#     ...
-#     return df
-#
-# df = load_grn_data()
-# if search_grn:
-#     df = df[df['grn_no'].str.contains(search_grn, case=False, na=False)]
-# if po_number != "All POs":
-#     df = df[df['po_number'] == po_number]
-# if vendor != "All Vendors":
-#     df = df[df['vendor_name'] == vendor]
-# if warehouse != "All Warehouses":
-#     df = df[df['warehouse'] == warehouse]
-# st.dataframe(df, use_container_width=True, hide_index=True)
+# ─────────────────────────────────────────────────────────────────────────────
+# TABLE
+# ─────────────────────────────────────────────────────────────────────────────
+section_label(f"GRN Records — {len(df):,} rows  |  {grn_count} GRNs")
+
+display_cols = ["GRN No", "GRN Date", "Vendor Name", "PO No",
+                "Item Code", "Item Name", "Warehouse",
+                "QuantityOrdered", "QuantityReceived", "QuantityPending",
+                "QuantityRejected", "PercentageRejection", "Status"]
+display_cols = [c for c in display_cols if c in df.columns]
+display_df   = df[display_cols].copy()
+display_df["GRN Date"] = display_df["GRN Date"].astype(str)
+
+def style_status(val):
+    return {
+        "Fully Received": "background-color:#DCFCE7;color:#166534;font-weight:600",
+        "Pending":        "background-color:#FEF9C3;color:#713F12;font-weight:600",
+        "Partial":        "background-color:#DBEAFE;color:#1E40AF;font-weight:600",
+        "Rejected":       "background-color:#FEE2E2;color:#991B1B;font-weight:600",
+    }.get(val, "")
+
+num_cols = {c: "{:,.2f}" for c in ["QuantityOrdered","QuantityReceived","QuantityPending","QuantityRejected"] if c in display_df.columns}
+if "PercentageRejection" in display_df.columns:
+    num_cols["PercentageRejection"] = "{:.2f}%"
+
+styled = display_df.style.applymap(style_status, subset=["Status"]).format(num_cols)
+st.dataframe(styled, use_container_width=True, hide_index=True, height=520)
+
+csv = display_df.to_csv(index=False).encode("utf-8")
+st.download_button("⬇️  Export to CSV", csv, "grn_export.csv", "text/csv")
