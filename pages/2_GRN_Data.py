@@ -89,7 +89,7 @@ def fmt(n):
 #     running Streamlit. Examples:
 #       Windows local : r"C:\Users\abinaya_m_yogabars_in\Desktop\SproutlifeInventoryApp\Sproutlife Inventory.xlsx"
 #       OneDrive sync : r"C:\Users\abinaya_m_yogabars_in\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
-EXCEL_PATH = r"C:\Users\abinaya_m_yogabars_in\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Desktop\SproutlifeInventoryApp\Sproutlife Inventory.xlsx"
+EXCEL_PATH = r"C:\Users\abinaya_m_yogabars_in\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
 SHEET_NAME = "GRN-Data"
 
 @st.cache_data(ttl=300)   # re-reads file every 5 minutes
