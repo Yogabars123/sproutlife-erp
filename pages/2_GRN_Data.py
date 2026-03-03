@@ -1,18 +1,41 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="GRN Data", layout="wide", page_icon="📥")
+# ─────────────────────────────────────────────
+# PAGE CONFIG (MOBILE FRIENDLY)
+# ─────────────────────────────────────────────
+st.set_page_config(
+    page_title="GRN Data",
+    page_icon="📥",
+    layout="centered"
+)
 
 # ─────────────────────────────────────────────
-# MOBILE OPTIMIZED CSS
+# MOBILE RESPONSIVE CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
+
+/* Reduce side padding */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+/* Remove horizontal scroll */
+html, body {
+    overflow-x: hidden !important;
+}
+
+/* KPI Card */
 .kpi-card {
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 14px;
+    padding: 14px;
     color: white;
     box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    margin-bottom: 12px;
 }
 
 .kpi-title {
@@ -22,23 +45,33 @@ st.markdown("""
 }
 
 .kpi-value {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     margin-top: 4px;
 }
 
-/* Mobile Optimization */
+/* Make dataframe scrollable */
+[data-testid="stDataFrame"] {
+    overflow-x: auto !important;
+}
+
+/* Stack columns on mobile */
 @media (max-width: 768px) {
-    .kpi-card {
-        padding: 12px;
+
+    div[data-testid="column"] {
+        width: 100% !important;
+        flex: 100% !important;
     }
+
     .kpi-title {
         font-size: 11px;
     }
+
     .kpi-value {
         font-size: 18px;
     }
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -53,13 +86,14 @@ def load_data():
 
 df = load_data()
 
+# Convert numeric columns safely
 numeric_cols = ["QuantityOrdered", "QuantityReceived", "QuantityRejected"]
 for col in numeric_cols:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # ─────────────────────────────────────────────
-# CENTRAL + VALID PO FILTER
+# BASE FILTER (Central + Valid PO Only)
 # ─────────────────────────────────────────────
 base_df = df[
     (df["Warehouse"] == "Central") &
@@ -71,7 +105,13 @@ base_df = df[
 # ─────────────────────────────────────────────
 # SEARCH
 # ─────────────────────────────────────────────
-search_text = st.text_input("Search (GRN / Item Code / Item Name / PO No)")
+st.markdown("### 🔍 Search")
+
+search_text = st.text_input(
+    "Search (GRN / Item Code / Item Name / PO No)",
+    label_visibility="collapsed",
+    placeholder="Type to search..."
+)
 
 filtered_df = base_df.copy()
 
@@ -97,7 +137,7 @@ total_rejected = filtered_df["QuantityRejected"].sum()
 pending_qty = total_ordered - total_received
 
 # ─────────────────────────────────────────────
-# KPI DISPLAY (Responsive Grid)
+# KPI DISPLAY (2 PER ROW MOBILE STYLE)
 # ─────────────────────────────────────────────
 col1, col2 = st.columns(2)
 col3, col4 = st.columns(2)
@@ -135,5 +175,9 @@ with col4:
     """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("### GRN Records (Central + Valid PO Only)")
+
+# ─────────────────────────────────────────────
+# TABLE
+# ─────────────────────────────────────────────
+st.markdown("### 📋 GRN Records (Central + Valid PO Only)")
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
