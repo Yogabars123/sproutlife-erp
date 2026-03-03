@@ -1,93 +1,93 @@
 import streamlit as st
 import pandas as pd
 
-# ─────────────────────────────────────────────
 # PAGE CONFIG
-# ─────────────────────────────────────────────
 st.set_page_config(
     page_title="RM Inventory | ERP",
     layout="wide",
     page_icon="📦"
 )
 
-# ─────────────────────────────────────────────
-# CLEAN CSS (NO EXTRA TOP SPACE)
-# ─────────────────────────────────────────────
+# ULTRA COMPACT CSS
 st.markdown("""
 <style>
-
-/* Remove default Streamlit padding */
 .block-container {
     padding-top: 0rem !important;
-    padding-bottom: 1rem !important;
+    padding-bottom: 0.5rem !important;
 }
 
-/* Remove top margin */
-.css-18e3th9 {
-    padding-top: 0rem !important;
-}
+header {visibility: hidden;}
+footer {visibility: hidden;}
 
-/* Background */
 body {
     background-color: #f4f6f9;
 }
 
-/* Header */
 .section-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
-    margin-top: 5px;
-    margin-bottom: 10px;
+    margin-top: 4px;
+    margin-bottom: 8px;
 }
 
-/* KPI Card */
 .kpi-box {
     background: linear-gradient(135deg, #1A56DB, #2563EB);
-    padding: 22px;
-    border-radius: 14px;
+    padding: 16px;
+    border-radius: 12px;
     color: white;
-    margin-top: 10px;
-    margin-bottom: 15px;
+    margin-top: 8px;
+    margin-bottom: 12px;
 }
 
 .kpi-title {
-    font-size: 15px;
+    font-size: 13px;
 }
 
 .kpi-value {
-    font-size: 32px;
+    font-size: 22px;
     font-weight: 700;
+    margin-top: 4px;
 }
 
-/* MOBILE OPTIMIZATION */
+.stTextInput input {
+    padding: 6px !important;
+}
+
+.stSelectbox div {
+    padding: 6px !important;
+}
+
 @media (max-width: 768px) {
 
     .block-container {
-        padding-top: 0rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
     }
 
     .section-title {
-        font-size: 16px;
-        margin-top: 2px;
+        font-size: 15px;
     }
 
     .kpi-title {
-        font-size: 12px;
+        font-size: 11px;
     }
 
     .kpi-value {
-        font-size: 20px;
+        font-size: 18px;
+    }
+
+    .stTextInput input {
+        font-size: 13px !important;
+    }
+
+    .stSelectbox div {
+        font-size: 13px !important;
     }
 }
-
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 # LOAD DATA
-# ─────────────────────────────────────────────
 @st.cache_data(ttl=600)
 def load_data():
     df = pd.read_excel(
@@ -99,9 +99,7 @@ def load_data():
 
 df = load_data()
 
-# ─────────────────────────────────────────────
 # REQUIRED COLUMNS
-# ─────────────────────────────────────────────
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 ITEM_COL = "Item code"
@@ -114,9 +112,7 @@ if STOCK_COL not in df.columns:
     st.error("Column 'Qty Available' not found.")
     st.stop()
 
-# ─────────────────────────────────────────────
 # MAIN WAREHOUSES
-# ─────────────────────────────────────────────
 main_warehouses = [
     "Central",
     "RM Warehouse Tumkur",
@@ -128,31 +124,25 @@ main_warehouses = [
     "YB FG Warehouse"
 ]
 
-# ─────────────────────────────────────────────
 # HEADER
-# ─────────────────────────────────────────────
 st.markdown(
-    '<div class="section-title">📦 Raw Material Inventory Overview</div>',
+    '<div class="section-title">📦 Raw Material Inventory</div>',
     unsafe_allow_html=True
 )
 
-# ─────────────────────────────────────────────
 # FILTERS
-# ─────────────────────────────────────────────
 col1, col2 = st.columns(2)
 
 with col1:
-    search_text = st.text_input("🔎 Search Item Code")
+    search_text = st.text_input("🔎 Item Code")
 
 with col2:
     selected_wh = st.selectbox(
-        "🏢 Select Warehouse",
+        "🏢 Warehouse",
         ["All Warehouses"] + main_warehouses
     )
 
-# ─────────────────────────────────────────────
 # FILTER LOGIC
-# ─────────────────────────────────────────────
 filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)].copy()
 
 if selected_wh != "All Warehouses":
@@ -166,23 +156,19 @@ if search_text and ITEM_COL in filtered_df.columns:
         .str.contains(search_text, case=False, na=False)
     ]
 
-# ─────────────────────────────────────────────
 # KPI
-# ─────────────────────────────────────────────
 total_stock = filtered_df[STOCK_COL].sum()
 
 st.markdown(f"""
 <div class="kpi-box">
-    <div class="kpi-title">Total Stock Available</div>
+    <div class="kpi-title">Total Stock</div>
     <div class="kpi-value">{total_stock:,.2f}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 # TABLE
-# ─────────────────────────────────────────────
 st.markdown(
-    '<div class="section-title">📋 Inventory Records</div>',
+    '<div class="section-title">📋 Records</div>',
     unsafe_allow_html=True
 )
 
