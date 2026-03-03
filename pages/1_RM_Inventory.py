@@ -11,27 +11,86 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# ENTERPRISE STYLE
+# RESPONSIVE ENTERPRISE CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-body { background-color: #f4f6f9; }
 
+body {
+    background-color: #f4f6f9;
+}
+
+/* Container spacing */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* KPI Card */
 .kpi-box {
     background: linear-gradient(135deg, #1A56DB, #2563EB);
-    padding: 25px;
-    border-radius: 16px;
+    padding: 32px;
+    border-radius: 18px;
     color: white;
-    font-size: 22px;
-    font-weight: 600;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+    margin-bottom: 25px;
+}
+
+.kpi-title {
+    font-size: 18px;
+    font-weight: 500;
 }
 
 .kpi-value {
-    font-size: 40px;
+    font-size: 42px;
     font-weight: 700;
     margin-top: 10px;
 }
+
+/* Section Headers */
+.section-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+
+    .main .block-container {
+        padding-top: 1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .kpi-box {
+        padding: 18px;
+        border-radius: 14px;
+    }
+
+    .kpi-title {
+        font-size: 14px;
+    }
+
+    .kpi-value {
+        font-size: 26px;
+    }
+
+    .section-title {
+        font-size: 18px;
+    }
+
+    .stTextInput input {
+        font-size: 14px !important;
+    }
+
+    .stSelectbox div {
+        font-size: 14px !important;
+    }
+
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -49,9 +108,23 @@ def load_data():
 
 df = load_data()
 
+# ─────────────────────────────────────────────
+# REQUIRED COLUMNS
+# ─────────────────────────────────────────────
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 
+if WAREHOUSE_COL not in df.columns:
+    st.error("Column 'Warehouse' not found.")
+    st.stop()
+
+if STOCK_COL not in df.columns:
+    st.error("Column 'Qty Available' not found.")
+    st.stop()
+
+# ─────────────────────────────────────────────
+# MAIN WAREHOUSES
+# ─────────────────────────────────────────────
 main_warehouses = [
     "Central",
     "RM Warehouse Tumkur",
@@ -64,10 +137,16 @@ main_warehouses = [
 ]
 
 # ─────────────────────────────────────────────
+# HEADER
+# ─────────────────────────────────────────────
+st.markdown(
+    '<div class="section-title">📦 Raw Material Inventory Overview</div>',
+    unsafe_allow_html=True
+)
+
+# ─────────────────────────────────────────────
 # FILTER SECTION
 # ─────────────────────────────────────────────
-st.markdown("## 📦 Raw Material Inventory Overview")
-
 col1, col2 = st.columns(2)
 
 with col1:
@@ -79,41 +158,49 @@ with col2:
         ["All Warehouses"] + main_warehouses
     )
 
-# Apply base warehouse restriction (only main warehouses allowed)
+# ─────────────────────────────────────────────
+# FILTER LOGIC
+# ─────────────────────────────────────────────
 filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)]
 
-# Apply warehouse dropdown filter
 if selected_wh != "All Warehouses":
     filtered_df = filtered_df[filtered_df[WAREHOUSE_COL] == selected_wh]
 
-# Apply search filter
 if search_text:
     filtered_df = filtered_df[
         filtered_df.apply(
-            lambda row: row.astype(str).str.contains(search_text, case=False).any(),
+            lambda row: row.astype(str)
+            .str.contains(search_text, case=False)
+            .any(),
             axis=1
         )
     ]
 
 # ─────────────────────────────────────────────
-# KPI CALCULATION (AFTER FILTERING)
+# KPI CALCULATION
 # ─────────────────────────────────────────────
 total_stock = filtered_df[STOCK_COL].sum()
 
 st.markdown(
     f"""
     <div class="kpi-box">
-        Total Stock Available
+        <div class="kpi-title">Total Stock Available</div>
         <div class="kpi-value">{total_stock:,.2f}</div>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-st.markdown("<br>", unsafe_allow_html=True)
-
 # ─────────────────────────────────────────────
 # TABLE
 # ─────────────────────────────────────────────
-st.markdown("### 📋 Inventory Records")
-st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+st.markdown(
+    '<div class="section-title">📋 Inventory Records</div>',
+    unsafe_allow_html=True
+)
+
+st.dataframe(
+    filtered_df,
+    use_container_width=True,
+    hide_index=True
+)
