@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -13,7 +12,7 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# POWER BI WEB STYLE CSS
+# POWER BI STYLE CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -72,7 +71,8 @@ section[data-testid="stSidebar"] {
 def load_data():
     df = pd.read_excel(
         "Sproutlife Inventory.xlsx",
-        sheet_name="RM-Inventory"
+        sheet_name="RM-Inventory",
+        engine="openpyxl"
     )
     df.columns = df.columns.str.strip()
     return df
@@ -83,16 +83,8 @@ WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 ITEM_COL = "Item code"
 
-main_warehouses = [
-    "Central",
-    "RM Warehouse Tumkur",
-    "Central Warehouse - Cold Storage RM",
-    "Tumkur Warehouse",
-    "Tumkur New Warehouse",
-    "HF Factory FG Warehouse",
-    "Sproutlife Foods Private Ltd (SNOWMAN)",
-    "YB FG Warehouse"
-]
+# Convert stock column safely to numeric
+df[STOCK_COL] = pd.to_numeric(df[STOCK_COL], errors="coerce").fillna(0)
 
 # ─────────────────────────────────────────────
 # SIDEBAR FILTERS
@@ -101,9 +93,11 @@ st.sidebar.markdown("### Filters")
 
 search_text = st.sidebar.text_input("Search Item Code")
 
+warehouse_list = sorted(df[WAREHOUSE_COL].dropna().unique())
+
 selected_wh = st.sidebar.selectbox(
     "Select Warehouse",
-    ["All Warehouses"] + main_warehouses
+    ["All Warehouses"] + list(warehouse_list)
 )
 
 low_stock_threshold = st.sidebar.number_input(
@@ -115,24 +109,37 @@ low_stock_threshold = st.sidebar.number_input(
 # ─────────────────────────────────────────────
 # FILTER LOGIC
 # ─────────────────────────────────────────────
-filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)].copy()
+filtered_df = df.copy()
 
+# Warehouse filter
 if selected_wh != "All Warehouses":
     filtered_df = filtered_df[
         filtered_df[WAREHOUSE_COL] == selected_wh
     ]
 
-if search_text:
+# Strong Search Logic
+if search_text and ITEM_COL in filtered_df.columns:
+    search_text = search_text.strip().lower()
+
     filtered_df = filtered_df[
-        filtered_df[ITEM_COL].astype(str)
-        .str.contains(search_text, case=False, na=False)
+        filtered_df[ITEM_COL]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .str.contains(search_text, na=False)
     ]
 
 # ─────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────
-st.markdown('<div class="dashboard-title">Raw Material Inventory Dashboard</div>', unsafe_allow_html=True)
-st.markdown('<div class="dashboard-subtitle">Enterprise Warehouse Monitoring System</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="dashboard-title">Raw Material Inventory Dashboard</div>',
+    unsafe_allow_html=True
+)
+st.markdown(
+    '<div class="dashboard-subtitle">Enterprise Warehouse Monitoring System</div>',
+    unsafe_allow_html=True
+)
 
 # ─────────────────────────────────────────────
 # KPI CALCULATIONS
@@ -140,10 +147,12 @@ st.markdown('<div class="dashboard-subtitle">Enterprise Warehouse Monitoring Sys
 total_stock = filtered_df[STOCK_COL].sum()
 total_skus = filtered_df[ITEM_COL].nunique()
 warehouse_count = filtered_df[WAREHOUSE_COL].nunique()
-low_stock_items = filtered_df[filtered_df[STOCK_COL] <= low_stock_threshold].shape[0]
+low_stock_items = filtered_df[
+    filtered_df[STOCK_COL] <= low_stock_threshold
+].shape[0]
 
 # ─────────────────────────────────────────────
-# KPI ROW (Like Power BI)
+# KPI ROW
 # ─────────────────────────────────────────────
 col1, col2, col3, col4 = st.columns(4)
 
@@ -180,9 +189,12 @@ with col4:
     """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# WAREHOUSE STOCK CHART
+# WAREHOUSE SUMMARY TABLE
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-title">Warehouse Stock Distribution</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">Warehouse Stock Summary</div>',
+    unsafe_allow_html=True
+)
 
 warehouse_summary = (
     filtered_df
@@ -191,25 +203,19 @@ warehouse_summary = (
     .reset_index()
 )
 
-fig = px.bar(
+st.dataframe(
     warehouse_summary,
-    x=WAREHOUSE_COL,
-    y=STOCK_COL,
-    title=None
+    use_container_width=True,
+    hide_index=True
 )
 
-fig.update_layout(
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    height=400
+# ─────────────────────────────────────────────
+# LOW STOCK ALERT
+# ─────────────────────────────────────────────
+st.markdown(
+    '<div class="section-title">Low Stock Items</div>',
+    unsafe_allow_html=True
 )
-
-st.plotly_chart(fig, use_container_width=True)
-
-# ─────────────────────────────────────────────
-# LOW STOCK ALERT TABLE
-# ─────────────────────────────────────────────
-st.markdown('<div class="section-title">Low Stock Items</div>', unsafe_allow_html=True)
 
 low_stock_df = filtered_df[
     filtered_df[STOCK_COL] <= low_stock_threshold
@@ -222,9 +228,12 @@ st.dataframe(
 )
 
 # ─────────────────────────────────────────────
-# FULL DATA TABLE
+# FULL INVENTORY TABLE
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-title">Inventory Details</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">Inventory Details</div>',
+    unsafe_allow_html=True
+)
 
 st.dataframe(
     filtered_df,
