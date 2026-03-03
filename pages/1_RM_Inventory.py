@@ -11,6 +11,31 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
+# ENTERPRISE STYLE
+# ─────────────────────────────────────────────
+st.markdown("""
+<style>
+body { background-color: #f4f6f9; }
+
+.kpi-box {
+    background: linear-gradient(135deg, #1A56DB, #2563EB);
+    padding: 25px;
+    border-radius: 16px;
+    color: white;
+    font-size: 22px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.kpi-value {
+    font-size: 40px;
+    font-weight: 700;
+    margin-top: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
 # LOAD DATA
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=600)
@@ -24,23 +49,9 @@ def load_data():
 
 df = load_data()
 
-# ─────────────────────────────────────────────
-# REQUIRED COLUMNS
-# ─────────────────────────────────────────────
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 
-if WAREHOUSE_COL not in df.columns:
-    st.error("Column 'Warehouse' not found.")
-    st.stop()
-
-if STOCK_COL not in df.columns:
-    st.error("Column 'Qty Available' not found.")
-    st.stop()
-
-# ─────────────────────────────────────────────
-# MAIN WAREHOUSES FOR KPI
-# ─────────────────────────────────────────────
 main_warehouses = [
     "Central",
     "RM Warehouse Tumkur",
@@ -53,27 +64,10 @@ main_warehouses = [
 ]
 
 # ─────────────────────────────────────────────
-# KPI CALCULATION (ONLY QTY AVAILABLE)
-# ─────────────────────────────────────────────
-kpi_df = df[df[WAREHOUSE_COL].isin(main_warehouses)]
-
-total_stock = kpi_df[STOCK_COL].sum()
-
-# ─────────────────────────────────────────────
-# HEADER
+# FILTER SECTION
 # ─────────────────────────────────────────────
 st.markdown("## 📦 Raw Material Inventory Overview")
 
-st.metric(
-    "Total Stock Available (Main Warehouses)",
-    f"{total_stock:,.0f}"
-)
-
-st.markdown("---")
-
-# ─────────────────────────────────────────────
-# SEARCH + FILTER
-# ─────────────────────────────────────────────
 col1, col2 = st.columns(2)
 
 with col1:
@@ -85,13 +79,14 @@ with col2:
         ["All Warehouses"] + main_warehouses
     )
 
-filtered_df = df.copy()
+# Apply base warehouse restriction (only main warehouses allowed)
+filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)]
 
-# Warehouse filter
+# Apply warehouse dropdown filter
 if selected_wh != "All Warehouses":
     filtered_df = filtered_df[filtered_df[WAREHOUSE_COL] == selected_wh]
 
-# Search filter
+# Apply search filter
 if search_text:
     filtered_df = filtered_df[
         filtered_df.apply(
@@ -99,6 +94,23 @@ if search_text:
             axis=1
         )
     ]
+
+# ─────────────────────────────────────────────
+# KPI CALCULATION (AFTER FILTERING)
+# ─────────────────────────────────────────────
+total_stock = filtered_df[STOCK_COL].sum()
+
+st.markdown(
+    f"""
+    <div class="kpi-box">
+        Total Stock Available
+        <div class="kpi-value">{total_stock:,.2f}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # TABLE
