@@ -11,41 +11,82 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# CLEAN ENTERPRISE + MOBILE CSS
+# CLEAN CSS (NO EXTRA TOP SPACE)
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-body { background-color: #f4f6f9; }
+
+/* Remove default Streamlit padding */
+.block-container {
+    padding-top: 0rem !important;
+    padding-bottom: 1rem !important;
+}
+
+/* Remove top margin */
+.css-18e3th9 {
+    padding-top: 0rem !important;
+}
+
+/* Background */
+body {
+    background-color: #f4f6f9;
+}
+
+/* Header */
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
 
 /* KPI Card */
 .kpi-box {
     background: linear-gradient(135deg, #1A56DB, #2563EB);
-    padding: 24px;
+    padding: 22px;
     border-radius: 14px;
     color: white;
-    margin-bottom: 20px;
+    margin-top: 10px;
+    margin-bottom: 15px;
 }
 
-.kpi-title { font-size: 16px; }
-.kpi-value { font-size: 34px; font-weight: 700; }
-
-.section-title {
-    font-size: 20px;
-    font-weight: 600;
-    margin-top: 15px;
+.kpi-title {
+    font-size: 15px;
 }
 
-/* MOBILE */
+.kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+/* MOBILE OPTIMIZATION */
 @media (max-width: 768px) {
-    .kpi-title { font-size: 12px; }
-    .kpi-value { font-size: 20px; }
-    .section-title { font-size: 16px; }
+
+    .block-container {
+        padding-top: 0rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .section-title {
+        font-size: 16px;
+        margin-top: 2px;
+    }
+
+    .kpi-title {
+        font-size: 12px;
+    }
+
+    .kpi-value {
+        font-size: 20px;
+    }
 }
+
 </style>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# LOAD DATA (FAST)
+# LOAD DATA
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=600)
 def load_data():
@@ -63,7 +104,7 @@ df = load_data()
 # ─────────────────────────────────────────────
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
-ITEM_COL = "Item code"   # change if needed
+ITEM_COL = "Item code"
 
 if WAREHOUSE_COL not in df.columns:
     st.error("Column 'Warehouse' not found.")
@@ -90,7 +131,10 @@ main_warehouses = [
 # ─────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-title">📦 Raw Material Inventory Overview</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">📦 Raw Material Inventory Overview</div>',
+    unsafe_allow_html=True
+)
 
 # ─────────────────────────────────────────────
 # FILTERS
@@ -107,19 +151,15 @@ with col2:
     )
 
 # ─────────────────────────────────────────────
-# FAST FILTER LOGIC
+# FILTER LOGIC
 # ─────────────────────────────────────────────
-
-# Filter only main warehouses
 filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)].copy()
 
-# Filter warehouse dropdown
 if selected_wh != "All Warehouses":
     filtered_df = filtered_df[
         filtered_df[WAREHOUSE_COL] == selected_wh
     ]
 
-# FAST SEARCH FILTER (NO APPLY)
 if search_text and ITEM_COL in filtered_df.columns:
     filtered_df = filtered_df[
         filtered_df[ITEM_COL].astype(str)
@@ -127,7 +167,7 @@ if search_text and ITEM_COL in filtered_df.columns:
     ]
 
 # ─────────────────────────────────────────────
-# KPI CALCULATION
+# KPI
 # ─────────────────────────────────────────────
 total_stock = filtered_df[STOCK_COL].sum()
 
@@ -141,7 +181,10 @@ st.markdown(f"""
 # ─────────────────────────────────────────────
 # TABLE
 # ─────────────────────────────────────────────
-st.markdown('<div class="section-title">📋 Inventory Records</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">📋 Inventory Records</div>',
+    unsafe_allow_html=True
+)
 
 st.dataframe(
     filtered_df,
