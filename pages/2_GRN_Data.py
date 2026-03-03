@@ -21,33 +21,38 @@ for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # ─────────────────────────────────────────────
-# FILTER SECTION
+# BASE ERP FILTER (CENTRAL + VALID PO)
+# ─────────────────────────────────────────────
+base_df = df[
+    (df["Warehouse"] == "Central") &
+    (df["PO No"].notna()) &
+    (df["PO No"].astype(str).str.strip() != "") &
+    (df["PO No"].astype(str).str.strip() != "-")
+]
+
+# ─────────────────────────────────────────────
+# SEARCH & FILTER SECTION
 # ─────────────────────────────────────────────
 st.markdown("### SEARCH & FILTER")
 
-col1, col2, col3, col4 = st.columns([3,2,2,2])
+col1, col2, col3 = st.columns([3,2,2])
 
 with col1:
     search_text = st.text_input("Search (GRN / Item Code / Item Name / PO No)")
 
 with col2:
-    po_options = ["All POs"] + sorted(df["PO No"].dropna().astype(str).unique().tolist())
-    po_number = st.selectbox("PO No", po_options)
-
-with col3:
-    vendor_options = ["All Vendors"] + sorted(df["Vendor Name"].dropna().astype(str).unique().tolist())
+    vendor_options = ["All Vendors"] + sorted(base_df["Vendor Name"].dropna().astype(str).unique().tolist())
     vendor = st.selectbox("Vendor", vendor_options)
 
-with col4:
-    warehouse_options = ["All Warehouses"] + sorted(df["Warehouse"].dropna().astype(str).unique().tolist())
-    warehouse = st.selectbox("Warehouse", warehouse_options)
+with col3:
+    po_options = ["All POs"] + sorted(base_df["PO No"].dropna().astype(str).unique().tolist())
+    po_number = st.selectbox("PO No", po_options)
 
 # ─────────────────────────────────────────────
-# APPLY NORMAL FILTERS (FOR TABLE)
+# APPLY ADDITIONAL USER FILTERS (ON TOP OF CENTRAL FILTER)
 # ─────────────────────────────────────────────
-filtered_df = df.copy()
+filtered_df = base_df.copy()
 
-# Search filter
 if search_text:
     search_text = search_text.lower()
     filtered_df = filtered_df[
@@ -61,33 +66,18 @@ if search_text:
         )
     ]
 
-if po_number != "All POs":
-    filtered_df = filtered_df[filtered_df["PO No"].astype(str) == po_number]
-
 if vendor != "All Vendors":
     filtered_df = filtered_df[filtered_df["Vendor Name"].astype(str) == vendor]
 
-if warehouse != "All Warehouses":
-    filtered_df = filtered_df[filtered_df["Warehouse"].astype(str) == warehouse]
+if po_number != "All POs":
+    filtered_df = filtered_df[filtered_df["PO No"].astype(str) == po_number]
 
 # ─────────────────────────────────────────────
-# KPI LOGIC (SPECIAL CONDITION)
-# Only:
-#   - Warehouse = Central
-#   - PO No not blank and not "-"
+# KPI CALCULATION (BASED ON SAME FILTERED DATA)
 # ─────────────────────────────────────────────
-kpi_df = df.copy()
-
-kpi_df = kpi_df[
-    (kpi_df["Warehouse"] == "Central") &
-    (kpi_df["PO No"].notna()) &
-    (kpi_df["PO No"].astype(str).str.strip() != "") &
-    (kpi_df["PO No"].astype(str).str.strip() != "-")
-]
-
-total_ordered = kpi_df["QuantityOrdered"].sum()
-total_received = kpi_df["QuantityReceived"].sum()
-total_rejected = kpi_df["QuantityRejected"].sum()
+total_ordered = filtered_df["QuantityOrdered"].sum()
+total_received = filtered_df["QuantityReceived"].sum()
+total_rejected = filtered_df["QuantityRejected"].sum()
 pending_qty = total_ordered - total_received
 
 # ─────────────────────────────────────────────
@@ -101,6 +91,6 @@ c3.metric("Central Pending", f"{pending_qty:,.0f}")
 c4.metric("Central Rejected", f"{total_rejected:,.0f}")
 
 st.markdown("---")
-st.markdown("### GRN Records")
+st.markdown("### GRN Records (Central Warehouse + Valid PO Only)")
 
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
