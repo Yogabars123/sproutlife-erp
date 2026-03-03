@@ -2,37 +2,33 @@ import streamlit as st
 import pandas as pd
 
 # ─────────────────────────────────────────────
-# PAGE CONFIG (FORCE SIDEBAR VISIBLE)
+# PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="GRN Data",
-    page_icon="📥",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Sproutlife ERP",
+    page_icon="📦",
+    layout="centered"
 )
 
 # ─────────────────────────────────────────────
-# FORCE SIDEBAR VISIBLE ON MOBILE
+# MOBILE SAFE CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
 
-/* Keep sidebar visible on mobile */
-@media (max-width: 768px) {
-    section[data-testid="stSidebar"] {
-        display: block !important;
-        width: 230px !important;
-    }
+/* Hide sidebar completely */
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
 
-    div[data-testid="collapsedControl"] {
-        display: none !important;
-    }
+/* Remove hamburger */
+div[data-testid="collapsedControl"] {
+    display: none !important;
 }
 
 /* Reduce padding */
 .block-container {
     padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
 }
 
 /* KPI Card */
@@ -45,143 +41,120 @@ st.markdown("""
 }
 
 .kpi-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .kpi-value {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     margin-top: 6px;
 }
 
-/* Mobile compact KPI */
+/* Stack columns on mobile */
 @media (max-width: 768px) {
     div[data-testid="column"] {
         width: 100% !important;
         flex: 100% !important;
     }
-
-    .kpi-title {
-        font-size: 12px;
-    }
-
-    .kpi-value {
-        font-size: 18px;
-    }
-}
-
-/* Make dataframe scrollable */
-[data-testid="stDataFrame"] {
-    overflow-x: auto !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# LOAD DATA
+# TOP NAVIGATION (MOBILE FRIENDLY)
 # ─────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    df = pd.read_excel("Sproutlife Inventory.xlsx", sheet_name="GRN-Data")
-    df.columns = df.columns.str.strip()
-    return df
+st.markdown("## 📦 Sproutlife ERP")
 
-df = load_data()
-
-# Convert numeric columns safely
-numeric_cols = ["QuantityOrdered", "QuantityReceived", "QuantityRejected"]
-for col in numeric_cols:
-    if col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-
-# ─────────────────────────────────────────────
-# BASE FILTER (Central + Valid PO Only)
-# ─────────────────────────────────────────────
-base_df = df[
-    (df["Warehouse"] == "Central") &
-    (df["PO No"].notna()) &
-    (df["PO No"].astype(str).str.strip() != "") &
-    (df["PO No"].astype(str).str.strip() != "-")
-]
-
-# ─────────────────────────────────────────────
-# PAGE HEADER
-# ─────────────────────────────────────────────
-st.title("📥 GRN Data")
-
-# ─────────────────────────────────────────────
-# SEARCH
-# ─────────────────────────────────────────────
-search_text = st.text_input(
-    "Search (GRN / Item Code / Item Name / PO No)"
+page = st.radio(
+    "Navigation",
+    ["GRN Data", "RM Inventory", "FG Inventory"],
+    horizontal=True
 )
 
-filtered_df = base_df.copy()
+# ─────────────────────────────────────────────
+# GRN PAGE
+# ─────────────────────────────────────────────
+if page == "GRN Data":
 
-if search_text:
-    search_text = search_text.lower()
-    filtered_df = filtered_df[
-        filtered_df.apply(
-            lambda row:
-                search_text in str(row["GRN No"]).lower()
-                or search_text in str(row["Item Code"]).lower()
-                or search_text in str(row["Item Name"]).lower()
-                or search_text in str(row["PO No"]).lower(),
-            axis=1
-        )
+    st.markdown("### 📥 GRN Data")
+
+    @st.cache_data
+    def load_data():
+        df = pd.read_excel("Sproutlife Inventory.xlsx", sheet_name="GRN-Data")
+        df.columns = df.columns.str.strip()
+        return df
+
+    df = load_data()
+
+    numeric_cols = ["QuantityOrdered", "QuantityReceived", "QuantityRejected"]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    base_df = df[
+        (df["Warehouse"] == "Central") &
+        (df["PO No"].notna()) &
+        (df["PO No"].astype(str).str.strip() != "") &
+        (df["PO No"].astype(str).str.strip() != "-")
     ]
 
-# ─────────────────────────────────────────────
-# KPI CALCULATION
-# ─────────────────────────────────────────────
-total_ordered = filtered_df["QuantityOrdered"].sum()
-total_received = filtered_df["QuantityReceived"].sum()
-total_rejected = filtered_df["QuantityRejected"].sum()
-pending_qty = total_ordered - total_received
+    search_text = st.text_input("Search")
 
-# ─────────────────────────────────────────────
-# KPI DISPLAY (RESPONSIVE)
-# ─────────────────────────────────────────────
-col1, col2, col3, col4 = st.columns(4)
+    filtered_df = base_df.copy()
 
-with col1:
-    st.markdown(f"""
-    <div class="kpi-card" style="background: linear-gradient(135deg,#1A56DB,#2563EB);">
-        <div class="kpi-title">Ordered Quantity</div>
-        <div class="kpi-value">{total_ordered:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    if search_text:
+        search_text = search_text.lower()
+        filtered_df = filtered_df[
+            filtered_df.apply(
+                lambda row:
+                    search_text in str(row["GRN No"]).lower()
+                    or search_text in str(row["Item Code"]).lower()
+                    or search_text in str(row["Item Name"]).lower(),
+                axis=1
+            )
+        ]
 
-with col2:
-    st.markdown(f"""
-    <div class="kpi-card" style="background: linear-gradient(135deg,#16A34A,#22C55E);">
-        <div class="kpi-title">Received Quantity</div>
-        <div class="kpi-value">{total_received:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    total_ordered = filtered_df["QuantityOrdered"].sum()
+    total_received = filtered_df["QuantityReceived"].sum()
+    total_rejected = filtered_df["QuantityRejected"].sum()
+    pending_qty = total_ordered - total_received
 
-with col3:
-    st.markdown(f"""
-    <div class="kpi-card" style="background: linear-gradient(135deg,#F59E0B,#FBBF24);">
-        <div class="kpi-title">Pending Quantity</div>
-        <div class="kpi-value">{pending_qty:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
 
-with col4:
-    st.markdown(f"""
-    <div class="kpi-card" style="background: linear-gradient(135deg,#DC2626,#EF4444);">
-        <div class="kpi-title">Rejected Quantity</div>
-        <div class="kpi-value">{total_rejected:,.0f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    with col1:
+        st.markdown(f"""
+        <div class="kpi-card" style="background:linear-gradient(135deg,#1A56DB,#2563EB);">
+            <div class="kpi-title">Ordered Quantity</div>
+            <div class="kpi-value">{total_ordered:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-st.markdown("---")
+    with col2:
+        st.markdown(f"""
+        <div class="kpi-card" style="background:linear-gradient(135deg,#16A34A,#22C55E);">
+            <div class="kpi-title">Received Quantity</div>
+            <div class="kpi-value">{total_received:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# TABLE
-# ─────────────────────────────────────────────
-st.subheader("GRN Records (Central + Valid PO Only)")
-st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+    with col3:
+        st.markdown(f"""
+        <div class="kpi-card" style="background:linear-gradient(135deg,#F59E0B,#FBBF24);">
+            <div class="kpi-title">Pending Quantity</div>
+            <div class="kpi-value">{pending_qty:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"""
+        <div class="kpi-card" style="background:linear-gradient(135deg,#DC2626,#EF4444);">
+            <div class="kpi-title">Rejected Quantity</div>
+            <div class="kpi-value">{total_rejected:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
