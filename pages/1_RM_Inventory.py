@@ -46,34 +46,9 @@ def load_data():
 df = load_data()
 
 # ─────────────────────────────────────────────
-# AUTO DETECT WAREHOUSE COLUMN
+# DEFINE MAIN WAREHOUSES FOR KPI
 # ─────────────────────────────────────────────
-warehouse_col = None
-for col in df.columns:
-    if "location" in col.lower() or "warehouse" in col.lower() or "plant" in col.lower():
-        warehouse_col = col
-        break
-
-if warehouse_col is None:
-    st.error("Warehouse column not found in Excel.")
-    st.write("Available columns:", df.columns)
-    st.stop()
-
-# ─────────────────────────────────────────────
-# AUTO DETECT STOCK COLUMN (NUMERIC LAST COLUMN)
-# ─────────────────────────────────────────────
-numeric_cols = df.select_dtypes(include="number").columns
-
-if len(numeric_cols) == 0:
-    st.error("No numeric stock column found.")
-    st.stop()
-
-stock_col = numeric_cols[-1]  # take last numeric column
-
-# ─────────────────────────────────────────────
-# DEFINE ALLOWED WAREHOUSES
-# ─────────────────────────────────────────────
-allowed_warehouses = [
+main_warehouses = [
     "Central",
     "RM Warehouse Tumkur",
     "Central Warehouse - Cold Storage RM",
@@ -84,54 +59,68 @@ allowed_warehouses = [
     "YB FG Warehouse"
 ]
 
-# Filter only allowed warehouses
-df = df[df[warehouse_col].isin(allowed_warehouses)]
+# Detect warehouse column
+warehouse_col = None
+for col in df.columns:
+    if "location" in col.lower() or "warehouse" in col.lower():
+        warehouse_col = col
+        break
+
+if warehouse_col is None:
+    st.error("Warehouse column not found in Excel.")
+    st.stop()
+
+# Detect stock column (last numeric column)
+stock_col = df.select_dtypes(include="number").columns[-1]
 
 # ─────────────────────────────────────────────
-# SIDEBAR FILTER
+# KPI CALCULATION (ONLY MAIN WAREHOUSES)
 # ─────────────────────────────────────────────
-st.sidebar.title("Sproutlife ERP")
-st.sidebar.markdown("**Module:** RM Inventory")
-st.sidebar.markdown("---")
-
-selected_wh = st.sidebar.multiselect(
-    "Select Warehouse",
-    allowed_warehouses,
-    default=allowed_warehouses
-)
-
-filtered_df = df[df[warehouse_col].isin(selected_wh)]
+kpi_df = df[df[warehouse_col].isin(main_warehouses)]
+total_stock = kpi_df[stock_col].sum()
 
 # ─────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────
 st.markdown("<div class='section-title'>📦 Raw Material Inventory Overview</div>", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# KPI CALCULATIONS
-# ─────────────────────────────────────────────
-total_qty = filtered_df[stock_col].sum()
-total_records = len(filtered_df)
-zero_stock = len(filtered_df[filtered_df[stock_col] == 0])
-
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
-    st.metric("Total Stock", f"{total_qty:,.0f}")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with c2:
-    st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
-    st.metric("Total SKUs", total_records)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-with c3:
-    st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
-    st.metric("Out of Stock Items", zero_stock)
-    st.markdown("</div>", unsafe_allow_html=True)
+# KPI CARD
+st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
+st.metric("Total Stock Available (Main Warehouses)", f"{total_stock:,.0f}")
+st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# FILTER SECTION
+# ─────────────────────────────────────────────
+st.markdown("<div class='section-title'>🔎 Search & Filter</div>", unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    search_text = st.text_input("Search Item / SKU")
+
+with col2:
+    selected_wh = st.selectbox(
+        "Select Warehouse",
+        ["All Warehouses"] + main_warehouses
+    )
+
+filtered_df = df.copy()
+
+# Apply warehouse filter
+if selected_wh != "All Warehouses":
+    filtered_df = filtered_df[filtered_df[warehouse_col] == selected_wh]
+
+# Apply search filter
+if search_text:
+    filtered_df = filtered_df[
+        filtered_df.apply(
+            lambda row: row.astype(str).str.contains(search_text, case=False).any(),
+            axis=1
+        )
+    ]
 
 # ─────────────────────────────────────────────
 # DATA TABLE
