@@ -21,7 +21,7 @@ for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
 # ─────────────────────────────────────────────
-# BASE ERP FILTER (CENTRAL + VALID PO)
+# BASE FILTER (Central + Valid PO Only)
 # ─────────────────────────────────────────────
 base_df = df[
     (df["Warehouse"] == "Central") &
@@ -31,11 +31,11 @@ base_df = df[
 ]
 
 # ─────────────────────────────────────────────
-# SEARCH & FILTER SECTION
+# SEARCH & FILTER
 # ─────────────────────────────────────────────
 st.markdown("### SEARCH & FILTER")
 
-col1, col2, col3 = st.columns([3,2,2])
+col1, col2 = st.columns([3,2])
 
 with col1:
     search_text = st.text_input("Search (GRN / Item Code / Item Name / PO No)")
@@ -44,13 +44,7 @@ with col2:
     vendor_options = ["All Vendors"] + sorted(base_df["Vendor Name"].dropna().astype(str).unique().tolist())
     vendor = st.selectbox("Vendor", vendor_options)
 
-with col3:
-    po_options = ["All POs"] + sorted(base_df["PO No"].dropna().astype(str).unique().tolist())
-    po_number = st.selectbox("PO No", po_options)
-
-# ─────────────────────────────────────────────
-# APPLY ADDITIONAL USER FILTERS (ON TOP OF CENTRAL FILTER)
-# ─────────────────────────────────────────────
+# Apply filters
 filtered_df = base_df.copy()
 
 if search_text:
@@ -69,11 +63,8 @@ if search_text:
 if vendor != "All Vendors":
     filtered_df = filtered_df[filtered_df["Vendor Name"].astype(str) == vendor]
 
-if po_number != "All POs":
-    filtered_df = filtered_df[filtered_df["PO No"].astype(str) == po_number]
-
 # ─────────────────────────────────────────────
-# KPI CALCULATION (BASED ON SAME FILTERED DATA)
+# KPI CALCULATION
 # ─────────────────────────────────────────────
 total_ordered = filtered_df["QuantityOrdered"].sum()
 total_received = filtered_df["QuantityReceived"].sum()
@@ -81,16 +72,41 @@ total_rejected = filtered_df["QuantityRejected"].sum()
 pending_qty = total_ordered - total_received
 
 # ─────────────────────────────────────────────
-# KPI DISPLAY
+# COLORED KPI CARDS
 # ─────────────────────────────────────────────
+def kpi_card(title, value, color):
+    return f"""
+    <div style="
+        background: linear-gradient(135deg, {color}, {color}cc);
+        padding: 20px;
+        border-radius: 14px;
+        color: white;
+        box-shadow: 0 6px 18px {color}40;
+    ">
+        <div style="font-size: 14px; font-weight: 600;">
+            {title}
+        </div>
+        <div style="font-size: 28px; font-weight: 800; margin-top: 6px;">
+            {value:,.0f}
+        </div>
+    </div>
+    """
+
 c1, c2, c3, c4 = st.columns(4)
 
-c1.metric("Central PO Ordered", f"{total_ordered:,.0f}")
-c2.metric("Central PO Received", f"{total_received:,.0f}")
-c3.metric("Central Pending", f"{pending_qty:,.0f}")
-c4.metric("Central Rejected", f"{total_rejected:,.0f}")
+with c1:
+    st.markdown(kpi_card("Ordered Quantity", total_ordered, "#1A56DB"), unsafe_allow_html=True)
+
+with c2:
+    st.markdown(kpi_card("Received Quantity", total_received, "#16A34A"), unsafe_allow_html=True)
+
+with c3:
+    st.markdown(kpi_card("Pending Quantity", pending_qty, "#F59E0B"), unsafe_allow_html=True)
+
+with c4:
+    st.markdown(kpi_card("Rejected Quantity", total_rejected, "#DC2626"), unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("### GRN Records (Central Warehouse + Valid PO Only)")
+st.markdown("### GRN Records (Central + Valid PO Only)")
 
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
