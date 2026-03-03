@@ -2,31 +2,37 @@ import streamlit as st
 import pandas as pd
 
 # ─────────────────────────────────────────────
-# PAGE CONFIG (MOBILE FRIENDLY)
+# PAGE CONFIG (FORCE SIDEBAR VISIBLE)
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="GRN Data",
     page_icon="📥",
-    layout="centered"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ─────────────────────────────────────────────
-# MOBILE RESPONSIVE CSS
+# FORCE SIDEBAR VISIBLE ON MOBILE
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
 
-/* Reduce side padding */
+/* Keep sidebar visible on mobile */
+@media (max-width: 768px) {
+    section[data-testid="stSidebar"] {
+        display: block !important;
+        width: 230px !important;
+    }
+
+    div[data-testid="collapsedControl"] {
+        display: none !important;
+    }
+}
+
+/* Reduce padding */
 .block-container {
     padding-top: 1rem !important;
     padding-bottom: 1rem !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-}
-
-/* Remove horizontal scroll */
-html, body {
-    overflow-x: hidden !important;
 }
 
 /* KPI Card */
@@ -39,37 +45,35 @@ html, body {
 }
 
 .kpi-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    opacity: 0.9;
 }
 
 .kpi-value {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
-    margin-top: 4px;
+    margin-top: 6px;
 }
 
-/* Make dataframe scrollable */
-[data-testid="stDataFrame"] {
-    overflow-x: auto !important;
-}
-
-/* Stack columns on mobile */
+/* Mobile compact KPI */
 @media (max-width: 768px) {
-
     div[data-testid="column"] {
         width: 100% !important;
         flex: 100% !important;
     }
 
     .kpi-title {
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .kpi-value {
         font-size: 18px;
     }
+}
+
+/* Make dataframe scrollable */
+[data-testid="stDataFrame"] {
+    overflow-x: auto !important;
 }
 
 </style>
@@ -103,14 +107,15 @@ base_df = df[
 ]
 
 # ─────────────────────────────────────────────
+# PAGE HEADER
+# ─────────────────────────────────────────────
+st.title("📥 GRN Data")
+
+# ─────────────────────────────────────────────
 # SEARCH
 # ─────────────────────────────────────────────
-st.markdown("### 🔍 Search")
-
 search_text = st.text_input(
-    "Search (GRN / Item Code / Item Name / PO No)",
-    label_visibility="collapsed",
-    placeholder="Type to search..."
+    "Search (GRN / Item Code / Item Name / PO No)"
 )
 
 filtered_df = base_df.copy()
@@ -137,10 +142,9 @@ total_rejected = filtered_df["QuantityRejected"].sum()
 pending_qty = total_ordered - total_received
 
 # ─────────────────────────────────────────────
-# KPI DISPLAY (2 PER ROW MOBILE STYLE)
+# KPI DISPLAY (RESPONSIVE)
 # ─────────────────────────────────────────────
-col1, col2 = st.columns(2)
-col3, col4 = st.columns(2)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f"""
@@ -179,5 +183,5 @@ st.markdown("---")
 # ─────────────────────────────────────────────
 # TABLE
 # ─────────────────────────────────────────────
-st.markdown("### 📋 GRN Records (Central + Valid PO Only)")
+st.subheader("GRN Records (Central + Valid PO Only)")
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
