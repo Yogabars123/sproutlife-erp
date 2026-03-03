@@ -12,21 +12,10 @@ def load_data():
     df.columns = df.columns.str.strip()
     return df
 
-try:
-    df = load_data()
-except Exception as e:
-    st.error(f"Excel Load Error: {e}")
-    st.stop()
+df = load_data()
 
-# ─────────────────────────────────────────────
-# CLEAN NUMERIC COLUMNS
-# ─────────────────────────────────────────────
-numeric_cols = [
-    "QuantityOrdered",
-    "QuantityReceived",
-    "QuantityRejected"
-]
-
+# Convert numeric columns safely
+numeric_cols = ["QuantityOrdered", "QuantityReceived", "QuantityRejected"]
 for col in numeric_cols:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
@@ -39,7 +28,7 @@ st.markdown("### SEARCH & FILTER")
 col1, col2, col3, col4 = st.columns([3,2,2,2])
 
 with col1:
-    search_grn = st.text_input("Search GRN")
+    search_text = st.text_input("Search (GRN / Item Code / Item Name / PO No)")
 
 with col2:
     po_options = ["All POs"] + sorted(df["PO No"].dropna().astype(str).unique().tolist())
@@ -58,12 +47,22 @@ with col4:
 # ─────────────────────────────────────────────
 filtered_df = df.copy()
 
-if search_grn:
+# 🔍 SEARCH LOGIC (MULTI-COLUMN SEARCH)
+if search_text:
+    search_text = search_text.lower()
+
     filtered_df = filtered_df[
-        filtered_df["GRN No"].astype(str)
-        .str.contains(search_grn, case=False, na=False)
+        filtered_df.apply(
+            lambda row:
+                search_text in str(row["GRN No"]).lower()
+                or search_text in str(row["Item Code"]).lower()
+                or search_text in str(row["Item Name"]).lower()
+                or search_text in str(row["PO No"]).lower(),
+            axis=1
+        )
     ]
 
+# Dropdown filters
 if po_number != "All POs":
     filtered_df = filtered_df[filtered_df["PO No"].astype(str) == po_number]
 
@@ -94,7 +93,4 @@ c4.metric("Total Rejected", f"{total_rejected:,.0f}")
 st.markdown("---")
 st.markdown("### GRN Records")
 
-# ─────────────────────────────────────────────
-# TABLE
-# ─────────────────────────────────────────────
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
