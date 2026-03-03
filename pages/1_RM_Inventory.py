@@ -11,27 +11,6 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# ENTERPRISE STYLING
-# ─────────────────────────────────────────────
-st.markdown("""
-<style>
-body { background-color: #f4f6f9; }
-.main .block-container { padding-top: 2rem; padding-bottom: 2rem; }
-.kpi-card {
-    background: white;
-    padding: 20px;
-    border-radius: 14px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-}
-.section-title {
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
 # LOAD DATA
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=600)
@@ -46,7 +25,35 @@ def load_data():
 df = load_data()
 
 # ─────────────────────────────────────────────
-# DEFINE MAIN WAREHOUSES FOR KPI
+# REQUIRED COLUMNS
+# ─────────────────────────────────────────────
+WAREHOUSE_COL = "Warehouse"
+
+# Try to detect stock column properly
+possible_stock_cols = ["Current Stock", "Stock", "Available Qty", "Quantity"]
+
+stock_col = None
+for col in possible_stock_cols:
+    if col in df.columns:
+        stock_col = col
+        break
+
+# If not found, take last numeric column
+if stock_col is None:
+    numeric_cols = df.select_dtypes(include="number").columns
+    if len(numeric_cols) == 0:
+        st.error("No stock column found.")
+        st.stop()
+    stock_col = numeric_cols[-1]
+
+# Validate warehouse column
+if WAREHOUSE_COL not in df.columns:
+    st.error("Column 'Warehouse' not found.")
+    st.write("Available columns:", df.columns)
+    st.stop()
+
+# ─────────────────────────────────────────────
+# MAIN WAREHOUSES (FOR KPI)
 # ─────────────────────────────────────────────
 main_warehouses = [
     "Central",
@@ -59,61 +66,44 @@ main_warehouses = [
     "YB FG Warehouse"
 ]
 
-# Detect warehouse column
-warehouse_col = None
-for col in df.columns:
-    if "location" in col.lower() or "warehouse" in col.lower():
-        warehouse_col = col
-        break
-
-if warehouse_col is None:
-    st.error("Warehouse column not found in Excel.")
-    st.stop()
-
-# Detect stock column (last numeric column)
-stock_col = df.select_dtypes(include="number").columns[-1]
-
 # ─────────────────────────────────────────────
-# KPI CALCULATION (ONLY MAIN WAREHOUSES)
+# KPI CALCULATION (STRICT FILTER)
 # ─────────────────────────────────────────────
-kpi_df = df[df[warehouse_col].isin(main_warehouses)]
+kpi_df = df[df[WAREHOUSE_COL].isin(main_warehouses)]
+
 total_stock = kpi_df[stock_col].sum()
 
 # ─────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────
-st.markdown("<div class='section-title'>📦 Raw Material Inventory Overview</div>", unsafe_allow_html=True)
+st.markdown("## 📦 Raw Material Inventory Overview")
 
-# KPI CARD
-st.markdown("<div class='kpi-card'>", unsafe_allow_html=True)
+# KPI DISPLAY
 st.metric("Total Stock Available (Main Warehouses)", f"{total_stock:,.0f}")
-st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("---")
 
 # ─────────────────────────────────────────────
-# FILTER SECTION
+# SEARCH + FILTER
 # ─────────────────────────────────────────────
-st.markdown("<div class='section-title'>🔎 Search & Filter</div>", unsafe_allow_html=True)
-
 col1, col2 = st.columns(2)
 
 with col1:
-    search_text = st.text_input("Search Item / SKU")
+    search_text = st.text_input("🔎 Search Item / SKU")
 
 with col2:
     selected_wh = st.selectbox(
-        "Select Warehouse",
+        "🏢 Select Warehouse",
         ["All Warehouses"] + main_warehouses
     )
 
 filtered_df = df.copy()
 
-# Apply warehouse filter
+# Warehouse filter
 if selected_wh != "All Warehouses":
-    filtered_df = filtered_df[filtered_df[warehouse_col] == selected_wh]
+    filtered_df = filtered_df[filtered_df[WAREHOUSE_COL] == selected_wh]
 
-# Apply search filter
+# Search filter
 if search_text:
     filtered_df = filtered_df[
         filtered_df.apply(
@@ -123,7 +113,7 @@ if search_text:
     ]
 
 # ─────────────────────────────────────────────
-# DATA TABLE
+# TABLE
 # ─────────────────────────────────────────────
-st.markdown("<div class='section-title'>📋 Inventory Records</div>", unsafe_allow_html=True)
+st.markdown("### 📋 Inventory Records")
 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
