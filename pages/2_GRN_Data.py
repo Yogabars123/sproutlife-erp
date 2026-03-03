@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from datetime import date, timedelta
 
 st.set_page_config(page_title="GRN Data", layout="wide", page_icon="📥")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EMBEDDED STYLES — no external file needed
-# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -97,52 +96,158 @@ def section_label(text):
                 text-transform:uppercase;color:#94A3B8;margin-bottom:0.3rem;">{text}</div>""",
                 unsafe_allow_html=True)
 
+def fmt(n):
+    return f"{int(n):,}"
+
 # ─────────────────────────────────────────────────────────────────────────────
-# PAGE CONTENT
+# DATA LOADING
+# Replace this section with your actual data source (DB, CSV, API, etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+@st.cache_data
+def load_grn_data():
+    np.random.seed(42)
+    n = 200
+
+    vendors   = ["Alpha Supplies", "Beta Traders", "Gamma Corp", "Delta Goods", "Epsilon Ltd"]
+    warehouses= ["Mumbai WH", "Delhi WH", "Bangalore WH", "Chennai WH", "Hyderabad WH"]
+    statuses  = ["Received", "Pending", "Partial", "Rejected"]
+
+    grn_nos   = [f"GRN-{2024000 + i}" for i in range(n)]
+    po_nos    = [f"PO-{10000 + np.random.randint(0, 50)}" for _ in range(n)]
+    dates     = [date(2024, 1, 1) + timedelta(days=int(d)) for d in np.random.randint(0, 365, n)]
+    qty_ord   = np.random.randint(500, 50000, n)
+    qty_recv  = [int(q * np.random.uniform(0.4, 1.0)) for q in qty_ord]
+    qty_rej   = [int(r * np.random.uniform(0, 0.05)) for r in qty_recv]
+    qty_pend  = [o - r for o, r in zip(qty_ord, qty_recv)]
+
+    df = pd.DataFrame({
+        "GRN No"        : grn_nos,
+        "PO Number"     : po_nos,
+        "Vendor"        : np.random.choice(vendors, n),
+        "Warehouse"     : np.random.choice(warehouses, n),
+        "GRN Date"      : dates,
+        "Qty Ordered"   : qty_ord,
+        "Qty Received"  : qty_recv,
+        "Qty Pending"   : qty_pend,
+        "Qty Rejected"  : qty_rej,
+        "Status"        : np.random.choice(statuses, n, p=[0.5, 0.25, 0.15, 0.1]),
+    })
+    return df
+
+df_full = load_grn_data()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE HEADER
 # ─────────────────────────────────────────────────────────────────────────────
 page_header("📥", "GRN Data", "Goods Receipt Note tracking & analysis")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# FILTERS — Row 1: search + dropdowns
+# ─────────────────────────────────────────────────────────────────────────────
 section_label("Search & Filter")
+
 col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
 with col1:
-    search_grn = st.text_input("", placeholder="🔍  Search GRN…", label_visibility="collapsed")
+    search_grn = st.text_input("", placeholder="🔍  Search GRN / PO…", label_visibility="collapsed")
 with col2:
-    po_number = st.selectbox("PO Number", ["All POs"])
+    po_options = ["All POs"] + sorted(df_full["PO Number"].unique().tolist())
+    po_number  = st.selectbox("PO Number", po_options, label_visibility="visible")
 with col3:
-    vendor = st.selectbox("Vendor", ["All Vendors"])
+    vendor_options = ["All Vendors"] + sorted(df_full["Vendor"].unique().tolist())
+    vendor         = st.selectbox("Vendor", vendor_options)
 with col4:
-    warehouse = st.selectbox("Warehouse", ["All Warehouses"])
+    wh_options = ["All Warehouses"] + sorted(df_full["Warehouse"].unique().tolist())
+    warehouse  = st.selectbox("Warehouse", wh_options)
+
+# ── Row 2: Date range + Status ────────────────────────────────────────────────
+col5, col6, col7 = st.columns([2, 2, 2])
+with col5:
+    min_date = df_full["GRN Date"].min()
+    max_date = df_full["GRN Date"].max()
+    date_from = st.date_input("From Date", value=min_date, min_value=min_date, max_value=max_date)
+with col6:
+    date_to = st.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date)
+with col7:
+    status_options = ["All Statuses"] + sorted(df_full["Status"].unique().tolist())
+    status_filter  = st.selectbox("Status", status_options)
 
 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# APPLY FILTERS
+# ─────────────────────────────────────────────────────────────────────────────
+df = df_full.copy()
+
+if search_grn:
+    mask = (
+        df["GRN No"].str.contains(search_grn, case=False, na=False) |
+        df["PO Number"].str.contains(search_grn, case=False, na=False)
+    )
+    df = df[mask]
+
+if po_number != "All POs":
+    df = df[df["PO Number"] == po_number]
+
+if vendor != "All Vendors":
+    df = df[df["Vendor"] == vendor]
+
+if warehouse != "All Warehouses":
+    df = df[df["Warehouse"] == warehouse]
+
+if status_filter != "All Statuses":
+    df = df[df["Status"] == status_filter]
+
+# Date range filter
+df = df[(df["GRN Date"] >= date_from) & (df["GRN Date"] <= date_to)]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAT CARDS  (computed from filtered data)
+# ─────────────────────────────────────────────────────────────────────────────
+total_ordered  = df["Qty Ordered"].sum()
+total_received = df["Qty Received"].sum()
+total_pending  = df["Qty Pending"].sum()
+total_rejected = df["Qty Rejected"].sum()
+grn_count      = len(df)
+
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.markdown(stat_card("Total QTY Ordered", "304,726,587", "12,918 GRNs", "#1A56DB", "📋"), unsafe_allow_html=True)
+    st.markdown(stat_card("Total QTY Ordered",  fmt(total_ordered),  f"{grn_count} GRNs",            "#1A56DB", "📋"), unsafe_allow_html=True)
 with c2:
-    st.markdown(stat_card("Total QTY Received", "135,393,246", "Against ordered qty", "#16A34A", "✅"), unsafe_allow_html=True)
+    st.markdown(stat_card("Total QTY Received", fmt(total_received), "Against ordered qty",           "#16A34A", "✅"), unsafe_allow_html=True)
 with c3:
-    st.markdown(stat_card("Pending QTY", "169,333,341", "Yet to be received", "#B45309", "⏳"), unsafe_allow_html=True)
+    st.markdown(stat_card("Pending QTY",        fmt(total_pending),  "Yet to be received",            "#B45309", "⏳"), unsafe_allow_html=True)
 with c4:
-    st.markdown(stat_card("Total QTY Rejected", "31,429", "Rejection across GRNs", "#DC2626", "❌"), unsafe_allow_html=True)
+    st.markdown(stat_card("Total QTY Rejected", fmt(total_rejected), "Rejection across GRNs",         "#DC2626", "❌"), unsafe_allow_html=True)
 
 st.markdown("---")
-section_label("GRN Records")
 
-# ── YOUR EXISTING DATA LOGIC GOES HERE ──────────────────────────────────────
-# Paste your original data loading, filtering, and st.dataframe() code below:
-#
-# @st.cache_data
-# def load_grn_data():
-#     ...
-#     return df
-#
-# df = load_grn_data()
-# if search_grn:
-#     df = df[df['grn_no'].str.contains(search_grn, case=False, na=False)]
-# if po_number != "All POs":
-#     df = df[df['po_number'] == po_number]
-# if vendor != "All Vendors":
-#     df = df[df['vendor_name'] == vendor]
-# if warehouse != "All Warehouses":
-#     df = df[df['warehouse'] == warehouse]
-# st.dataframe(df, use_container_width=True, hide_index=True)
+# ─────────────────────────────────────────────────────────────────────────────
+# GRN TABLE
+# ─────────────────────────────────────────────────────────────────────────────
+section_label(f"GRN Records — {grn_count} rows")
+
+# Colour-code status column
+def style_status(val):
+    colors = {
+        "Received": "background-color:#DCFCE7;color:#166534;font-weight:600",
+        "Pending":  "background-color:#FEF9C3;color:#713F12;font-weight:600",
+        "Partial":  "background-color:#DBEAFE;color:#1E40AF;font-weight:600",
+        "Rejected": "background-color:#FEE2E2;color:#991B1B;font-weight:600",
+    }
+    return colors.get(val, "")
+
+display_df = df.copy()
+display_df["GRN Date"] = display_df["GRN Date"].astype(str)
+
+styled = (
+    display_df.style
+    .applymap(style_status, subset=["Status"])
+    .format({
+        "Qty Ordered"  : "{:,}",
+        "Qty Received" : "{:,}",
+        "Qty Pending"  : "{:,}",
+        "Qty Rejected" : "{:,}",
+    })
+)
+
+st.dataframe(styled, use_container_width=True, hide_index=True, height=480)
