@@ -83,18 +83,43 @@ def fmt(n):
     return f"{n:,.0f}"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DATA LOADING
+# DATA LOADING  — reads directly from SharePoint via Office365-REST-Python-Client
+# pip install Office365-REST-Python-Client openpyxl
 # ─────────────────────────────────────────────────────────────────────────────
-# ⚠️  UPDATE THIS PATH to wherever your Excel file lives on the machine
-#     running Streamlit. Examples:
-#       Windows local : r"C:\Users\abinaya_m_yogabars_in\Desktop\SproutlifeInventoryApp\Sproutlife Inventory.xlsx"
-#       OneDrive sync : r"C:\Users\abinaya_m_yogabars_in\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
-EXCEL_PATH = r"C:\Users\abinaya_m_yogabars_in\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
-SHEET_NAME = "GRN-Data"
+import io, os
 
-@st.cache_data(ttl=300)   # re-reads file every 5 minutes
+SHAREPOINT_SITE  = "https://sproutlife01-my.sharepoint.com/personal/abinaya_m_yogabars_in"
+FILE_RELATIVE    = "/personal/abinaya_m_yogabars_in/Documents/Sproutlife Inventory.xlsx"
+SHEET_NAME       = "GRN-Data"
+
+# ── Credentials: set these as environment variables (never hard-code passwords)
+#    In your terminal before running streamlit:
+#      set SP_USER=abinaya_m@yogabars.in
+#      set SP_PASS=your_password
+SP_USER = os.environ.get("SP_USER", "")
+SP_PASS = os.environ.get("SP_PASS", "")
+
+@st.cache_data(ttl=300)
 def load_grn_data():
-    df = pd.read_excel(EXCEL_PATH, sheet_name=SHEET_NAME, engine="openpyxl")
+    if not SP_USER or not SP_PASS:
+        st.error("❌ Please set SP_USER and SP_PASS environment variables before running.")
+        st.info("In your terminal run:\n`set SP_USER=your@email.com`\n`set SP_PASS=yourpassword`\nthen restart Streamlit.")
+        st.stop()
+
+    try:
+        from office365.sharepoint.client_context import ClientContext
+        from office365.runtime.auth.user_credential import UserCredential
+    except ImportError:
+        st.error("❌ Missing package. Run: `pip install Office365-REST-Python-Client`")
+        st.stop()
+
+    ctx = ClientContext(SHAREPOINT_SITE).with_credentials(UserCredential(SP_USER, SP_PASS))
+    file_obj = ctx.web.get_file_by_server_relative_url(FILE_RELATIVE)
+    download = file_obj.download_session()
+    ctx.execute_query()
+    buf = io.BytesIO(download.read())
+
+    df = pd.read_excel(buf, sheet_name=SHEET_NAME, engine="openpyxl")
 
     # ── Normalise column names (strip spaces) ────────────────────────────────
     df.columns = df.columns.str.strip()
