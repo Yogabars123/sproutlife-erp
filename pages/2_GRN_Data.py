@@ -14,7 +14,7 @@ def load_data():
 
 df = load_data()
 
-# Convert numeric columns safely
+# Convert numeric columns
 numeric_cols = ["QuantityOrdered", "QuantityReceived", "QuantityRejected"]
 for col in numeric_cols:
     if col in df.columns:
@@ -43,14 +43,13 @@ with col4:
     warehouse = st.selectbox("Warehouse", warehouse_options)
 
 # ─────────────────────────────────────────────
-# APPLY FILTERS
+# APPLY NORMAL FILTERS (FOR TABLE)
 # ─────────────────────────────────────────────
 filtered_df = df.copy()
 
-# 🔍 SEARCH LOGIC (MULTI-COLUMN SEARCH)
+# Search filter
 if search_text:
     search_text = search_text.lower()
-
     filtered_df = filtered_df[
         filtered_df.apply(
             lambda row:
@@ -62,7 +61,6 @@ if search_text:
         )
     ]
 
-# Dropdown filters
 if po_number != "All POs":
     filtered_df = filtered_df[filtered_df["PO No"].astype(str) == po_number]
 
@@ -73,11 +71,23 @@ if warehouse != "All Warehouses":
     filtered_df = filtered_df[filtered_df["Warehouse"].astype(str) == warehouse]
 
 # ─────────────────────────────────────────────
-# KPI CALCULATIONS
+# KPI LOGIC (SPECIAL CONDITION)
+# Only:
+#   - Warehouse = Central
+#   - PO No not blank and not "-"
 # ─────────────────────────────────────────────
-total_ordered = filtered_df["QuantityOrdered"].sum()
-total_received = filtered_df["QuantityReceived"].sum()
-total_rejected = filtered_df["QuantityRejected"].sum()
+kpi_df = df.copy()
+
+kpi_df = kpi_df[
+    (kpi_df["Warehouse"] == "Central") &
+    (kpi_df["PO No"].notna()) &
+    (kpi_df["PO No"].astype(str).str.strip() != "") &
+    (kpi_df["PO No"].astype(str).str.strip() != "-")
+]
+
+total_ordered = kpi_df["QuantityOrdered"].sum()
+total_received = kpi_df["QuantityReceived"].sum()
+total_rejected = kpi_df["QuantityRejected"].sum()
 pending_qty = total_ordered - total_received
 
 # ─────────────────────────────────────────────
@@ -85,10 +95,10 @@ pending_qty = total_ordered - total_received
 # ─────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns(4)
 
-c1.metric("Total Ordered", f"{total_ordered:,.0f}")
-c2.metric("Total Received", f"{total_received:,.0f}")
-c3.metric("Pending Qty", f"{pending_qty:,.0f}")
-c4.metric("Total Rejected", f"{total_rejected:,.0f}")
+c1.metric("Central PO Ordered", f"{total_ordered:,.0f}")
+c2.metric("Central PO Received", f"{total_received:,.0f}")
+c3.metric("Central Pending", f"{pending_qty:,.0f}")
+c4.metric("Central Rejected", f"{total_rejected:,.0f}")
 
 st.markdown("---")
 st.markdown("### GRN Records")
