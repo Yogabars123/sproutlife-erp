@@ -28,32 +28,18 @@ df = load_data()
 # REQUIRED COLUMNS
 # ─────────────────────────────────────────────
 WAREHOUSE_COL = "Warehouse"
+STOCK_COL = "Qty Available"
 
-# Try to detect stock column properly
-possible_stock_cols = ["Current Stock", "Stock", "Available Qty", "Quantity"]
-
-stock_col = None
-for col in possible_stock_cols:
-    if col in df.columns:
-        stock_col = col
-        break
-
-# If not found, take last numeric column
-if stock_col is None:
-    numeric_cols = df.select_dtypes(include="number").columns
-    if len(numeric_cols) == 0:
-        st.error("No stock column found.")
-        st.stop()
-    stock_col = numeric_cols[-1]
-
-# Validate warehouse column
 if WAREHOUSE_COL not in df.columns:
     st.error("Column 'Warehouse' not found.")
-    st.write("Available columns:", df.columns)
+    st.stop()
+
+if STOCK_COL not in df.columns:
+    st.error("Column 'Qty Available' not found.")
     st.stop()
 
 # ─────────────────────────────────────────────
-# MAIN WAREHOUSES (FOR KPI)
+# MAIN WAREHOUSES FOR KPI
 # ─────────────────────────────────────────────
 main_warehouses = [
     "Central",
@@ -67,19 +53,21 @@ main_warehouses = [
 ]
 
 # ─────────────────────────────────────────────
-# KPI CALCULATION (STRICT FILTER)
+# KPI CALCULATION (ONLY QTY AVAILABLE)
 # ─────────────────────────────────────────────
 kpi_df = df[df[WAREHOUSE_COL].isin(main_warehouses)]
 
-total_stock = kpi_df[stock_col].sum()
+total_stock = kpi_df[STOCK_COL].sum()
 
 # ─────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────
 st.markdown("## 📦 Raw Material Inventory Overview")
 
-# KPI DISPLAY
-st.metric("Total Stock Available (Main Warehouses)", f"{total_stock:,.0f}")
+st.metric(
+    "Total Stock Available (Main Warehouses)",
+    f"{total_stock:,.0f}"
+)
 
 st.markdown("---")
 
