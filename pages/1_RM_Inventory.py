@@ -5,85 +5,65 @@ import pandas as pd
 st.set_page_config(
     page_title="RM Inventory | ERP",
     layout="wide",
-    page_icon="📦"
+    page_icon="📦",
+    initial_sidebar_state="expanded"
 )
 
-# ULTRA COMPACT CSS
+# PROFESSIONAL ERP CSS
 st.markdown("""
 <style>
+
+/* Reduce top spacing */
 .block-container {
-    padding-top: 0rem !important;
-    padding-bottom: 0.5rem !important;
+    padding-top: 0.5rem !important;
 }
 
-header {visibility: hidden;}
-footer {visibility: hidden;}
-
+/* Professional background */
 body {
     background-color: #f4f6f9;
 }
 
-.section-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-top: 4px;
-    margin-bottom: 8px;
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+    background-color: #1f2937;
 }
 
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+/* Header */
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* KPI Card */
 .kpi-box {
     background: linear-gradient(135deg, #1A56DB, #2563EB);
-    padding: 16px;
-    border-radius: 12px;
+    padding: 20px;
+    border-radius: 14px;
     color: white;
-    margin-top: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 15px;
 }
 
 .kpi-title {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .kpi-value {
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 700;
-    margin-top: 4px;
 }
 
-.stTextInput input {
-    padding: 6px !important;
-}
-
-.stSelectbox div {
-    padding: 6px !important;
-}
-
+/* Mobile optimization */
 @media (max-width: 768px) {
-
-    .block-container {
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-    }
-
-    .section-title {
-        font-size: 15px;
-    }
-
-    .kpi-title {
-        font-size: 11px;
-    }
-
-    .kpi-value {
-        font-size: 18px;
-    }
-
-    .stTextInput input {
-        font-size: 13px !important;
-    }
-
-    .stSelectbox div {
-        font-size: 13px !important;
-    }
+    .kpi-title { font-size: 12px; }
+    .kpi-value { font-size: 20px; }
+    .section-title { font-size: 16px; }
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -99,20 +79,10 @@ def load_data():
 
 df = load_data()
 
-# REQUIRED COLUMNS
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 ITEM_COL = "Item code"
 
-if WAREHOUSE_COL not in df.columns:
-    st.error("Column 'Warehouse' not found.")
-    st.stop()
-
-if STOCK_COL not in df.columns:
-    st.error("Column 'Qty Available' not found.")
-    st.stop()
-
-# MAIN WAREHOUSES
 main_warehouses = [
     "Central",
     "RM Warehouse Tumkur",
@@ -124,23 +94,20 @@ main_warehouses = [
     "YB FG Warehouse"
 ]
 
-# HEADER
+# ───────── SIDEBAR FILTERS (Professional ERP Style)
+st.sidebar.title("📊 Filters")
+
+search_text = st.sidebar.text_input("🔎 Item Code")
+selected_wh = st.sidebar.selectbox(
+    "🏢 Warehouse",
+    ["All Warehouses"] + main_warehouses
+)
+
+# MAIN HEADER
 st.markdown(
     '<div class="section-title">📦 Raw Material Inventory</div>',
     unsafe_allow_html=True
 )
-
-# FILTERS
-col1, col2 = st.columns(2)
-
-with col1:
-    search_text = st.text_input("🔎 Item Code")
-
-with col2:
-    selected_wh = st.selectbox(
-        "🏢 Warehouse",
-        ["All Warehouses"] + main_warehouses
-    )
 
 # FILTER LOGIC
 filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)].copy()
@@ -161,17 +128,12 @@ total_stock = filtered_df[STOCK_COL].sum()
 
 st.markdown(f"""
 <div class="kpi-box">
-    <div class="kpi-title">Total Stock</div>
+    <div class="kpi-title">Total Stock Available</div>
     <div class="kpi-value">{total_stock:,.2f}</div>
 </div>
 """, unsafe_allow_html=True)
 
 # TABLE
-st.markdown(
-    '<div class="section-title">📋 Records</div>',
-    unsafe_allow_html=True
-)
-
 st.dataframe(
     filtered_df,
     use_container_width=True,
