@@ -1,17 +1,22 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import pandas as pd
+import json
 from pathlib import Path
 
 st.set_page_config(page_title="RM Inventory", layout="wide")
 
-# Get project root folder
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Load Excel
+df = pd.read_excel("Sproutlife Inventory.xlsx", sheet_name="RM-Inventory")
 
-# HTML file path
-html_file = BASE_DIR / "rm_inventory.html"
+# Convert to JSON
+data_json = df.to_json(orient="records")
 
 # Read HTML
-html = html_file.read_text(encoding="utf-8")
+html_path = Path("rm_inventory.html")
+html = html_path.read_text()
 
-# Display HTML
+# Inject data into HTML
+html = html.replace("DATA_PLACEHOLDER", data_json)
+
 components.html(html, height=1200, scrolling=True)
