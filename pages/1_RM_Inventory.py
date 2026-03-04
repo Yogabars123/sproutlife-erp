@@ -10,32 +10,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+from pages.Sidebar_style import inject_sidebar
+inject_sidebar("RM Inventory")
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
-
-/* ── SHOW SIDEBAR TOGGLE BUTTON CLEARLY ── */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    background: #1e293b !important;
-    border-radius: 0 8px 8px 0 !important;
-    border: 1px solid #334155 !important;
-    border-left: none !important;
-}
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="collapsedControl"] button {
-    color: #e2e8f0 !important;
-    background: transparent !important;
-}
-[data-testid="stSidebarCollapsedControl"] svg,
-[data-testid="collapsedControl"] svg {
-    fill: #e2e8f0 !important;
-    color: #e2e8f0 !important;
-}
 
 /* ── GLOBAL BACKGROUND ── */
 html, body,
@@ -55,97 +37,6 @@ html, body,
     max-width: 100% !important;
 }
 [data-testid="stVerticalBlock"] > div { gap: 0 !important; }
-
-/* ══════════════════════════════════
-   SIDEBAR TOGGLE BUTTONS — always visible
-══════════════════════════════════ */
-/* The >> button when sidebar is closed */
-[data-testid="stSidebarCollapseButton"],
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="collapsedControl"] button {
-    background: #1e293b !important;
-    border: 1px solid #334155 !important;
-    border-radius: 8px !important;
-    width: 32px !important; height: 32px !important;
-    display: flex !important; align-items: center !important;
-    justify-content: center !important;
-}
-[data-testid="stSidebarCollapseButton"] svg,
-[data-testid="stSidebarCollapsedControl"] svg,
-[data-testid="collapsedControl"] svg {
-    fill: #94a3b8 !important;
-    color: #94a3b8 !important;
-    width: 18px !important; height: 18px !important;
-}
-[data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="stSidebarCollapsedControl"] button:hover,
-[data-testid="collapsedControl"] button:hover {
-    background: #334155 !important;
-    border-color: #64748b !important;
-}
-[data-testid="stSidebarCollapseButton"] button:hover svg,
-[data-testid="stSidebarCollapsedControl"] button:hover svg,
-[data-testid="collapsedControl"] button:hover svg {
-    fill: #ffffff !important; color: #ffffff !important;
-}
-
-/* ══════════════════════════════════
-   SIDEBAR — dark, slides naturally
-══════════════════════════════════ */
-[data-testid="stSidebar"] {
-    background: #0d1117 !important;
-    border-right: 1px solid #1e2535 !important;
-}
-[data-testid="stSidebar"] > div:first-child {
-    padding: 1.2rem 1rem !important;
-}
-
-/* All sidebar text visible */
-[data-testid="stSidebar"] * {
-    color: #e2e8f0 !important;
-    font-family: 'Inter', sans-serif !important;
-}
-
-/* Native Streamlit page nav links */
-[data-testid="stSidebarNav"] ul { padding: 0 !important; }
-[data-testid="stSidebarNav"] a,
-[data-testid="stSidebarNavLink"] {
-    border-radius: 9px !important;
-    padding: 9px 12px !important;
-    font-size: 13.5px !important;
-    font-weight: 600 !important;
-    color: #cbd5e1 !important;
-    text-decoration: none !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    margin-bottom: 3px !important;
-    transition: background 0.15s, color 0.15s !important;
-}
-[data-testid="stSidebarNav"] a:hover,
-[data-testid="stSidebarNavLink"]:hover {
-    background: #1e293b !important;
-    color: #ffffff !important;
-}
-[data-testid="stSidebarNav"] a[aria-current="page"],
-[data-testid="stSidebarNavLink"][aria-current="page"] {
-    background: linear-gradient(135deg, #1e1040, #0f1e40) !important;
-    color: #c4b5fd !important;
-    border: 1px solid #3730a3 !important;
-    font-weight: 700 !important;
-}
-
-/* Sidebar nav section title */
-[data-testid="stSidebarNavSeparator"] {
-    border-color: #1e2535 !important;
-}
 
 /* ══════════════════════════════════
    HEADER
@@ -237,7 +128,6 @@ html, body,
 
 [data-testid="stHorizontalBlock"] { gap: 8px !important; align-items: flex-end !important; }
 
-/* ── WIDGET OVERRIDES ── */
 [data-testid="stTextInput"] > div > div {
     background: #111827 !important; border: 1.5px solid #1e2d45 !important;
     border-radius: 9px !important;
@@ -331,58 +221,6 @@ div[data-testid="stDataFrame"] {
     letter-spacing: 1.5px; font-family: 'JetBrains Mono', monospace;
 }
 </style>
-""", unsafe_allow_html=True)
-
-# ── JS: open sidebar on load + make toggle always visible ──
-st.markdown("""
-<script>
-(function() {
-    function openSidebar() {
-        var doc = window.parent.document;
-
-        // Try clicking the expand button if sidebar is collapsed
-        var expandBtns = doc.querySelectorAll(
-            '[data-testid="stSidebarCollapsedControl"] button, ' +
-            '[data-testid="collapsedControl"] button'
-        );
-        expandBtns.forEach(function(b) { b.click(); });
-
-        // Make ALL sidebar toggle buttons visible and styled
-        var allToggles = doc.querySelectorAll(
-            '[data-testid="stSidebarCollapseButton"], ' +
-            '[data-testid="stSidebarCollapsedControl"], ' +
-            '[data-testid="collapsedControl"]'
-        );
-        allToggles.forEach(function(el) {
-            el.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
-        });
-
-        var btns = doc.querySelectorAll(
-            '[data-testid="stSidebarCollapseButton"] button, ' +
-            '[data-testid="stSidebarCollapsedControl"] button, ' +
-            '[data-testid="collapsedControl"] button'
-        );
-        btns.forEach(function(b) {
-            b.style.cssText = 'background:#1e293b!important;border:1px solid #475569!important;border-radius:8px!important;width:32px!important;height:32px!important;';
-        });
-
-        var svgs = doc.querySelectorAll(
-            '[data-testid="stSidebarCollapseButton"] svg, ' +
-            '[data-testid="stSidebarCollapsedControl"] svg, ' +
-            '[data-testid="collapsedControl"] svg'
-        );
-        svgs.forEach(function(s) {
-            s.style.cssText = 'fill:#e2e8f0!important;color:#e2e8f0!important;';
-        });
-    }
-
-    // Run immediately and after short delays for Streamlit's async render
-    openSidebar();
-    setTimeout(openSidebar, 300);
-    setTimeout(openSidebar, 800);
-    setTimeout(openSidebar, 1500);
-})();
-</script>
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════
@@ -488,7 +326,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════
-# FILTERS — single row
+# FILTERS
 # ════════════════════════════════════════
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
 st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=True)
