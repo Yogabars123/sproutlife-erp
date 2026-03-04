@@ -8,27 +8,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+from pages.Sidebar_style import inject_sidebar
+inject_sidebar("GRN Data")
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
-
-/* ── SIDEBAR TOGGLE VISIBLE ── */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"] {
-    display: flex !important; visibility: visible !important;
-    background: #1e293b !important;
-    border-radius: 0 8px 8px 0 !important;
-    border: 1px solid #334155 !important; border-left: none !important;
-}
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="collapsedControl"] button { color: #e2e8f0 !important; background: transparent !important; }
-[data-testid="stSidebarCollapsedControl"] svg,
-[data-testid="collapsedControl"] svg { fill: #e2e8f0 !important; color: #e2e8f0 !important; }
-[data-testid="stSidebarCollapseButton"],
-[data-testid="stSidebarCollapseButton"] button { display: flex !important; visibility: visible !important; }
-[data-testid="stSidebarCollapseButton"] svg { fill: #94a3b8 !important; }
 
 /* ── GLOBAL ── */
 html, body,
@@ -42,27 +29,6 @@ html, body,
 #MainMenu, footer, header, [data-testid="stToolbar"] { visibility: hidden !important; }
 .block-container { padding: 1rem 1.2rem 3rem 1.2rem !important; max-width: 100% !important; }
 [data-testid="stVerticalBlock"] > div { gap: 0 !important; }
-
-/* ── SIDEBAR ── */
-[data-testid="stSidebar"] {
-    background: #0d1117 !important;
-    border-right: 1px solid #1e2535 !important;
-}
-[data-testid="stSidebar"] > div:first-child { padding: 1.2rem 1rem !important; }
-[data-testid="stSidebar"] * { color: #e2e8f0 !important; font-family: 'Inter', sans-serif !important; }
-[data-testid="stSidebarNav"] a, [data-testid="stSidebarNavLink"] {
-    border-radius: 9px !important; padding: 9px 12px !important;
-    font-size: 13.5px !important; font-weight: 600 !important;
-    color: #cbd5e1 !important; text-decoration: none !important;
-    display: flex !important; align-items: center !important;
-    gap: 8px !important; margin-bottom: 3px !important;
-    transition: background 0.15s, color 0.15s !important;
-}
-[data-testid="stSidebarNav"] a:hover { background: #1e293b !important; color: #ffffff !important; }
-[data-testid="stSidebarNav"] a[aria-current="page"] {
-    background: linear-gradient(135deg, #1e1040, #0f1e40) !important;
-    color: #c4b5fd !important; border: 1px solid #3730a3 !important; font-weight: 700 !important;
-}
 
 /* ── HEADER ── */
 .app-header {
@@ -173,31 +139,6 @@ div[data-testid="stDataFrame"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ── JS: open sidebar on load ──
-st.markdown("""
-<script>
-(function() {
-    function openSidebar() {
-        var doc = window.parent.document;
-        var expandBtns = doc.querySelectorAll(
-            '[data-testid="stSidebarCollapsedControl"] button, [data-testid="collapsedControl"] button'
-        );
-        expandBtns.forEach(function(b) { b.click(); });
-        var toggles = doc.querySelectorAll(
-            '[data-testid="stSidebarCollapseButton"],[data-testid="stSidebarCollapsedControl"],[data-testid="collapsedControl"]'
-        );
-        toggles.forEach(function(el) {
-            el.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
-        });
-    }
-    openSidebar();
-    setTimeout(openSidebar, 300);
-    setTimeout(openSidebar, 800);
-    setTimeout(openSidebar, 1500);
-})();
-</script>
-""", unsafe_allow_html=True)
-
 # ════════════════════════════════════════
 # LOAD DATA
 # ════════════════════════════════════════
@@ -213,7 +154,6 @@ for col in ["QuantityOrdered", "QuantityReceived", "QuantityRejected"]:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-# Base filter: Central + valid PO only
 base_df = df[
     (df["Warehouse"] == "Central") &
     (df["PO No"].notna()) &
@@ -245,7 +185,6 @@ search_text = st.text_input("_search", placeholder="Search GRN No / Item Code / 
                              label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Apply search
 filtered_df = base_df.copy()
 if search_text:
     s = search_text.lower()
@@ -258,16 +197,13 @@ if search_text:
     ]
 
 # ════════════════════════════════════════
-# KPI CALCULATION
+# KPI CARDS
 # ════════════════════════════════════════
 total_ordered  = filtered_df["QuantityOrdered"].sum()
 total_received = filtered_df["QuantityReceived"].sum()
 total_rejected = filtered_df["QuantityRejected"].sum()
 pending_qty    = total_ordered - total_received
 
-# ════════════════════════════════════════
-# KPI CARDS — 4 in a grid
-# ════════════════════════════════════════
 st.markdown(f"""
 <div class="kpi-grid">
     <div class="kpi-card blue">
