@@ -15,6 +15,27 @@ st.markdown("""
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* ── SHOW SIDEBAR TOGGLE BUTTON CLEARLY ── */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    background: #1e293b !important;
+    border-radius: 0 8px 8px 0 !important;
+    border: 1px solid #334155 !important;
+    border-left: none !important;
+}
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="collapsedControl"] button {
+    color: #e2e8f0 !important;
+    background: transparent !important;
+}
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg {
+    fill: #e2e8f0 !important;
+    color: #e2e8f0 !important;
+}
+
 /* ── GLOBAL BACKGROUND ── */
 html, body,
 [data-testid="stAppViewContainer"],
@@ -33,6 +54,46 @@ html, body,
     max-width: 100% !important;
 }
 [data-testid="stVerticalBlock"] > div { gap: 0 !important; }
+
+/* ══════════════════════════════════
+   SIDEBAR TOGGLE BUTTONS — always visible
+══════════════════════════════════ */
+/* The >> button when sidebar is closed */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="collapsedControl"] button {
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    width: 32px !important; height: 32px !important;
+    display: flex !important; align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stSidebarCollapseButton"] svg,
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="collapsedControl"] svg {
+    fill: #94a3b8 !important;
+    color: #94a3b8 !important;
+    width: 18px !important; height: 18px !important;
+}
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="stSidebarCollapsedControl"] button:hover,
+[data-testid="collapsedControl"] button:hover {
+    background: #334155 !important;
+    border-color: #64748b !important;
+}
+[data-testid="stSidebarCollapseButton"] button:hover svg,
+[data-testid="stSidebarCollapsedControl"] button:hover svg,
+[data-testid="collapsedControl"] button:hover svg {
+    fill: #ffffff !important; color: #ffffff !important;
+}
 
 /* ══════════════════════════════════
    SIDEBAR — dark, slides naturally
