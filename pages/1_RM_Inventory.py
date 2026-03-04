@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import pandas as pd
 
@@ -57,6 +58,7 @@ body {
     padding: 6px !important;
 }
 
+/* MOBILE OPTIMIZATION */
 @media (max-width: 768px) {
 
     .block-container {
@@ -83,6 +85,11 @@ body {
     .stSelectbox div {
         font-size: 13px !important;
     }
+}
+
+/* Enable horizontal scrolling for tables */
+[data-testid="stDataFrame"] {
+    overflow-x: auto;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -156,6 +163,9 @@ if search_text and ITEM_COL in filtered_df.columns:
         .str.contains(search_text, case=False, na=False)
     ]
 
+# SORT BY STOCK
+filtered_df = filtered_df.sort_values(STOCK_COL, ascending=False)
+
 # KPI
 total_stock = filtered_df[STOCK_COL].sum()
 
@@ -175,5 +185,7 @@ st.markdown(
 st.dataframe(
     filtered_df,
     use_container_width=True,
-    hide_index=True
+    hide_index=True,
+    height=500
 )
+```
