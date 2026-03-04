@@ -2,10 +2,89 @@ import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Forecast", layout="wide")
+# ─────────────────────────────────────────────
+# PAGE CONFIG
+# ─────────────────────────────────────────────
+st.set_page_config(page_title="Forecast", layout="wide", page_icon="📊")
 
+# ─────────────────────────────────────────────
+# SIDEBAR NAVIGATION
+# ─────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #1A56DB, #2563EB);
+        border-radius: 14px;
+        padding: 18px 16px 14px 16px;
+        margin-bottom: 8px;
+        text-align: center;
+    ">
+        <div style="font-size: 28px; margin-bottom: 4px;">🌱</div>
+        <div style="color: white; font-size: 16px; font-weight: 800; letter-spacing: 0.3px;">Sproutlife</div>
+        <div style="color: rgba(255,255,255,0.7); font-size: 11px; margin-top: 2px;">Inventory Management</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] {
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        min-width: 220px !important;
+        max-width: 220px !important;
+    }
+    .nav-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: #94a3b8;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        padding: 10px 4px 4px 4px;
+    }
+    section[data-testid="stSidebar"] .stButton > button {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        margin-bottom: 2px;
+    }
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background: #e0eaff;
+        color: #1A56DB;
+    }
+    .sidebar-footer {
+        font-size: 11px;
+        color: #94a3b8;
+        text-align: center;
+        padding-top: 8px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="nav-label">Main Menu</div>', unsafe_allow_html=True)
+    st.page_link("Home.py",                       label="🏠  Home / Overview")
+    st.page_link("pages/GRN.py",                  label="📥  GRN")
+    st.page_link("pages/FG_Inventory.py",         label="📦  FG Inventory")
+    st.page_link("pages/RM_Inventory.py",         label="🗄️  RM Inventory")
+    st.page_link("pages/Consumption.py",          label="🏭  Consumption")
+    st.page_link("pages/Forecast.py",             label="📊  Forecast")
+
+    st.markdown("<hr style='margin:10px 0; border-color:#e2e8f0'>", unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-footer">© 2025 Sproutlife Foods</div>', unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# CSS
+# ─────────────────────────────────────────────
 st.markdown("""
 <style>
+    .block-container { padding-top: 0.8rem !important; padding-bottom: 1rem !important; }
     .metric-card {
         background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 100%);
         border-radius: 12px;
@@ -15,52 +94,48 @@ st.markdown("""
         margin-bottom: 10px;
     }
     .metric-card .label {
-        font-size: 13px;
-        opacity: 0.8;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 6px;
+        font-size: 13px; opacity: 0.8;
+        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
     }
-    .metric-card .value {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-    }
-    .metric-card .sub {
-        font-size: 12px;
-        opacity: 0.65;
-        margin-top: 4px;
-    }
+    .metric-card .value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    .metric-card .sub   { font-size: 12px; opacity: 0.65; margin-top: 4px; }
     .section-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin: 18px 0 8px 0;
+        font-size: 14px; font-weight: 600; color: #666;
+        text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px 0;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Forecast")
+# ─────────────────────────────────────────────
+# HEADER
+# ─────────────────────────────────────────────
+st.markdown("## 📊 Forecast")
+st.caption("Stock forecast and days of supply analysis")
+st.markdown("<hr>", unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────
+# LOAD DATA
+# ─────────────────────────────────────────────
 @st.cache_data
 def load_data():
     file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
 
-    # Load forecast - Plant only, non-zero
     xl = pd.ExcelFile(file_path)
     sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
     if not sheet:
         st.error("Forecast sheet not found in Excel file.")
-        return pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
+
     df_fc = pd.read_excel(file_path, sheet_name=sheet)
     df_fc.columns = df_fc.columns.str.strip()
+
     if "Location" in df_fc.columns:
         df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
+
     for col in ["Forecast", "Norm", "Per day Req"]:
         if col in df_fc.columns:
             df_fc[col] = pd.to_numeric(df_fc[col], errors="coerce").fillna(0)
+
     if "Forecast" in df_fc.columns:
         df_fc = df_fc[df_fc["Forecast"] > 0]
 
@@ -79,7 +154,6 @@ def load_data():
     soh_by_sku = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
     soh_by_sku.columns = ["Item SKU", "SOH"]
 
-    # Merge SOH into forecast
     if "Item code" in df_fc.columns:
         df_fc["Item code"] = df_fc["Item code"].astype(str).str.strip()
         df_fc = df_fc.merge(soh_by_sku, left_on="Item code", right_on="Item SKU", how="left")
@@ -93,19 +167,23 @@ def load_data():
 
 df = load_data()
 
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
 # FILTERS
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
+st.markdown('<div class="section-title">Search & Filter</div>', unsafe_allow_html=True)
+
 f1, f2 = st.columns([3, 2])
 
 with f1:
-    search = st.text_input("Search (Item Code / Product Name)")
+    search = st.text_input("Search", label_visibility="collapsed",
+                           placeholder="Search item code / product name...")
 with f2:
-    dos_filter = st.selectbox("Days of Stock", ["All", "Critical (< 7 days)", "Low (7-14 days)", "Healthy (> 14 days)"])
+    dos_filter = st.selectbox("Days of Stock",
+                              ["All", "Critical (< 7 days)", "Low (7-14 days)", "Healthy (> 14 days)"])
 
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
 # APPLY FILTERS
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
 if search:
     df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False).any(), axis=1)]
 
@@ -116,16 +194,14 @@ elif dos_filter == "Low (7-14 days)" and "Days of Stock" in df.columns:
 elif dos_filter == "Healthy (> 14 days)" and "Days of Stock" in df.columns:
     df = df[df["Days of Stock"] > 14]
 
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
 # KPI CARDS
-# ---------------------------------------------------
-st.divider()
-
-total_forecast  = df["Forecast"].sum() if "Forecast" in df.columns else 0
-total_soh       = df["SOH"].sum() if "SOH" in df.columns else 0
-total_per_day   = df["Per day Req"].sum() if "Per day Req" in df.columns else 0
-critical_count  = (df["Days of Stock"] < 7).sum() if "Days of Stock" in df.columns else 0
-total_items     = df["Item code"].nunique() if "Item code" in df.columns else len(df)
+# ─────────────────────────────────────────────
+total_forecast = df["Forecast"].sum()        if "Forecast" in df.columns else 0
+total_soh      = df["SOH"].sum()             if "SOH" in df.columns else 0
+total_per_day  = df["Per day Req"].sum()     if "Per day Req" in df.columns else 0
+critical_count = (df["Days of Stock"] < 7).sum() if "Days of Stock" in df.columns else 0
+total_items    = df["Item code"].nunique()   if "Item code" in df.columns else len(df)
 
 k1, k2, k3, k4 = st.columns(4)
 
@@ -161,11 +237,11 @@ with k4:
         <div class="sub">Urgent replenishment needed</div>
     </div>""", unsafe_allow_html=True)
 
-st.divider()
+st.markdown("<hr>", unsafe_allow_html=True)
 
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
 # TABLE WITH HIGHLIGHTING
-# ---------------------------------------------------
+# ─────────────────────────────────────────────
 st.markdown(f'<div class="section-title">📋 Showing {len(df):,} records</div>', unsafe_allow_html=True)
 
 def highlight_rows(row):
@@ -176,7 +252,6 @@ def highlight_rows(row):
             return ["background-color: #fff3cd"] * len(row)
     return [""] * len(row)
 
-# Drop duplicate Item SKU column if merged
 if "Item SKU" in df.columns:
     df = df.drop(columns=["Item SKU"], errors="ignore")
 
@@ -186,11 +261,11 @@ st.dataframe(
     hide_index=True,
     height=500,
     column_config={
-        "Forecast": st.column_config.NumberColumn("Forecast", format="%.0f"),
-        "SOH": st.column_config.NumberColumn("SOH", format="%.0f"),
-        "Per day Req": st.column_config.NumberColumn("Per Day Req", format="%.1f"),
-        "Days of Stock": st.column_config.NumberColumn("Days of Stock", format="%.1f"),
-        "Norm": st.column_config.NumberColumn("Norm", format="%.0f"),
+        "Forecast":     st.column_config.NumberColumn("Forecast",     format="%.0f"),
+        "SOH":          st.column_config.NumberColumn("SOH",          format="%.0f"),
+        "Per day Req":  st.column_config.NumberColumn("Per Day Req",  format="%.1f"),
+        "Days of Stock":st.column_config.NumberColumn("Days of Stock",format="%.1f"),
+        "Norm":         st.column_config.NumberColumn("Norm",         format="%.0f"),
     }
 )
 
