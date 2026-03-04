@@ -51,9 +51,36 @@ html, body,
     padding: 1.2rem 1rem !important;
 }
 
-/* Hide the collapse arrow on desktop */
-[data-testid="stSidebarCollapseButton"] {
+/* Force sidebar open — hide ALL collapse/expand controls */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"],
+button[kind="header"],
+.st-emotion-cache-zq5wmm,
+.st-emotion-cache-1cypcdb,
+[class*="collapsedControl"],
+[class*="sidebarButton"] {
     display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Make sidebar always visible */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    display: flex !important;
+    transform: none !important;
+    margin-left: 0 !important;
+    visibility: visible !important;
+    width: 220px !important;
+    min-width: 220px !important;
+}
+
+/* Main content never shifts */
+[data-testid="stSidebar"][aria-expanded="false"] + [data-testid="stAppViewBlockContainer"],
+[data-testid="stSidebar"][aria-expanded="false"] ~ * {
+    margin-left: 220px !important;
 }
 
 .sb-brand {
@@ -403,6 +430,26 @@ soh_sku = soh_sku.drop(columns=["_k"])
 # ────────────────────────────────────────
 # SIDEBAR NAVIGATION
 # ────────────────────────────────────────
+# Force sidebar always open via JS
+st.markdown("""
+<script>
+(function() {
+    function forceOpen() {
+        var s = window.parent.document.querySelector('[data-testid="stSidebar"]');
+        if (s && s.getAttribute('aria-expanded') === 'false') {
+            var btn = window.parent.document.querySelector('[data-testid="stSidebarCollapseButton"]');
+            if (btn) { btn.click(); }
+        }
+        // Also remove collapse button from DOM
+        var colBtns = window.parent.document.querySelectorAll('[data-testid="stSidebarCollapseButton"], [data-testid="collapsedControl"]');
+        colBtns.forEach(function(b){ b.style.display='none'; b.style.visibility='hidden'; });
+    }
+    forceOpen();
+    setInterval(forceOpen, 300);
+})();
+</script>
+""", unsafe_allow_html=True)
+
 with st.sidebar:
     st.markdown("""
     <div class="sb-brand">
