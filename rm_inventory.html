@@ -159,7 +159,7 @@
 
 let data = DATA_PLACEHOLDER;
 
-// KPI warehouses
+// Warehouses used for KPI calculation
 const KPI_WAREHOUSES = [
 "Central",
 "RM Warehouse Tumkur",
@@ -170,7 +170,7 @@ const KPI_WAREHOUSES = [
 "Sproutlife Foods Private Ltd (SNOWMAN)"
 ];
 
-// Table warehouses
+// Warehouses used in table display
 const TABLE_WAREHOUSES = [
 "Central",
 "Central Production -Bar Line",
@@ -192,6 +192,8 @@ const totalStockElement = document.getElementById("totalStock");
 const searchInput = document.getElementById("searchInput");
 const warehouseSelect = document.getElementById("warehouseSelect");
 
+
+// KPI Calculation
 function calculateKPI(){
 
 let total = 0;
@@ -200,7 +202,7 @@ data.forEach(row => {
 
 if(KPI_WAREHOUSES.includes(row["Warehouse"])){
 
-total += Number(row["Qty Available"]);
+total += Number(row["Qty Available"]) || 0;
 
 }
 
@@ -211,27 +213,32 @@ total.toLocaleString(undefined,{minimumFractionDigits:2});
 
 }
 
+
+// Render Table
 function renderTable(filteredData){
 
-tableBody.innerHTML="";
+tableBody.innerHTML = "";
 
-if(filteredData.length===0){
+if(filteredData.length === 0){
 
-tableBody.innerHTML=
-`<tr><td colspan="3" class="no-data">No Records Found</td></tr>`;
+tableBody.innerHTML =
+`<tr>
+<td colspan="4" class="no-data">No Records Found</td>
+</tr>`;
 
 return;
 
 }
 
-filteredData.forEach(row=>{
+filteredData.forEach(row => {
 
-const tr=document.createElement("tr");
+const tr = document.createElement("tr");
 
-tr.innerHTML=`
-<td>${row["Item SKU"]}</td>
-<td>${row["Warehouse"]}</td>
-<td>${Number(row["Qty Available"]).toFixed(2)}</td>
+tr.innerHTML = `
+<td>${row["Item SKU"] || ""}</td>
+<td>${row["Item Name"] || ""}</td>
+<td>${row["Warehouse"] || ""}</td>
+<td>${Number(row["Qty Available"] || 0).toFixed(2)}</td>
 `;
 
 tableBody.appendChild(tr);
@@ -240,22 +247,26 @@ tableBody.appendChild(tr);
 
 }
 
+
+// Apply Filters
 function applyFilters(){
 
-const searchValue=searchInput.value.toLowerCase();
-const selectedWarehouse=warehouseSelect.value;
+const searchValue = searchInput.value.toLowerCase();
+const selectedWarehouse = warehouseSelect.value;
 
-let filtered=data.filter(row=>{
+let filtered = data.filter(row => {
 
-// Only allowed warehouses for table
 if(!TABLE_WAREHOUSES.includes(row["Warehouse"])) return false;
 
-const matchSearch=
-row["Item SKU"].toLowerCase().includes(searchValue);
+const sku = (row["Item SKU"] || "").toLowerCase();
+const name = (row["Item Name"] || "").toLowerCase();
 
-const matchWarehouse=
-selectedWarehouse==="All" ||
-row["Warehouse"]===selectedWarehouse;
+const matchSearch =
+sku.includes(searchValue) || name.includes(searchValue);
+
+const matchWarehouse =
+selectedWarehouse === "All" ||
+row["Warehouse"] === selectedWarehouse;
 
 return matchSearch && matchWarehouse;
 
@@ -265,17 +276,23 @@ renderTable(filtered);
 
 }
 
-searchInput.addEventListener("input",applyFilters);
-warehouseSelect.addEventListener("change",applyFilters);
 
+// Event Listeners
+searchInput.addEventListener("input", applyFilters);
+warehouseSelect.addEventListener("change", applyFilters);
+
+
+// Initial Load
 calculateKPI();
 applyFilters();
 
 </script>
 
+
 </body>
 
 </html>
+
 
 
 
