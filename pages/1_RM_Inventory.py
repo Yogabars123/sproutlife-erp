@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="RM Inventory", layout="wide")
 
 # Load HTML UI
-with open("../rm_inventory.html", "r", encoding="utf-8") as f:
+with open("../index.html", "r", encoding="utf-8") as f:
     html = f.read()
 
 components.html(html, height=1200, scrolling=True)
