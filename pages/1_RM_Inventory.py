@@ -6,7 +6,8 @@ import io
 st.set_page_config(
     page_title="RM Inventory · Sproutlife",
     layout="wide",
-    page_icon="📦"
+    page_icon="📦",
+    initial_sidebar_state="expanded"
 )
 
 st.markdown("""
@@ -330,6 +331,58 @@ div[data-testid="stDataFrame"] {
     letter-spacing: 1.5px; font-family: 'JetBrains Mono', monospace;
 }
 </style>
+""", unsafe_allow_html=True)
+
+# ── JS: open sidebar on load + make toggle always visible ──
+st.markdown("""
+<script>
+(function() {
+    function openSidebar() {
+        var doc = window.parent.document;
+
+        // Try clicking the expand button if sidebar is collapsed
+        var expandBtns = doc.querySelectorAll(
+            '[data-testid="stSidebarCollapsedControl"] button, ' +
+            '[data-testid="collapsedControl"] button'
+        );
+        expandBtns.forEach(function(b) { b.click(); });
+
+        // Make ALL sidebar toggle buttons visible and styled
+        var allToggles = doc.querySelectorAll(
+            '[data-testid="stSidebarCollapseButton"], ' +
+            '[data-testid="stSidebarCollapsedControl"], ' +
+            '[data-testid="collapsedControl"]'
+        );
+        allToggles.forEach(function(el) {
+            el.style.cssText = 'display:flex!important;visibility:visible!important;opacity:1!important;';
+        });
+
+        var btns = doc.querySelectorAll(
+            '[data-testid="stSidebarCollapseButton"] button, ' +
+            '[data-testid="stSidebarCollapsedControl"] button, ' +
+            '[data-testid="collapsedControl"] button'
+        );
+        btns.forEach(function(b) {
+            b.style.cssText = 'background:#1e293b!important;border:1px solid #475569!important;border-radius:8px!important;width:32px!important;height:32px!important;';
+        });
+
+        var svgs = doc.querySelectorAll(
+            '[data-testid="stSidebarCollapseButton"] svg, ' +
+            '[data-testid="stSidebarCollapsedControl"] svg, ' +
+            '[data-testid="collapsedControl"] svg'
+        );
+        svgs.forEach(function(s) {
+            s.style.cssText = 'fill:#e2e8f0!important;color:#e2e8f0!important;';
+        });
+    }
+
+    // Run immediately and after short delays for Streamlit's async render
+    openSidebar();
+    setTimeout(openSidebar, 300);
+    setTimeout(openSidebar, 800);
+    setTimeout(openSidebar, 1500);
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════
