@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 
@@ -154,4 +153,4 @@ else:
 
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇️ Export CSV", csv, "rm_inventory_export.csv", "text/csv")
-```
+
