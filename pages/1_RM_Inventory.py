@@ -9,9 +9,10 @@ st.set_page_config(
     page_icon="📦"
 )
 
-# ULTRA COMPACT CSS
+# ---------- CSS ----------
 st.markdown("""
 <style>
+
 .block-container {
     padding-top: 0rem !important;
     padding-bottom: 0.5rem !important;
@@ -58,43 +59,44 @@ body {
     padding: 6px !important;
 }
 
-/* MOBILE OPTIMIZATION */
 @media (max-width: 768px) {
 
-    .block-container {
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-    }
-
-    .section-title {
-        font-size: 15px;
-    }
-
-    .kpi-title {
-        font-size: 11px;
-    }
-
-    .kpi-value {
-        font-size: 18px;
-    }
-
-    .stTextInput input {
-        font-size: 13px !important;
-    }
-
-    .stSelectbox div {
-        font-size: 13px !important;
-    }
+.block-container {
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
 }
 
-/* Enable horizontal scrolling for tables */
+.section-title {
+    font-size: 15px;
+}
+
+.kpi-title {
+    font-size: 11px;
+}
+
+.kpi-value {
+    font-size: 18px;
+}
+
+.stTextInput input {
+    font-size: 13px !important;
+}
+
+.stSelectbox div {
+    font-size: 13px !important;
+}
+
+}
+
+/* dataframe scroll fix */
 [data-testid="stDataFrame"] {
     overflow-x: auto;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
-# LOAD DATA
+# ---------- LOAD DATA ----------
 @st.cache_data(ttl=600)
 def load_data():
     df = pd.read_excel(
@@ -106,7 +108,7 @@ def load_data():
 
 df = load_data()
 
-# REQUIRED COLUMNS
+# ---------- REQUIRED COLUMNS ----------
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 ITEM_COL = "Item code"
@@ -119,7 +121,7 @@ if STOCK_COL not in df.columns:
     st.error("Column 'Qty Available' not found.")
     st.stop()
 
-# MAIN WAREHOUSES
+# ---------- WAREHOUSES ----------
 main_warehouses = [
     "Central",
     "RM Warehouse Tumkur",
@@ -131,13 +133,13 @@ main_warehouses = [
     "YB FG Warehouse"
 ]
 
-# HEADER
+# ---------- HEADER ----------
 st.markdown(
     '<div class="section-title">📦 Raw Material Inventory</div>',
     unsafe_allow_html=True
 )
 
-# FILTERS
+# ---------- FILTERS ----------
 col1, col2 = st.columns(2)
 
 with col1:
@@ -149,7 +151,7 @@ with col2:
         ["All Warehouses"] + main_warehouses
     )
 
-# FILTER LOGIC
+# ---------- FILTER LOGIC ----------
 filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)].copy()
 
 if selected_wh != "All Warehouses":
@@ -163,10 +165,10 @@ if search_text and ITEM_COL in filtered_df.columns:
         .str.contains(search_text, case=False, na=False)
     ]
 
-# SORT BY STOCK
+# ---------- SORT ----------
 filtered_df = filtered_df.sort_values(STOCK_COL, ascending=False)
 
-# KPI
+# ---------- KPI ----------
 total_stock = filtered_df[STOCK_COL].sum()
 
 st.markdown(f"""
@@ -176,7 +178,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# TABLE
+# ---------- TABLE ----------
 st.markdown(
     '<div class="section-title">📋 Records</div>',
     unsafe_allow_html=True
