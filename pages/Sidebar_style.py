@@ -1,14 +1,16 @@
 import streamlit as st
 
+# Streamlit Cloud strips number prefixes from filenames in URLs
+# e.g. "1_RM_Inventory.py" becomes "/RM_Inventory"
 PAGES = [
     ("🏠", "Home",                    "/"),
-    ("🗄️", "RM Inventory",            "/1_RM_Inventory"),
-    ("📥", "GRN Data",                "/2_GRN_Data"),
-    ("📦", "FG Inventory",            "/3_FG_Inventory"),
-    ("🏭", "Consumption",             "/4_Consumption"),
-    ("📊", "Forecast",                "/5_Forecast"),
-    ("🔁", "Replenishment",           "/6_Replenishment"),
-    ("📈", "Consumption vs Forecast", "/7_Consumption_vs_Forecast"),
+    ("🗄️", "RM Inventory",            "/RM_Inventory"),
+    ("📥", "GRN Data",                "/GRN_Data"),
+    ("📦", "FG Inventory",            "/FG_Inventory"),
+    ("🏭", "Consumption",             "/Consumption"),
+    ("📊", "Forecast",                "/Forecast"),
+    ("🛒", "Replenishment",           "/Replenishment"),
+    ("📈", "Consumption vs Forecast", "/Consumption_vs_Forecast"),
 ]
 
 def inject_sidebar(current_page: str = ""):
@@ -61,4 +63,3 @@ def inject_sidebar(current_page: str = ""):
         st.markdown(links_html, unsafe_allow_html=True)
         st.markdown('<hr style="border-color:#1e293b;margin:10px 0">', unsafe_allow_html=True)
         st.markdown('<div class="snav-footer">© 2025 Sproutlife Foods</div>', unsafe_allow_html=True)
-
