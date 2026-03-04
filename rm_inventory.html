@@ -157,72 +157,87 @@
 
     <script>
 
-        const data = [
-            { item: "RM001", warehouse: "Central", qty: 120 },
-            { item: "RM002", warehouse: "Tumkur Warehouse", qty: 75 },
-            { item: "RM003", warehouse: "RM Warehouse Tumkur", qty: 200 },
-            { item: "RM004", warehouse: "Central", qty: 50 }
-        ];
+let data = DATA_PLACEHOLDER;
 
-        const tableBody = document.querySelector("#inventoryTable tbody");
-        const totalStockElement = document.getElementById("totalStock");
-        const searchInput = document.getElementById("searchInput");
-        const warehouseSelect = document.getElementById("warehouseSelect");
+const tableBody = document.querySelector("#inventoryTable tbody");
+const totalStockElement = document.getElementById("totalStock");
+const searchInput = document.getElementById("searchInput");
+const warehouseSelect = document.getElementById("warehouseSelect");
 
-        function renderTable(filteredData) {
-            tableBody.innerHTML = "";
-            let total = 0;
+function renderTable(filteredData) {
 
-            if (filteredData.length === 0) {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td colspan="3" class="no-data">
-                        Currently No Records Available
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-                totalStockElement.innerText = "0.00";
-                return;
-            }
+    tableBody.innerHTML = "";
+    let total = 0;
 
-            filteredData.forEach(row => {
-                total += row.qty;
+    if (filteredData.length === 0) {
 
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${row.item}</td>
-                    <td>${row.warehouse}</td>
-                    <td>${row.qty.toFixed(2)}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
+        const tr = document.createElement("tr");
 
-            totalStockElement.innerText =
-                total.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        }
+        tr.innerHTML = `
+        <td colspan="3" class="no-data">
+        Currently No Records Available
+        </td>
+        `;
 
-        function applyFilters() {
-            const searchValue = searchInput.value.toLowerCase();
-            const selectedWarehouse = warehouseSelect.value;
+        tableBody.appendChild(tr);
 
-            const filtered = data.filter(row => {
-                const matchSearch = row.item.toLowerCase().includes(searchValue);
-                const matchWarehouse =
-                    selectedWarehouse === "All" ||
-                    row.warehouse === selectedWarehouse;
-                return matchSearch && matchWarehouse;
-            });
+        totalStockElement.innerText = "0.00";
 
-            renderTable(filtered);
-        }
+        return;
+    }
 
-        searchInput.addEventListener("input", applyFilters);
-        warehouseSelect.addEventListener("change", applyFilters);
+    filteredData.forEach(row => {
 
-        renderTable(data);
+        total += Number(row["Qty Available"]);
 
-    </script>
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+        <td>${row["Item Code"]}</td>
+        <td>${row["Warehouse"]}</td>
+        <td>${Number(row["Qty Available"]).toFixed(2)}</td>
+        `;
+
+        tableBody.appendChild(tr);
+
+    });
+
+    totalStockElement.innerText =
+        total.toLocaleString(undefined,{minimumFractionDigits:2});
+
+}
+
+function applyFilters(){
+
+    const searchValue = searchInput.value.toLowerCase();
+    const selectedWarehouse = warehouseSelect.value;
+
+    const filtered = data.filter(row => {
+
+        const matchSearch =
+        row["Item Code"].toLowerCase().includes(searchValue);
+
+        const matchWarehouse =
+        selectedWarehouse === "All" ||
+        row["Warehouse"] === selectedWarehouse;
+
+        return matchSearch && matchWarehouse;
+
+    });
+
+    renderTable(filtered);
+
+}
+
+searchInput.addEventListener("input",applyFilters);
+warehouseSelect.addEventListener("change",applyFilters);
+
+renderTable(data);
+
+</script>
+   
 
 </body>
 
 </html>
+
