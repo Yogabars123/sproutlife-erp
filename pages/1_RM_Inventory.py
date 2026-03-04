@@ -1,4 +1,3 @@
-python
 import streamlit as st
 import pandas as pd
 
@@ -9,7 +8,7 @@ st.set_page_config(
     page_icon="📦"
 )
 
-# ---------------- SIMPLE CSS ----------------
+# ---------------- CSS ----------------
 st.markdown("""
 <style>
 
@@ -18,8 +17,8 @@ padding-top:0rem;
 padding-bottom:0.5rem;
 }
 
-header{visibility:hidden;}
-footer{visibility:hidden;}
+header {visibility:hidden;}
+footer {visibility:hidden;}
 
 .section-title{
 font-size:18px;
@@ -62,7 +61,7 @@ def load_data():
 
 df = load_data()
 
-# ---------------- COLUMN NAMES ----------------
+# ---------------- REQUIRED COLUMNS ----------------
 WAREHOUSE_COL = "Warehouse"
 STOCK_COL = "Qty Available"
 ITEM_COL = "Item code"
@@ -75,7 +74,7 @@ if STOCK_COL not in df.columns:
     st.error("Column 'Qty Available' not found")
     st.stop()
 
-# ---------------- WAREHOUSES ----------------
+# ---------------- WAREHOUSE LIST ----------------
 main_warehouses = [
 "Central",
 "RM Warehouse Tumkur",
@@ -88,7 +87,10 @@ main_warehouses = [
 ]
 
 # ---------------- HEADER ----------------
-st.markdown('<div class="section-title">📦 Raw Material Inventory</div>', unsafe_allow_html=True)
+st.markdown(
+'<div class="section-title">📦 Raw Material Inventory</div>',
+unsafe_allow_html=True
+)
 
 # ---------------- FILTERS ----------------
 col1,col2 = st.columns(2)
@@ -106,11 +108,15 @@ with col2:
 filtered_df = df[df[WAREHOUSE_COL].isin(main_warehouses)].copy()
 
 if selected_wh != "All Warehouses":
-    filtered_df = filtered_df[filtered_df[WAREHOUSE_COL] == selected_wh]
+    filtered_df = filtered_df[
+        filtered_df[WAREHOUSE_COL] == selected_wh
+    ]
 
 if search_text and ITEM_COL in filtered_df.columns:
     filtered_df = filtered_df[
-        filtered_df[ITEM_COL].astype(str).str.contains(search_text, case=False, na=False)
+        filtered_df[ITEM_COL]
+        .astype(str)
+        .str.contains(search_text, case=False, na=False)
     ]
 
 # ---------------- SORT ----------------
@@ -127,7 +133,10 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------- TABLE ----------------
-st.markdown('<div class="section-title">📋 Records</div>', unsafe_allow_html=True)
+st.markdown(
+'<div class="section-title">📋 Records</div>',
+unsafe_allow_html=True
+)
 
 st.dataframe(
 filtered_df,
