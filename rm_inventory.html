@@ -155,7 +155,7 @@
         </div>
     </div>
 
-    <script>
+<script>
 
 let data = DATA_PLACEHOLDER;
 
@@ -180,9 +180,7 @@ function renderTable(filteredData) {
         `;
 
         tableBody.appendChild(tr);
-
         totalStockElement.innerText = "0.00";
-
         return;
     }
 
@@ -193,7 +191,7 @@ function renderTable(filteredData) {
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-        <td>${row["Item Code"]}</td>
+        <td>${row["Item SKU"]}</td>
         <td>${row["Warehouse"]}</td>
         <td>${Number(row["Qty Available"]).toFixed(2)}</td>
         `;
@@ -215,7 +213,7 @@ function applyFilters(){
     const filtered = data.filter(row => {
 
         const matchSearch =
-        row["Item Code"].toLowerCase().includes(searchValue);
+        row["Item SKU"].toLowerCase().includes(searchValue);
 
         const matchWarehouse =
         selectedWarehouse === "All" ||
@@ -235,9 +233,10 @@ warehouseSelect.addEventListener("change",applyFilters);
 renderTable(data);
 
 </script>
-   
+
 
 </body>
 
 </html>
+
 
