@@ -157,88 +157,33 @@
 
 <script>
 
+
 let data = DATA_PLACEHOLDER;
-
-// Warehouses used for KPI calculation
-const KPI_WAREHOUSES = [
-"Central",
-"RM Warehouse Tumkur",
-"Central Warehouse - Cold Storage RM",
-"Tumkur Warehouse",
-"Tumkur New Warehouse",
-"HF Factory FG Warehouse",
-"Sproutlife Foods Private Ltd (SNOWMAN)"
-];
-
-// Warehouses used in table display
-const TABLE_WAREHOUSES = [
-"Central",
-"Central Production -Bar Line",
-"Central Production - Oats Line",
-"Central Production - Peanut Line",
-"Central Production - Muesli Line",
-"RM Warehouse Tumkur",
-"Central Production -Dry Fruits Line",
-"Central Warehouse - Cold Storage RM",
-"Central Production -Packing",
-"Tumkur Warehouse",
-"Tumkur New Warehouse",
-"HF Factory FG Warehouse",
-"Sproutlife Foods Private Ltd (SNOWMAN)"
-];
 
 const tableBody = document.querySelector("#inventoryTable tbody");
 const totalStockElement = document.getElementById("totalStock");
 const searchInput = document.getElementById("searchInput");
 const warehouseSelect = document.getElementById("warehouseSelect");
 
-
-// KPI Calculation
-function calculateKPI(){
-
-let total = 0;
-
-data.forEach(row => {
-
-if(KPI_WAREHOUSES.includes(row["Warehouse"])){
-
-total += Number(row["Qty Available"]) || 0;
-
-}
-
-});
-
-totalStockElement.innerText =
-total.toLocaleString(undefined,{minimumFractionDigits:2});
-
-}
-
-
-// Render Table
-function renderTable(filteredData){
+function renderTable(rows){
 
 tableBody.innerHTML = "";
 
-if(filteredData.length === 0){
-
+if(rows.length === 0){
 tableBody.innerHTML =
-`<tr>
-<td colspan="4" class="no-data">No Records Found</td>
-</tr>`;
-
+`<tr><td colspan="4">No records found</td></tr>`;
 return;
-
 }
 
-filteredData.forEach(row => {
+rows.forEach(row => {
 
 const tr = document.createElement("tr");
 
 tr.innerHTML = `
-<td>${row["Item SKU"] || ""}</td>
-<td>${row["Item Name"] || ""}</td>
-<td>${row["Warehouse"] || ""}</td>
-<td>${Number(row["Qty Available"] || 0).toFixed(2)}</td>
+<td>${row["Item SKU"]}</td>
+<td>${row["Item Name"]}</td>
+<td>${row["Warehouse"]}</td>
+<td>${Number(row["Qty Available"]).toFixed(2)}</td>
 `;
 
 tableBody.appendChild(tr);
@@ -248,42 +193,56 @@ tableBody.appendChild(tr);
 }
 
 
-// Apply Filters
+function calculateKPI(rows){
+
+let total = 0;
+
+rows.forEach(row => {
+
+total += Number(row["Qty Available"]) || 0;
+
+});
+
+totalStockElement.innerText =
+total.toLocaleString(undefined,{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+});
+
+}
+
+
 function applyFilters(){
 
-const searchValue = searchInput.value.toLowerCase();
+const search = searchInput.value.toLowerCase();
 const selectedWarehouse = warehouseSelect.value;
 
 let filtered = data.filter(row => {
 
-if(!TABLE_WAREHOUSES.includes(row["Warehouse"])) return false;
-
 const sku = (row["Item SKU"] || "").toLowerCase();
 const name = (row["Item Name"] || "").toLowerCase();
+const warehouse = row["Warehouse"] || "";
 
 const matchSearch =
-sku.includes(searchValue) || name.includes(searchValue);
+sku.includes(search) || name.includes(search);
 
 const matchWarehouse =
-selectedWarehouse === "All" ||
-row["Warehouse"] === selectedWarehouse;
+selectedWarehouse === "All Warehouses" ||
+warehouse === selectedWarehouse;
 
 return matchSearch && matchWarehouse;
 
 });
 
 renderTable(filtered);
+calculateKPI(filtered);
 
 }
 
 
-// Event Listeners
 searchInput.addEventListener("input", applyFilters);
 warehouseSelect.addEventListener("change", applyFilters);
 
-
-// Initial Load
-calculateKPI();
 applyFilters();
 
 </script>
@@ -292,6 +251,7 @@ applyFilters();
 </body>
 
 </html>
+
 
 
 
