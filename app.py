@@ -25,27 +25,14 @@ html, body,
 #MainMenu, footer, header, [data-testid="stToolbar"] { visibility: hidden !important; }
 .block-container { padding: 1.5rem 2rem 3rem 2rem !important; max-width: 100% !important; }
 
-/* ── HERO ── */
 .hero {
     background: linear-gradient(135deg, #0f2460 0%, #1A56DB 50%, #0d9e5c 100%);
-    border-radius: 20px;
-    padding: 48px 40px;
-    margin-bottom: 28px;
-    position: relative;
-    overflow: hidden;
-}
-.hero::after {
-    content: '';
-    position: absolute; top: -60px; right: -60px;
-    width: 280px; height: 280px;
-    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
-    border-radius: 50%;
+    border-radius: 20px; padding: 48px 40px; margin-bottom: 28px;
 }
 .hero-emoji  { font-size: 52px; margin-bottom: 12px; }
 .hero-title  { font-size: 32px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px; }
 .hero-sub    { font-size: 15px; color: rgba(255,255,255,0.7); max-width: 520px; line-height: 1.6; }
 
-/* ── SECTION LABEL ── */
 .sec-label {
     font-size: 10px; font-weight: 700; color: #475569;
     text-transform: uppercase; letter-spacing: 1.4px;
@@ -53,49 +40,34 @@ html, body,
 }
 .sec-label::after { content: ''; flex: 1; height: 1px; background: #1e2535; }
 
-/* ── NAV CARDS ── */
-.nav-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    margin-bottom: 28px;
+.mod-card {
+    background: #0d1117; border: 1px solid #1e2535;
+    border-radius: 16px; padding: 20px 22px 10px 22px; margin-bottom: 4px;
 }
-@media (max-width: 900px) { .nav-grid { grid-template-columns: repeat(2, 1fr); } }
+.mod-icon  { font-size: 28px; margin-bottom: 10px; }
+.mod-title { font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+.mod-desc  { font-size: 12px; color: #475569; line-height: 1.5; margin-bottom: 14px; }
 
-.nav-card {
-    background: #0d1117;
-    border: 1px solid #1e2535;
-    border-radius: 16px;
-    padding: 20px 22px;
-    text-decoration: none !important;
-    display: block;
-    transition: border-color 0.2s, transform 0.15s, background 0.2s;
-    cursor: pointer;
+div[data-testid="stButton"] > button {
+    background: #111827 !important; border: 1px solid #1e2d45 !important;
+    border-radius: 8px !important; color: #60a5fa !important;
+    font-size: 12px !important; font-weight: 600 !important;
+    padding: 6px 12px !important; width: 100% !important;
+    transition: all 0.15s !important; margin-bottom: 14px !important;
 }
-.nav-card:hover {
-    border-color: #3b82f6;
-    background: #111827;
-    transform: translateY(-2px);
+div[data-testid="stButton"] > button:hover {
+    background: #1e3a5f !important; border-color: #3b82f6 !important; color: #fff !important;
 }
-.nav-card-icon  { font-size: 28px; margin-bottom: 10px; }
-.nav-card-title {
-    font-size: 14px; font-weight: 700; color: #f1f5f9;
-    margin-bottom: 4px;
-}
-.nav-card-desc  { font-size: 12px; color: #475569; line-height: 1.5; }
 
-/* ── FOOTER ── */
 .home-footer {
-    text-align: center; font-size: 11px; font-weight: 600;
-    color: #1e2535; letter-spacing: 1.5px;
-    font-family: 'JetBrains Mono', monospace;
-    padding-top: 16px; border-top: 1px solid #161d2e;
-    margin-top: 16px;
+    text-align: center; font-size: 11px; font-weight: 600; color: #1e2535;
+    letter-spacing: 1.5px; font-family: 'JetBrains Mono', monospace;
+    padding-top: 16px; border-top: 1px solid #161d2e; margin-top: 16px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── HERO ────────────────────────────────────────────────────────────────────
+# ── HERO ──────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero">
     <div class="hero-emoji">🌱</div>
@@ -107,48 +79,32 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── NAV CARDS ───────────────────────────────────────────────────────────────
+# ── MODULE CARDS ──────────────────────────────────────────────────────────
 st.markdown('<div class="sec-label">Modules</div>', unsafe_allow_html=True)
 
-st.markdown("""
-<div class="nav-grid">
-    <a class="nav-card" href="/RM_Inventory" target="_self">
-        <div class="nav-card-icon">🗄️</div>
-        <div class="nav-card-title">RM Inventory</div>
-        <div class="nav-card-desc">Raw material stock levels, days of supply, and warehouse-wise breakdown.</div>
-    </a>
-    <a class="nav-card" href="/GRN_Data" target="_self">
-        <div class="nav-card-icon">📥</div>
-        <div class="nav-card-title">GRN Data</div>
-        <div class="nav-card-desc">Goods received notes — ordered, received, pending and rejected quantities.</div>
-    </a>
-    <a class="nav-card" href="/FG_Inventory" target="_self">
-        <div class="nav-card-icon">📦</div>
-        <div class="nav-card-title">FG Inventory</div>
-        <div class="nav-card-desc">Finished goods stock with shelf life tracking and expiry alerts.</div>
-    </a>
-    <a class="nav-card" href="/Consumption" target="_self">
-        <div class="nav-card-icon">🏭</div>
-        <div class="nav-card-title">Consumption</div>
-        <div class="nav-card-desc">Batch-wise material consumption and total production quantities.</div>
-    </a>
-    <a class="nav-card" href="/Forecast" target="_self">
-        <div class="nav-card-icon">📊</div>
-        <div class="nav-card-title">Forecast</div>
-        <div class="nav-card-desc">Demand forecast vs SOH with critical stock alerts by days of supply.</div>
-    </a>
-    <a class="nav-card" href="/Replenishment" target="_self">
-        <div class="nav-card-icon">🛒</div>
-        <div class="nav-card-title">Replenishment</div>
-        <div class="nav-card-desc">Auto-generated order suggestions for items under 10 days of stock.</div>
-    </a>
-    <a class="nav-card" href="/Consumption_vs_Forecast" target="_self">
-        <div class="nav-card-icon">📈</div>
-        <div class="nav-card-title">Consumption vs Forecast</div>
-        <div class="nav-card-desc">Variance analysis — actual consumption compared against forecast per material.</div>
-    </a>
-</div>
-""", unsafe_allow_html=True)
+MODULES = [
+    ("🗄️", "RM Inventory",            "Raw material stock levels, days of supply, and warehouse-wise breakdown.",   "pages/1_RM_Inventory.py"),
+    ("📥", "GRN Data",                "Goods received notes — ordered, received, pending and rejected quantities.", "pages/2_GRN_Data.py"),
+    ("📦", "FG Inventory",            "Finished goods stock with shelf life tracking and expiry alerts.",            "pages/3_FG_Inventory.py"),
+    ("🏭", "Consumption",             "Batch-wise material consumption and total production quantities.",            "pages/4_Consumption.py"),
+    ("📊", "Forecast",                "Demand forecast vs SOH with critical stock alerts by days of supply.",        "pages/5_Forecast.py"),
+    ("🛒", "Replenishment",           "Auto-generated order suggestions for items under 10 days of stock.",         "pages/6_Replenishment.py"),
+    ("📈", "Consumption vs Forecast", "Variance analysis — actual consumption compared against forecast.",          "pages/7_Consumption_vs_Forecast.py"),
+]
+
+for row_start in range(0, len(MODULES), 3):
+    row = MODULES[row_start:row_start + 3]
+    cols = st.columns(3)
+    for col, (icon, title, desc, path) in zip(cols, row):
+        with col:
+            st.markdown(f"""
+            <div class="mod-card">
+                <div class="mod-icon">{icon}</div>
+                <div class="mod-title">{title}</div>
+                <div class="mod-desc">{desc}</div>
+            </div>""", unsafe_allow_html=True)
+            if st.button(f"Open {title} →", key=f"nav_{title}"):
+                st.switch_page(path)
 
 st.markdown('<div class="home-footer">SPROUTLIFE FOODS · INVENTORY MANAGEMENT SYSTEM</div>',
             unsafe_allow_html=True)
