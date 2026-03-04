@@ -6,7 +6,8 @@ import io
 st.set_page_config(
     page_title="RM Inventory · Sproutlife",
     layout="wide",
-    page_icon="📦"
+    page_icon="📦",
+    initial_sidebar_state="expanded"   # ← sidebar always open
 )
 
 st.markdown("""
@@ -31,20 +32,87 @@ html, body,
 #MainMenu, footer, header, [data-testid="stToolbar"] { visibility: hidden !important; }
 
 .block-container {
-    padding: 1rem 1rem 3rem 1rem !important;
-    max-width: 960px !important;
-    margin: 0 auto !important;
+    padding: 1rem 1.2rem 3rem 1.2rem !important;
+    max-width: 100% !important;
 }
 
 [data-testid="stVerticalBlock"] > div { gap: 0 !important; }
 
 /* ══════════════════════════════════
+   SIDEBAR
+══════════════════════════════════ */
+[data-testid="stSidebar"] {
+    background: #0d1117 !important;
+    border-right: 1px solid #161d2e !important;
+    min-width: 220px !important;
+    max-width: 220px !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding: 1.2rem 1rem !important;
+}
+
+/* Hide the collapse arrow on desktop */
+[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+}
+
+.sb-brand {
+    display: flex; align-items: center; gap: 9px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #161d2e;
+    margin-bottom: 18px;
+}
+.sb-logo {
+    width: 34px; height: 34px; min-width: 34px;
+    background: #0f2e1a; border: 1px solid #1a5c30;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+}
+.sb-name { font-size: 13px; font-weight: 800; color: #f1f5f9; line-height: 1.1; }
+.sb-tagline { font-size: 10px; color: #475569; }
+
+.sb-section {
+    font-size: 9.5px; font-weight: 700; color: #334155;
+    text-transform: uppercase; letter-spacing: 1.3px;
+    margin: 16px 0 6px 0;
+}
+
+/* Nav links — using Streamlit page_link or markdown */
+.nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    font-size: 13px; font-weight: 500; color: #94a3b8;
+    text-decoration: none;
+    margin-bottom: 2px;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+.nav-item:hover { background: #161d2e; color: #f1f5f9; }
+.nav-item.active {
+    background: linear-gradient(135deg, #1a0533, #0c1a40);
+    color: #c4b5fd;
+    border: 1px solid #2d1b5e;
+    font-weight: 600;
+}
+.nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+.sb-footer {
+    position: absolute; bottom: 1rem; left: 1rem; right: 1rem;
+    font-size: 10px; color: #1e2d45;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+    border-top: 1px solid #161d2e;
+    padding-top: 10px;
+    text-align: center;
+}
+
+/* ══════════════════════════════════
    HEADER
 ══════════════════════════════════ */
 .app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     padding-bottom: 14px;
     border-bottom: 1px solid #161d2e;
     margin-bottom: 14px;
@@ -52,21 +120,14 @@ html, body,
 .hdr-left { display: flex; align-items: center; gap: 10px; }
 .hdr-logo {
     width: 40px; height: 40px; min-width: 40px;
-    background: #0f2e1a;
-    border: 1px solid #1a5c30;
+    background: #0f2e1a; border: 1px solid #1a5c30;
     border-radius: 11px;
     display: flex; align-items: center; justify-content: center;
     font-size: 19px;
 }
-.hdr-title {
-    font-size: 16px; font-weight: 800;
-    color: #f1f5f9; line-height: 1.1;
-    white-space: nowrap;
-}
-.hdr-sub {
-    font-size: 11px; color: #475569;
-    white-space: nowrap;
-}
+.hdr-title { font-size: 16px; font-weight: 800; color: #f1f5f9; white-space: nowrap; }
+.hdr-sub   { font-size: 11px; color: #475569; white-space: nowrap; }
+
 .live-pill {
     display: inline-flex; align-items: center; gap: 5px;
     background: #071a0f; border: 1px solid #166534;
@@ -86,79 +147,70 @@ html, body,
 }
 
 /* ══════════════════════════════════
-   KPI CARD — vibrant gradient
+   KPI — vibrant purple-teal gradient
 ══════════════════════════════════ */
 .kpi-card {
-    background: linear-gradient(135deg, #1a0533 0%, #0c1a40 50%, #001a1a 100%);
+    background: linear-gradient(135deg, #1a0533 0%, #0c1a40 55%, #001a1a 100%);
     border: 1px solid #2d1b5e;
     border-radius: 18px;
     padding: 20px 22px;
     margin-bottom: 16px;
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
 }
 .kpi-card::before {
     content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 3px;
+    position: absolute; top:0; left:0; right:0; height:3px;
     background: linear-gradient(90deg, #a855f7, #3b82f6, #06b6d4, #10b981);
     border-radius: 18px 18px 0 0;
 }
 .kpi-card::after {
     content: '';
-    position: absolute;
-    bottom: -30px; right: -30px;
-    width: 130px; height: 130px;
+    position: absolute; bottom:-30px; right:-30px;
+    width:130px; height:130px;
     background: radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%);
     border-radius: 50%;
 }
 .kpi-row { display:flex; align-items:center; justify-content:space-between; }
 .kpi-lbl {
-    font-size: 10px; font-weight: 700;
-    color: #a78bfa;
-    text-transform: uppercase; letter-spacing: 1.3px;
-    margin-bottom: 6px;
+    font-size:10px; font-weight:700; color:#a78bfa;
+    text-transform:uppercase; letter-spacing:1.3px; margin-bottom:6px;
 }
 .kpi-num {
-    font-size: 36px; font-weight: 800;
+    font-size:36px; font-weight:800;
     background: linear-gradient(135deg, #e879f9, #818cf8, #38bdf8);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -1.5px; line-height: 1;
-    font-family: 'JetBrains Mono', monospace;
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+    letter-spacing:-1.5px; line-height:1;
+    font-family:'JetBrains Mono', monospace;
 }
-.kpi-cap { font-size: 11px; color: #64748b; margin-top: 5px; }
+.kpi-cap { font-size:11px; color:#64748b; margin-top:5px; }
 .kpi-ico {
-    width: 54px; height: 54px; min-width: 54px;
-    background: rgba(168,85,247,0.1);
-    border: 1px solid rgba(168,85,247,0.25);
-    border-radius: 15px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px;
-    position: relative; z-index: 1;
+    width:54px; height:54px; min-width:54px;
+    background:rgba(168,85,247,0.1);
+    border:1px solid rgba(168,85,247,0.25);
+    border-radius:15px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px; position:relative; z-index:1;
 }
 
 /* ══════════════════════════════════
-   FILTER ROW — all in one line
+   FILTER ROW
 ══════════════════════════════════ */
-.filter-row-wrap {
+.filter-wrap {
     background: #0d1117;
     border: 1px solid #161d2e;
     border-radius: 14px;
     padding: 12px 14px;
     margin-bottom: 14px;
 }
-.filter-row-label {
-    font-size: 10px; font-weight: 700;
-    color: #334155; text-transform: uppercase;
-    letter-spacing: 1.2px; margin-bottom: 10px;
-    display: flex; align-items: center; gap: 6px;
+.filter-title {
+    font-size:10px; font-weight:700; color:#334155;
+    text-transform:uppercase; letter-spacing:1.2px;
+    margin-bottom:10px;
+    display:flex; align-items:center; gap:6px;
 }
-.filter-row-label::after {
-    content: ''; flex: 1; height: 1px; background: #1a2236;
-}
+.filter-title::after { content:''; flex:1; height:1px; background:#1a2236; }
 
-/* Streamlit column gap fix */
 [data-testid="stHorizontalBlock"] {
     gap: 8px !important;
     align-items: flex-end !important;
@@ -168,146 +220,112 @@ html, body,
    WIDGET OVERRIDES
 ══════════════════════════════════ */
 [data-testid="stTextInput"] > div > div {
-    background: #111827 !important;
-    border: 1.5px solid #1e2d45 !important;
-    border-radius: 9px !important;
+    background:#111827 !important;
+    border:1.5px solid #1e2d45 !important;
+    border-radius:9px !important;
 }
 [data-testid="stTextInput"] > div > div:focus-within {
-    border-color: #7c3aed !important;
-    box-shadow: 0 0 0 3px rgba(124,58,237,0.15) !important;
+    border-color:#7c3aed !important;
+    box-shadow:0 0 0 3px rgba(124,58,237,0.15) !important;
 }
 [data-testid="stTextInput"] input {
-    background: transparent !important;
-    color: #f1f5f9 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 13px !important;
-    padding: 9px 12px !important;
-    border: none !important; box-shadow: none !important;
+    background:transparent !important; color:#f1f5f9 !important;
+    font-family:'Inter',sans-serif !important;
+    font-size:13px !important; padding:9px 12px !important;
+    border:none !important; box-shadow:none !important;
 }
-[data-testid="stTextInput"] input::placeholder { color: #2d3f5a !important; }
+[data-testid="stTextInput"] input::placeholder { color:#2d3f5a !important; }
 
 [data-testid="stSelectbox"] > div > div {
-    background: #111827 !important;
-    border: 1.5px solid #1e2d45 !important;
-    border-radius: 9px !important;
-    color: #e2e8f0 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 12.5px !important;
-    min-height: 38px !important;
+    background:#111827 !important;
+    border:1.5px solid #1e2d45 !important;
+    border-radius:9px !important;
+    color:#e2e8f0 !important;
+    font-family:'Inter',sans-serif !important;
+    font-size:12.5px !important;
+    min-height:38px !important;
 }
 
-[data-testid="stWidgetLabel"] { display: none !important; }
+[data-testid="stWidgetLabel"] { display:none !important; }
 
-/* Refresh button */
 .stButton > button {
-    width: 100% !important;
-    background: #0d1117 !important;
-    border: 1.5px solid #161d2e !important;
-    border-radius: 9px !important;
-    color: #475569 !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 13px !important; font-weight: 600 !important;
-    padding: 9px !important;
-    transition: all 0.2s !important;
-    margin-bottom: 6px !important;
+    width:100% !important;
+    background:#0d1117 !important; border:1.5px solid #161d2e !important;
+    border-radius:9px !important; color:#475569 !important;
+    font-family:'Inter',sans-serif !important;
+    font-size:13px !important; font-weight:600 !important;
+    padding:9px !important; transition:all 0.2s !important;
+    margin-bottom:6px !important;
 }
 .stButton > button:hover {
-    border-color: #7c3aed !important;
-    color: #a78bfa !important;
-    background: #160b2e !important;
+    border-color:#7c3aed !important; color:#a78bfa !important;
+    background:#160b2e !important;
 }
 
-/* Export button */
 .stDownloadButton > button {
-    width: 100% !important;
-    background: linear-gradient(135deg, #0f172a, #1e1b4b) !important;
-    border: 1.5px solid #4338ca !important;
-    border-radius: 9px !important;
-    color: #a5b4fc !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 13px !important; font-weight: 700 !important;
-    padding: 10px !important; letter-spacing: 0.3px !important;
-    transition: all 0.2s !important;
+    width:100% !important;
+    background:linear-gradient(135deg,#0f172a,#1e1b4b) !important;
+    border:1.5px solid #4338ca !important; border-radius:9px !important;
+    color:#a5b4fc !important;
+    font-family:'Inter',sans-serif !important;
+    font-size:13px !important; font-weight:700 !important;
+    padding:10px !important; transition:all 0.2s !important;
 }
 .stDownloadButton > button:hover {
-    background: linear-gradient(135deg, #1e1b4b, #312e81) !important;
-    color: #fff !important;
+    background:linear-gradient(135deg,#1e1b4b,#312e81) !important;
+    color:#fff !important;
 }
 
 /* ══════════════════════════════════
-   FILTER RESULT BANNER
+   RESULT BANNER
 ══════════════════════════════════ */
 .result-banner {
-    background: linear-gradient(135deg, #071a0f, #070d1a);
-    border: 1px solid #14532d;
-    border-left: 3px solid #22c55e;
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin: 8px 0 14px 0;
-    display: flex; align-items: center; justify-content: space-between;
+    background:linear-gradient(135deg,#071a0f,#070d1a);
+    border:1px solid #14532d; border-left:3px solid #22c55e;
+    border-radius:12px; padding:14px 18px;
+    margin:8px 0 14px 0;
+    display:flex; align-items:center; justify-content:space-between;
 }
-.rb-lbl {
-    font-size: 10px; font-weight: 700; color: #16a34a;
-    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;
-}
-.rb-val {
-    font-size: 28px; font-weight: 800; color: #dcfce7;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: -1px; line-height: 1;
-}
-.rb-right { text-align: right; flex-shrink: 0; }
-.rb-cnt { font-size: 22px; font-weight: 700; color: #4ade80; font-family: 'JetBrains Mono', monospace; line-height:1; }
-.rb-sub { font-size: 10px; color: #166534; margin-top: 2px; }
+.rb-lbl { font-size:10px; font-weight:700; color:#16a34a; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.rb-val { font-size:28px; font-weight:800; color:#dcfce7; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; line-height:1; }
+.rb-right { text-align:right; flex-shrink:0; }
+.rb-cnt { font-size:22px; font-weight:700; color:#4ade80; font-family:'JetBrains Mono',monospace; }
+.rb-sub { font-size:10px; color:#166534; margin-top:2px; }
 
 /* ══════════════════════════════════
-   TABLE HEADER ROW
+   TABLE
 ══════════════════════════════════ */
-.tbl-hdr {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 0 6px 0;
-}
+.tbl-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 0 6px 0; }
 .tbl-lbl { font-size:10px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:1.2px; }
 .tbl-badge {
-    background: #0f172a; border: 1px solid #1e2d45;
-    color: #818cf8; font-size: 11px; font-weight: 700;
-    padding: 3px 11px; border-radius: 20px;
-    font-family: 'JetBrains Mono', monospace;
+    background:#0f172a; border:1px solid #1e2d45;
+    color:#818cf8; font-size:11px; font-weight:700;
+    padding:3px 11px; border-radius:20px;
+    font-family:'JetBrains Mono',monospace;
 }
-
-/* ══════════════════════════════════
-   DATAFRAME
-══════════════════════════════════ */
-div[data-testid="stDataFrame"] {
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    border: 1px solid #161d2e !important;
-}
-
-/* ══════════════════════════════════
-   SECTION DIVIDER
-══════════════════════════════════ */
 .sec-div {
-    font-size: 10px; font-weight: 700; color: #1e2d45;
-    text-transform: uppercase; letter-spacing: 1.2px;
-    padding: 12px 0 8px 0;
-    display: flex; align-items: center; gap: 7px;
+    font-size:10px; font-weight:700; color:#1e2d45;
+    text-transform:uppercase; letter-spacing:1.2px;
+    padding:12px 0 8px 0;
+    display:flex; align-items:center; gap:7px;
 }
 .sec-div::after { content:''; flex:1; height:1px; background:#161d2e; }
 
-/* ══════════════════════════════════
-   ALERT / FOOTER
-══════════════════════════════════ */
-[data-testid="stAlert"] {
-    background: #1a1200 !important; border: 1px solid #78350f !important;
-    border-radius: 10px !important; color: #fbbf24 !important;
+div[data-testid="stDataFrame"] {
+    border-radius:12px !important; overflow:hidden !important;
+    border:1px solid #161d2e !important;
 }
+
+[data-testid="stAlert"] {
+    background:#1a1200 !important; border:1px solid #78350f !important;
+    border-radius:10px !important; color:#fbbf24 !important;
+}
+
 .app-footer {
-    margin-top: 2rem; padding-top: 12px;
-    border-top: 1px solid #161d2e;
-    text-align: center;
-    font-size: 10px; font-weight: 600; color: #1e2d45;
-    letter-spacing: 1.5px; font-family: 'JetBrains Mono', monospace;
+    margin-top:2rem; padding-top:12px;
+    border-top:1px solid #161d2e; text-align:center;
+    font-size:10px; font-weight:600; color:#1e2d45;
+    letter-spacing:1.5px; font-family:'JetBrains Mono',monospace;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -383,7 +401,47 @@ soh_sku["Days of Stock"] = soh_sku.apply(
 soh_sku = soh_sku.drop(columns=["_k"])
 
 # ────────────────────────────────────────
-# HEADER
+# SIDEBAR NAVIGATION
+# ────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+    <div class="sb-brand">
+        <div class="sb-logo">🌱</div>
+        <div>
+            <div class="sb-name">Sproutlife</div>
+            <div class="sb-tagline">Inventory Suite</div>
+        </div>
+    </div>
+
+    <div class="sb-section">Navigation</div>
+
+    <a class="nav-item active" href="#">
+        <span class="nav-icon">📦</span> RM Inventory
+    </a>
+    <a class="nav-item" href="#">
+        <span class="nav-icon">🏭</span> FG Inventory
+    </a>
+    <a class="nav-item" href="#">
+        <span class="nav-icon">📈</span> Forecast
+    </a>
+    <a class="nav-item" href="#">
+        <span class="nav-icon">🔄</span> Reorder Alerts
+    </a>
+    <a class="nav-item" href="#">
+        <span class="nav-icon">📊</span> Reports
+    </a>
+
+    <div class="sb-section" style="margin-top:20px">Warehouses</div>
+    <a class="nav-item" href="#"><span class="nav-icon">🏢</span> Central</a>
+    <a class="nav-item" href="#"><span class="nav-icon">🏗️</span> Tumkur</a>
+    <a class="nav-item" href="#"><span class="nav-icon">❄️</span> Cold Storage</a>
+    <a class="nav-item" href="#"><span class="nav-icon">🏬</span> Snowman</a>
+
+    <div class="sb-footer">SPROUTLIFE FOODS v2.0</div>
+    """, unsafe_allow_html=True)
+
+# ────────────────────────────────────────
+# MAIN — HEADER
 # ────────────────────────────────────────
 st.markdown("""
 <div class="app-header">
@@ -391,20 +449,19 @@ st.markdown("""
         <div class="hdr-logo">📦</div>
         <div>
             <div class="hdr-title">RM Inventory</div>
-            <div class="hdr-sub">Sproutlife Foods · Raw Material</div>
+            <div class="hdr-sub">Sproutlife Foods · Raw Material Stock</div>
         </div>
     </div>
     <div class="live-pill"><span class="live-dot"></span>LIVE</div>
 </div>
 """, unsafe_allow_html=True)
 
-# Refresh
 if st.button("↺  Refresh Data", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
 
 # ────────────────────────────────────────
-# KPI — vibrant purple-blue-teal gradient
+# KPI
 # ────────────────────────────────────────
 total_soh = df_raw[df_raw["Warehouse"].isin(SOH_WH)]["Qty Available"].sum()
 
@@ -422,15 +479,14 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────
-# FILTERS — all 4 in one horizontal row
+# FILTERS — all 4 in one row
 # ────────────────────────────────────────
-st.markdown('<div class="filter-row-wrap">', unsafe_allow_html=True)
-st.markdown('<div class="filter-row-label">🔽 Filters</div>', unsafe_allow_html=True)
+st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
+st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=True)
 
 col_s, col_w, col_c, col_st = st.columns([2.2, 2, 1.6, 1.6])
-
 with col_s:
-    search = st.text_input("s", placeholder="🔍 Search SKU / name…",
+    search = st.text_input("s", placeholder="🔍 Search SKU / name / batch…",
                            label_visibility="collapsed")
 with col_w:
     wh_opts = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().unique().tolist())
@@ -463,15 +519,14 @@ if stock_filter == "Available Only":
 elif stock_filter == "Zero / Neg":
     df = df[df["Qty Available"] <= 0]
 
-# Filtered result banner
 is_filtered = (bool(search) or selected_wh != "All Warehouses"
                or selected_cat != "All Categories" or stock_filter != "All Stock")
 if is_filtered:
     f_qty = df[df["Warehouse"].isin(SOH_WH)]["Qty Available"].sum()
-    if search:                         ctx = f'"{search}"'
+    if search:                             ctx = f'"{search}"'
     elif selected_wh != "All Warehouses":  ctx = selected_wh[:30]
     elif selected_cat != "All Categories": ctx = selected_cat[:30]
-    else:                              ctx = stock_filter
+    else:                                  ctx = stock_filter
     st.markdown(f"""
     <div class="result-banner">
         <div>
@@ -489,10 +544,9 @@ if is_filtered:
 # TABLE
 # ────────────────────────────────────────
 st.markdown('<div class="sec-div">Records</div>', unsafe_allow_html=True)
-
 st.markdown(f"""
 <div class="tbl-hdr">
-    <span class="tbl-lbl">📋 Showing all columns</span>
+    <span class="tbl-lbl">📋 All columns included</span>
     <span class="tbl-badge">{len(df):,} rows</span>
 </div>
 """, unsafe_allow_html=True)
@@ -511,11 +565,8 @@ st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 if df.empty:
     st.warning("⚠️  No records match the current filters.")
 else:
-    # Merge forecast / DoS
     df_m = df.merge(soh_sku[["Item SKU", "Forecast", "Days of Stock"]],
                     on="Item SKU", how="left")
-
-    # Full column order — nothing dropped
     priority = [
         "Item Name", "Item SKU", "Category", "Warehouse", "UoM",
         "Qty Available", "Forecast", "Days of Stock",
@@ -525,9 +576,8 @@ else:
         "Item Type", "Primary Supplier"
     ]
     cols = [c for c in priority if c in df_m.columns]
-    cols += [c for c in df_m.columns if c not in cols]   # append any extra columns
+    cols += [c for c in df_m.columns if c not in cols]
     df_show = df_m[cols].copy()
-
     for c in ["Inventory Date", "Expiry Date", "MFG Date"]:
         if c in df_show.columns:
             df_show[c] = df_show[c].dt.strftime("%d-%b-%Y").fillna("")
@@ -538,21 +588,16 @@ else:
         height=500,
         hide_index=True,
         column_config={
-            "Qty Available":        st.column_config.NumberColumn("Qty Avail",   format="%.0f"),
-            "Forecast":             st.column_config.NumberColumn("Forecast",    format="%.0f"),
-            "Days of Stock":        st.column_config.NumberColumn("DoS",         format="%.1f"),
-            "Qty Inward":           st.column_config.NumberColumn("Inward",      format="%.0f"),
-            "Qty (Issue / Hold)":   st.column_config.NumberColumn("Issue/Hold",  format="%.0f"),
-            "Value (Inc Tax)":      st.column_config.NumberColumn("Val (Inc)",   format="%.0f"),
-            "Value (Ex Tax)":       st.column_config.NumberColumn("Val (Ex)",    format="%.0f"),
-            "Current Aging (Days)": st.column_config.NumberColumn("Aging (d)",   format="%d"),
+            "Qty Available":        st.column_config.NumberColumn("Qty Avail",  format="%.0f"),
+            "Forecast":             st.column_config.NumberColumn("Forecast",   format="%.0f"),
+            "Days of Stock":        st.column_config.NumberColumn("DoS",        format="%.1f"),
+            "Qty Inward":           st.column_config.NumberColumn("Inward",     format="%.0f"),
+            "Qty (Issue / Hold)":   st.column_config.NumberColumn("Issue/Hold", format="%.0f"),
+            "Value (Inc Tax)":      st.column_config.NumberColumn("Val (Inc)",  format="%.0f"),
+            "Value (Ex Tax)":       st.column_config.NumberColumn("Val (Ex)",   format="%.0f"),
+            "Current Aging (Days)": st.column_config.NumberColumn("Aging (d)",  format="%d"),
         }
     )
 
-# ────────────────────────────────────────
-# FOOTER
-# ────────────────────────────────────────
-st.markdown(
-    '<div class="app-footer">SPROUTLIFE FOODS · RM INVENTORY</div>',
-    unsafe_allow_html=True
-)
+st.markdown('<div class="app-footer">SPROUTLIFE FOODS · RM INVENTORY</div>',
+            unsafe_allow_html=True)
