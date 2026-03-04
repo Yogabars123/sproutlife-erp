@@ -112,37 +112,37 @@ st.markdown('<div class="sec-label">Modules</div>', unsafe_allow_html=True)
 
 st.markdown("""
 <div class="nav-grid">
-    <a class="nav-card" href="/1_RM_Inventory" target="_self">
+    <a class="nav-card" href="/RM_Inventory" target="_self">
         <div class="nav-card-icon">🗄️</div>
         <div class="nav-card-title">RM Inventory</div>
         <div class="nav-card-desc">Raw material stock levels, days of supply, and warehouse-wise breakdown.</div>
     </a>
-    <a class="nav-card" href="/2_GRN_Data" target="_self">
+    <a class="nav-card" href="/GRN_Data" target="_self">
         <div class="nav-card-icon">📥</div>
         <div class="nav-card-title">GRN Data</div>
         <div class="nav-card-desc">Goods received notes — ordered, received, pending and rejected quantities.</div>
     </a>
-    <a class="nav-card" href="/3_FG_Inventory" target="_self">
+    <a class="nav-card" href="/FG_Inventory" target="_self">
         <div class="nav-card-icon">📦</div>
         <div class="nav-card-title">FG Inventory</div>
         <div class="nav-card-desc">Finished goods stock with shelf life tracking and expiry alerts.</div>
     </a>
-    <a class="nav-card" href="/4_Consumption" target="_self">
+    <a class="nav-card" href="/Consumption" target="_self">
         <div class="nav-card-icon">🏭</div>
         <div class="nav-card-title">Consumption</div>
         <div class="nav-card-desc">Batch-wise material consumption and total production quantities.</div>
     </a>
-    <a class="nav-card" href="/5_Forecast" target="_self">
+    <a class="nav-card" href="/Forecast" target="_self">
         <div class="nav-card-icon">📊</div>
         <div class="nav-card-title">Forecast</div>
         <div class="nav-card-desc">Demand forecast vs SOH with critical stock alerts by days of supply.</div>
     </a>
-    <a class="nav-card" href="/6_Replenishment" target="_self">
+    <a class="nav-card" href="/Replenishment" target="_self">
         <div class="nav-card-icon">🛒</div>
         <div class="nav-card-title">Replenishment</div>
         <div class="nav-card-desc">Auto-generated order suggestions for items under 10 days of stock.</div>
     </a>
-    <a class="nav-card" href="/7_Consumption_vs_Forecast" target="_self">
+    <a class="nav-card" href="/Consumption_vs_Forecast" target="_self">
         <div class="nav-card-icon">📈</div>
         <div class="nav-card-title">Consumption vs Forecast</div>
         <div class="nav-card-desc">Variance analysis — actual consumption compared against forecast per material.</div>
