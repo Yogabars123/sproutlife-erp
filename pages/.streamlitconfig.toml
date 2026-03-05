@@ -1,0 +1,9 @@
+[server]
+runOnSave = true
+
+[ui]
+hideTopBar = false
+
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
