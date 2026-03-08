@@ -28,24 +28,6 @@ def inject_sidebar(current_page: str = ""):
 
         st.markdown("""
         <style>
-        /* ── Force sidebar always open ── */
-        section[data-testid="stSidebar"] {
-            transform: none !important;
-            min-width: 230px !important;
-            width: 230px !important;
-            visibility: visible !important;
-            display: block !important;
-        }
-        section[data-testid="stSidebar"][aria-expanded="false"] {
-            transform: none !important;
-            margin-left: 0 !important;
-        }
-        /* Hide the collapse arrow button */
-        button[data-testid="collapsedControl"],
-        button[kind="header"] {
-            display: none !important;
-        }
-
         section[data-testid="stSidebar"] > div:first-child {
             background: #0f172a !important;
             padding: 12px 10px !important;
@@ -80,7 +62,27 @@ def inject_sidebar(current_page: str = ""):
             font-size:11px; color:#334155;
             text-align:center; padding-top:12px;
         }
+        section[data-testid="stSidebar"] { min-width:230px !important; }
         </style>
+
+        <script>
+        // Force sidebar open on every page load
+        (function openSidebar() {
+            const tryOpen = () => {
+                const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+                if (sidebar) {
+                    const collapsed = sidebar.getAttribute('aria-expanded') === 'false';
+                    if (collapsed) {
+                        const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+                        if (btn) btn.click();
+                    }
+                } else {
+                    setTimeout(tryOpen, 200);
+                }
+            };
+            setTimeout(tryOpen, 300);
+        })();
+        </script>
         """, unsafe_allow_html=True)
 
         st.markdown('<span class="snav-label">Navigation</span>', unsafe_allow_html=True)
