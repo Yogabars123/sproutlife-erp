@@ -28,6 +28,23 @@ def inject_sidebar(current_page: str = ""):
 
         st.markdown("""
         <style>
+        /* Force sidebar always visible and expanded */
+        section[data-testid="stSidebar"] {
+            transform: none !important;
+            margin-left: 0 !important;
+            visibility: visible !important;
+            width: 244px !important;
+            min-width: 244px !important;
+        }
+        section[data-testid="stSidebar"][aria-expanded="false"] {
+            transform: none !important;
+            margin-left: 0 !important;
+        }
+        /* Hide collapse/expand buttons */
+        [data-testid="collapsedControl"],
+        [data-testid="baseButton-header"] {
+            display: none !important;
+        }
         section[data-testid="stSidebar"] > div:first-child {
             background: #0f172a !important;
             padding: 12px 10px !important;
@@ -65,24 +82,6 @@ def inject_sidebar(current_page: str = ""):
         section[data-testid="stSidebar"] { min-width:230px !important; }
         </style>
 
-        <script>
-        // Force sidebar open on every page load
-        (function openSidebar() {
-            const tryOpen = () => {
-                const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-                if (sidebar) {
-                    const collapsed = sidebar.getAttribute('aria-expanded') === 'false';
-                    if (collapsed) {
-                        const btn = window.parent.document.querySelector('[data-testid="collapsedControl"]');
-                        if (btn) btn.click();
-                    }
-                } else {
-                    setTimeout(tryOpen, 200);
-                }
-            };
-            setTimeout(tryOpen, 300);
-        })();
-        </script>
         """, unsafe_allow_html=True)
 
         st.markdown('<span class="snav-label">Navigation</span>', unsafe_allow_html=True)
