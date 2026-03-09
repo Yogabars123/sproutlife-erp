@@ -181,7 +181,14 @@ if sel_wh != "All Warehouses" and "Warehouse" in df.columns:
     df = df[df["Warehouse"].astype(str) == sel_wh]
 
 # ── KPI CARDS ─────────────────────────────────────────────────────────────────
-total_ordered  = df["QuantityOrdered"].sum()  if "QuantityOrdered"  in df.columns else 0
+# Ordered Qty — deduplicate by PO No + Item Code to avoid double counting
+if "QuantityOrdered" in df.columns and "PO No" in df.columns and "Item Code" in df.columns:
+    total_ordered = df.drop_duplicates(subset=["PO No", "Item Code"])["QuantityOrdered"].sum()
+elif "QuantityOrdered" in df.columns:
+    total_ordered = df["QuantityOrdered"].sum()
+else:
+    total_ordered = 0
+
 total_received = df["QuantityReceived"].sum() if "QuantityReceived" in df.columns else 0
 total_rejected = df["QuantityRejected"].sum() if "QuantityRejected" in df.columns else 0
 pending_qty    = total_ordered - total_received
