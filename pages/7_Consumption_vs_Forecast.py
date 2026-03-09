@@ -6,7 +6,7 @@ import io
 st.set_page_config(page_title="Consumption vs Forecast", layout="wide")
 
 from pages.Sidebar_style import inject_sidebar
-from pages.data_loader import load_sheet
+from data_loader import load_sheet
 inject_sidebar("Consumption vs Forecast")
 
 st.markdown("""
