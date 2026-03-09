@@ -78,10 +78,14 @@ def load_data():
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     # Parse date column — try GRN Date or Date
-    date_col = next((c for c in df.columns if "date" in c.lower() or "grn date" in c.lower()), None)
-    if date_col:
-        df["_date"] = pd.to_datetime(df[date_col], errors="coerce")
-        df["_month"] = df["_date"].dt.strftime("%b-%Y")
+    # Use existing GRN Month column if present
+    if "GRN Month" in df.columns:
+        df["_month"] = df["GRN Month"].astype(str).str.strip()
+    else:
+        date_col = next((c for c in df.columns if "date" in c.lower()), None)
+        if date_col:
+            df["_date"] = pd.to_datetime(df[date_col], errors="coerce")
+            df["_month"] = df["_date"].dt.strftime("%b-%Y")
     return df
 
 df_all = load_data()
@@ -119,9 +123,9 @@ with c1:
 
 with c2:
     # Vendor dropdown
-    vendor_col = next((c for c in df_all.columns if "vendor" in c.lower() or "supplier" in c.lower()), None)
+    vendor_col = "Vendor Name" if "Vendor Name" in df_all.columns else next((c for c in df_all.columns if "vendor" in c.lower() or "supplier" in c.lower()), None)
     if vendor_col:
-        vendors = ["All Vendors"] + sorted(df_all[vendor_col].dropna().astype(str).unique().tolist())
+        vendors = ["All Vendors"] + sorted(df_all[vendor_col].dropna().astype(str).str.strip().unique().tolist())
     else:
         vendors = ["All Vendors"]
     sel_vendor = st.selectbox("v", vendors, label_visibility="collapsed")
@@ -129,7 +133,11 @@ with c2:
 with c3:
     # Month dropdown
     if "_month" in df_all.columns:
-        months = ["All Months"] + sorted(df_all["_month"].dropna().unique().tolist(), reverse=True)
+        raw_months = df_all["_month"].dropna().astype(str).str.strip().unique().tolist()
+        # Sort by month order: Jan, Feb, Mar... 
+        month_order = ["January","February","March","April","May","June","July","August","September","October","November","December"]
+        sorted_months = sorted(raw_months, key=lambda x: month_order.index(x) if x in month_order else 99)
+        months = ["All Months"] + sorted_months
     else:
         months = ["All Months"]
     sel_month = st.selectbox("m", months, label_visibility="collapsed")
