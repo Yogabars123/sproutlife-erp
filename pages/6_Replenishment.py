@@ -6,7 +6,7 @@ import io
 st.set_page_config(page_title="Replenishment Planner", layout="wide")
 
 from pages.Sidebar_style import inject_sidebar
-from data_loader import load_sheet
+from pages.data_loader import load_sheet
 inject_sidebar("Replenishment")
 
 st.markdown("""
