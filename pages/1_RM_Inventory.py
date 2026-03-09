@@ -231,7 +231,11 @@ div[data-testid="stDataFrame"] {
 def load_rm():
     # Data loaded from OneDrive via data_loader
     df = load_sheet("RM-Inventory")
-    df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
+    if df.empty:
+        return df
+    df.columns = df.columns.str.strip()
+    if "Warehouse" in df.columns:
+        df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
     for c in ["Inventory Date", "Expiry Date", "MFG Date"]:
         if c in df.columns: df[c] = pd.to_datetime(df[c], errors="coerce")
     for c in ["Qty Available","Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]:
@@ -240,11 +244,9 @@ def load_rm():
 
 @st.cache_data
 def load_forecast():
-    # Data loaded from OneDrive via data_loader
-    xl = pd.ExcelFile(fp)
-    sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
-    if not sheet: return pd.DataFrame(columns=["Item code","Forecast"])
-    df = load_sheet("RM-Inventory")
+    df = load_sheet("Forecast")
+    if df.empty:
+        return pd.DataFrame(columns=["Item code","Forecast"])
     df.columns = df.columns.str.strip()
     if "Location" in df.columns:
         df = df[df["Location"].astype(str).str.strip().str.lower() == "plant"]
@@ -252,6 +254,8 @@ def load_forecast():
         df["Forecast"] = pd.to_numeric(df["Forecast"], errors="coerce").fillna(0)
         df = df[df["Forecast"] > 0]
     ic = "Item code" if "Item code" in df.columns else "Item Code"
+    if ic not in df.columns:
+        return pd.DataFrame(columns=["Item code","Forecast"])
     df[ic] = df[ic].astype(str).str.strip()
     return df[[ic,"Forecast"]].rename(columns={ic:"Item code"}).drop_duplicates(subset="Item code")
 
