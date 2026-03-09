@@ -6,6 +6,7 @@ import io
 st.set_page_config(page_title="Replenishment Planner", layout="wide")
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("Replenishment")
 
 st.markdown("""
@@ -29,13 +30,13 @@ st.caption("Items with less than 10 days of stock — auto-generated order sugge
 @st.cache_data
 def load_data():
     file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df_rm = pd.read_excel(file_path, sheet_name="RM-Inventory")
+    df_rm = load_sheet("RM-Inventory")
     df_rm.columns = df_rm.columns.str.strip()
     df_rm["Warehouse"] = df_rm["Warehouse"].astype(str).str.strip()
     df_rm["Qty Available"] = pd.to_numeric(df_rm["Qty Available"], errors="coerce").fillna(0)
     xl = pd.ExcelFile(file_path)
     sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
-    df_fc = pd.read_excel(file_path, sheet_name=sheet)
+    df_fc = load_sheet("Replenishment", sheet_name=sheet)
     df_fc.columns = df_fc.columns.str.strip()
     if "Location" in df_fc.columns:
         df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
