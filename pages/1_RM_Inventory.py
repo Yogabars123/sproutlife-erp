@@ -11,6 +11,7 @@ st.set_page_config(
 )
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("RM Inventory")
 
 st.markdown("""
@@ -228,10 +229,8 @@ div[data-testid="stDataFrame"] {
 # ════════════════════════════════════════
 @st.cache_data
 def load_rm():
-    fp = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(fp):
-        fp = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df = pd.read_excel(fp, sheet_name="RM-Inventory")
+    # Data loaded from OneDrive via data_loader
+    df = load_sheet("RM-Inventory")
     df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
     for c in ["Inventory Date", "Expiry Date", "MFG Date"]:
         if c in df.columns: df[c] = pd.to_datetime(df[c], errors="coerce")
@@ -241,13 +240,11 @@ def load_rm():
 
 @st.cache_data
 def load_forecast():
-    fp = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(fp):
-        fp = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
+    # Data loaded from OneDrive via data_loader
     xl = pd.ExcelFile(fp)
     sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
     if not sheet: return pd.DataFrame(columns=["Item code","Forecast"])
-    df = pd.read_excel(fp, sheet_name=sheet)
+    df = load_sheet("RM-Inventory")
     df.columns = df.columns.str.strip()
     if "Location" in df.columns:
         df = df[df["Location"].astype(str).str.strip().str.lower() == "plant"]
