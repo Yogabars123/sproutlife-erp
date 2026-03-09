@@ -1,9 +1,9 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Sproutlife ERP",
+    page_title="YogaBar ERP",
     layout="wide",
-    page_icon="🌱",
+    page_icon="🥗",
     initial_sidebar_state="expanded"
 )
 
@@ -26,12 +26,11 @@ html, body,
 .block-container { padding: 1.5rem 2rem 3rem 2rem !important; max-width: 100% !important; }
 
 .hero {
-    background: linear-gradient(135deg, #0f2460 0%, #1A56DB 50%, #0d9e5c 100%);
+    background: linear-gradient(135deg, #0d6b63 0%, #5bc8c0 50%, #0d9e5c 100%);
     border-radius: 20px; padding: 48px 40px; margin-bottom: 28px;
 }
-.hero-emoji  { font-size: 52px; margin-bottom: 12px; }
-.hero-title  { font-size: 32px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px; }
-.hero-sub    { font-size: 15px; color: rgba(255,255,255,0.7); max-width: 520px; line-height: 1.6; }
+.hero-title { font-size: 32px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 8px; }
+.hero-sub   { font-size: 15px; color: rgba(255,255,255,0.85); max-width: 520px; line-height: 1.6; }
 
 .sec-label {
     font-size: 10px; font-weight: 700; color: #475569;
@@ -49,14 +48,14 @@ html, body,
 .mod-desc  { font-size: 12px; color: #475569; line-height: 1.5; margin-bottom: 14px; }
 
 div[data-testid="stButton"] > button {
-    background: #111827 !important; border: 1px solid #1e2d45 !important;
-    border-radius: 8px !important; color: #60a5fa !important;
+    background: #111827 !important; border: 1px solid #1e4d4a !important;
+    border-radius: 8px !important; color: #5bc8c0 !important;
     font-size: 12px !important; font-weight: 600 !important;
     padding: 6px 12px !important; width: 100% !important;
     transition: all 0.15s !important; margin-bottom: 14px !important;
 }
 div[data-testid="stButton"] > button:hover {
-    background: #1e3a5f !important; border-color: #3b82f6 !important; color: #fff !important;
+    background: #0d2e2c !important; border-color: #5bc8c0 !important; color: #fff !important;
 }
 
 .home-footer {
@@ -70,11 +69,10 @@ div[data-testid="stButton"] > button:hover {
 # ── HERO ──────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero">
-    <div class="hero-emoji">🌱</div>
-    <div class="hero-title">Sproutlife ERP Dashboard</div>
+    <div class="hero-title">🥗 YogaBar ERP Dashboard</div>
     <div class="hero-sub">
         Real-time inventory, forecasting, and production insights
-        for Sproutlife Foods. Select a module from the sidebar or below.
+        for YogaBar. Select a module from the sidebar or below.
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -106,5 +104,5 @@ for row_start in range(0, len(MODULES), 3):
             if st.button(f"Open {title} →", key=f"nav_{title}"):
                 st.switch_page(path)
 
-st.markdown('<div class="home-footer">SPROUTLIFE FOODS · INVENTORY MANAGEMENT SYSTEM</div>',
+st.markdown('<div class="home-footer">YOGABAR · INVENTORY MANAGEMENT SYSTEM</div>',
             unsafe_allow_html=True)
