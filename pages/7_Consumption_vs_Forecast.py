@@ -145,7 +145,7 @@ st.markdown("""
         <div class="hdr-logo">📈</div>
         <div>
             <div class="hdr-title">Consumption vs Forecast</div>
-            <div class="hdr-sub">YogaBar · March Actual vs Forecast · Plant Location</div>
+            <div class="hdr-sub">YogaBar · March Actual Consumption vs Forecast Qty</div>
         </div>
     </div>
     <div class="live-pill"><span class="live-dot"></span>LIVE</div>
@@ -191,7 +191,7 @@ elif sel_type == "PM (Packaging Material)":
 
 # ── KPI CARDS ─────────────────────────────────────────────────────────────────
 total_actual   = df["Actual_Consumed"].sum()
-total_forecast = (df["Per Day Req"] * 31).sum()
+total_forecast = df["Forecast"].sum()
 over_count     = (df["Status"] == "Over").sum()
 under_count    = (df["Status"] == "Under").sum()
 variance_pct   = ((total_actual / total_forecast) * 100 - 100) if total_forecast > 0 else 0
@@ -204,9 +204,9 @@ st.markdown(f"""
         <div class="kpi-cap">{len(df):,} materials · March data</div>
     </div>
     <div class="kpi-card blue">
-        <div class="kpi-lbl">March Forecast (31 days)</div>
+        <div class="kpi-lbl">Total Forecast Qty</div>
         <div class="kpi-num">{total_forecast:,.0f}</div>
-        <div class="kpi-cap">Forecast ÷ 24 × 31 days</div>
+        <div class="kpi-cap">From Forecast sheet · Plant</div>
     </div>
     <div class="kpi-card red">
         <div class="kpi-lbl">Over Consumed</div>
@@ -231,8 +231,8 @@ fig.add_trace(go.Bar(
     name="Actual (March)", marker_color="#5bc8c0", opacity=0.9, marker_line_width=0,
 ))
 fig.add_trace(go.Bar(
-    x=top15["Label"], y=top15["Per Day Req"] * 31,
-    name="Forecast (31d)", marker_color="#818cf8", opacity=0.7, marker_line_width=0,
+    x=top15["Label"], y=top15["Forecast"],
+    name="Forecast", marker_color="#818cf8", opacity=0.7, marker_line_width=0,
 ))
 fig.update_layout(
     paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
@@ -264,7 +264,7 @@ st.markdown("""
 <div class="legend-bar">
     <span><span class="legend-dot" style="background:#ef4444"></span><span style="color:#f87171">Over Consumed (Actual &gt; Forecast)</span></span>
     <span><span class="legend-dot" style="background:#22c55e"></span><span style="color:#4ade80">Under Consumed (Actual &lt; Forecast)</span></span>
-    <span style="color:#475569; margin-left:auto; font-size:10px; font-family:'JetBrains Mono',monospace;">Forecast for March = Per Day Req × 31 days</span>
+    <span style="color:#475569; margin-left:auto; font-size:10px; font-family:'JetBrains Mono',monospace;">Remaining = Forecast − Actual Consumed</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -289,22 +289,19 @@ else:
         "Actual_Consumed": "Actual (March)",
         "Material_Name":   "Material Name",
     }).copy()
-    disp["Forecast (March)"] = (disp["Per Day Req"] * 31).round(0)
-
     col_order = ["Material SKU", "Material Name", "Category", "Actual (March)",
-                 "Forecast (March)", "Per Day Req", "Variance", "Variance %", "Status"]
+                 "Forecast", "Remaining", "Consumed %", "Status"]
     col_order = [c for c in col_order if c in disp.columns]
 
     st.dataframe(
         disp[col_order].style.apply(colour_row, axis=1),
         use_container_width=True, hide_index=True, height=520,
         column_config={
-            "Actual (March)":   st.column_config.NumberColumn("Actual (March)",   format="%.0f"),
-            "Forecast (March)": st.column_config.NumberColumn("Forecast (March)", format="%.0f"),
-            "Per Day Req":      st.column_config.NumberColumn("Per Day Req",       format="%.2f"),
-            "Variance":         st.column_config.NumberColumn("Variance",          format="%.0f"),
-            "Variance %":       st.column_config.NumberColumn("Variance %",        format="%.1f%%"),
+            "Actual (March)": st.column_config.NumberColumn("Actual (March)", format="%.0f"),
+            "Forecast":       st.column_config.NumberColumn("Forecast Qty",    format="%.0f"),
+            "Remaining":      st.column_config.NumberColumn("Remaining",        format="%.0f"),
+            "Consumed %":     st.column_config.NumberColumn("Consumed %",       format="%.1f%%"),
         }
     )
 
-st.markdown('<div class="app-footer">YOGABAR · CONSUMPTION VS FORECAST · MARCH</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-footer">YOGABAR · MARCH CONSUMPTION VS FORECAST</div>', unsafe_allow_html=True)
