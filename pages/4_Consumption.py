@@ -13,6 +13,7 @@ st.set_page_config(
 )
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("Consumption")
 
 st.markdown("""
@@ -167,10 +168,8 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
 # ── DATA LOADING ─────────────────────────────────────────────────────────────
 @st.cache_data
 def load_consumption():
-    fp = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(fp):
-        fp = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df = pd.read_excel(fp, sheet_name="Consumption")
+    # Data loaded from OneDrive via data_loader
+    df = load_sheet("Consumption")
     df.columns = df.columns.str.strip()
     if "Batch Date" in df.columns:
         df["Batch Date"] = pd.to_datetime(df["Batch Date"], errors="coerce")
