@@ -4,7 +4,7 @@ import os
 import io
 
 st.set_page_config(
-    page_title="RM Inventory · Sproutlife",
+    page_title="RM Inventory · YogaBar",
     layout="wide",
     page_icon="📦",
     initial_sidebar_state="expanded"
@@ -53,7 +53,7 @@ html, body,
     display: flex; align-items: center; justify-content: center; font-size: 19px;
 }
 .hdr-title { font-size: 16px; font-weight: 800; color: #f1f5f9; white-space: nowrap; }
-.hdr-sub   { font-size: 11px; color: #64748b; white-space: nowrap; }
+.hdr-sub   { font-size: 11px; color: #94a3b8; white-space: nowrap; }
 
 .live-pill {
     display: inline-flex; align-items: center; gap: 5px;
@@ -297,7 +297,7 @@ st.markdown("""
         <div class="hdr-logo">📦</div>
         <div>
             <div class="hdr-title">RM Inventory</div>
-            <div class="hdr-sub">Sproutlife Foods · Raw Material Stock</div>
+            <div class="hdr-sub">YogaBar · Raw Material Stock</div>
         </div>
     </div>
     <div class="live-pill"><span class="live-dot"></span>LIVE</div>
@@ -419,4 +419,4 @@ else:
             "Current Aging (Days)": st.column_config.NumberColumn("Aging (d)",  format="%d"),
         })
 
-st.markdown('<div class="app-footer">SPROUTLIFE FOODS · RM INVENTORY</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-footer">YOGABAR · RM INVENTORY</div>', unsafe_allow_html=True)
