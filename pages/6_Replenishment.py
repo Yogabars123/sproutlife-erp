@@ -26,7 +26,7 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-pill { display:inline-flex; align-items:center; gap:5px; background:#071a0f; border:1px solid #166534; border-radius:20px; padding:5px 11px; font-size:10px; font-weight:700; color:#22c55e; letter-spacing:1px; font-family:'JetBrains Mono',monospace; }
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 5px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
-.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+.kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
 .kpi-card { border-radius:16px; padding:16px 18px; position:relative; overflow:hidden; border:1px solid; min-height:100px; }
 .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
 .kpi-card.red    { background:linear-gradient(135deg,#1a0000,#2a0808); border-color:#7f1d1d; }
@@ -159,24 +159,21 @@ c1, c2 = st.columns([3, 2])
 with c1:
     search = st.text_input("s", placeholder="🔍 Search SKU / item name…", label_visibility="collapsed")
 with c2:
-    if "Category" in df.columns:
-        cat_opts = ["All Categories"] + sorted(df["Category"].dropna().astype(str).unique().tolist())
-    else:
-        cat_opts = ["All Categories"]
-    sel_cat = st.selectbox("c", cat_opts, label_visibility="collapsed")
+    sel_cat = st.selectbox("c", ["All", "RM (Raw Material)", "PM (Packaging Material)"], label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
 df_view = df.copy()
 if search:
     df_view = df_view[df_view.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-if sel_cat != "All Categories" and "Category" in df_view.columns:
-    df_view = df_view[df_view["Category"].astype(str) == sel_cat]
+if sel_cat == "RM (Raw Material)" and "Item SKU" in df_view.columns:
+    df_view = df_view[~df_view["Item SKU"].astype(str).str.upper().str.startswith("PM")]
+elif sel_cat == "PM (Packaging Material)" and "Item SKU" in df_view.columns:
+    df_view = df_view[df_view["Item SKU"].astype(str).str.upper().str.startswith("PM")]
 
 # ── KPI CARDS ─────────────────────────────────────────────────────────────────
 zero_stock   = (df_view["Days of Stock"] <= 0).sum()
 under5       = ((df_view["Days of Stock"] > 0) & (df_view["Days of Stock"] < 5)).sum()
 under10      = ((df_view["Days of Stock"] >= 5) & (df_view["Days of Stock"] < 10)).sum()
-total_order  = df_view["Suggested Order Qty"].sum()
 
 st.markdown(f"""
 <div class="kpi-grid">
@@ -195,11 +192,7 @@ st.markdown(f"""
         <div class="kpi-num">{under10:,}</div>
         <div class="kpi-cap">Plan orders this week</div>
     </div>
-    <div class="kpi-card teal">
-        <div class="kpi-lbl">Total Order Qty</div>
-        <div class="kpi-num">{total_order:,.0f}</div>
-        <div class="kpi-cap">To cover 30 days stock</div>
-    </div>
+
 </div>
 """, unsafe_allow_html=True)
 
