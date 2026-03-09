@@ -181,11 +181,17 @@ def load_fg():
 df_raw = load_fg()
 
 today = pd.Timestamp(datetime.today().date())
-if "Expiry Date" in df_raw.columns and "MFG Date" in df_raw.columns:
+if "Expiry Date" in df_raw.columns:
     remaining_days = (df_raw["Expiry Date"] - today).dt.days
-    total_days     = (df_raw["Expiry Date"] - df_raw["MFG Date"]).dt.days
-    df_raw["Remaining Shelf Life (%)"] = ((remaining_days / total_days) * 100).round(1).clip(0, 100)
-    df_raw["_remaining_days"]          = remaining_days.fillna(0).astype(int)
+    df_raw["_remaining_days"] = remaining_days.fillna(0).astype(int)
+    if "MFG Date" in df_raw.columns:
+        total_days = (df_raw["Expiry Date"] - df_raw["MFG Date"]).dt.days
+        valid = total_days > 0
+        pct = pd.Series(0.0, index=df_raw.index)
+        pct[valid] = ((remaining_days[valid] / total_days[valid]) * 100).clip(0, 100)
+        df_raw["Remaining Shelf Life (%)"] = pct.round(1)
+    else:
+        df_raw["Remaining Shelf Life (%)"] = 0.0
 
 # ── HEADER ──────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -287,7 +293,7 @@ else:
             "Value (Inc Tax)":            st.column_config.NumberColumn("Val (Inc)",   format="%.0f"),
             "Value (Ex Tax)":             st.column_config.NumberColumn("Val (Ex)",    format="%.0f"),
             "Current Aging (Days)":       st.column_config.NumberColumn("Aging (d)",   format="%d"),
-            "Remaining Shelf Life (%)":   st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100),
+            "Remaining Shelf Life (%)":   st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
         })
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY</div>', unsafe_allow_html=True)
