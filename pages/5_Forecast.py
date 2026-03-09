@@ -5,6 +5,7 @@ import os
 st.set_page_config(page_title="Forecast", layout="wide", page_icon="📊")
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("Forecast")
 
 st.markdown("""
@@ -34,7 +35,7 @@ def load_data():
     if not sheet:
         st.error("Forecast sheet not found in Excel file.")
         return pd.DataFrame()
-    df_fc = pd.read_excel(file_path, sheet_name=sheet)
+    df_fc = load_sheet("Forecast", sheet_name=sheet)
     df_fc.columns = df_fc.columns.str.strip()
     if "Location" in df_fc.columns:
         df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
@@ -43,7 +44,7 @@ def load_data():
             df_fc[col] = pd.to_numeric(df_fc[col], errors="coerce").fillna(0)
     if "Forecast" in df_fc.columns:
         df_fc = df_fc[df_fc["Forecast"] > 0]
-    df_rm = pd.read_excel(file_path, sheet_name="RM-Inventory")
+    df_rm = load_sheet("RM-Inventory")
     df_rm.columns = df_rm.columns.str.strip()
     df_rm["Warehouse"] = df_rm["Warehouse"].astype(str).str.strip()
     df_rm["Qty Available"] = pd.to_numeric(df_rm["Qty Available"], errors="coerce").fillna(0)
