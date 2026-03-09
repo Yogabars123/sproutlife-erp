@@ -74,7 +74,7 @@ def inject_sidebar(current_page: str = ""):
         /* ── Section label ── */
         .snav-label {
             font-family: 'DM Sans', sans-serif;
-            font-size: 9px; font-weight: 700; color: #2d4a6b;
+            font-size: 9px; font-weight: 700; color: #3d6080;
             letter-spacing: 2.5px; text-transform: uppercase;
             padding: 16px 10px 8px; display: block;
         }
@@ -92,14 +92,14 @@ def inject_sidebar(current_page: str = ""):
             font-family: 'DM Sans', sans-serif !important;
             font-size: 13px !important;
             font-weight: 500 !important;
-            color: #4a6080 !important;
+            color: #8faec8 !important;
             text-decoration: none !important;
             transition: all 0.18s ease !important;
             border: 1px solid transparent !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
             background: rgba(91,200,192,0.08) !important;
-            color: #7ee8e2 !important;
+            color: #a8f0ec !important;
             border-color: rgba(91,200,192,0.15) !important;
             transform: translateX(3px) !important;
         }
@@ -122,7 +122,7 @@ def inject_sidebar(current_page: str = ""):
         /* ── Footer ── */
         .snav-footer {
             font-family: 'DM Sans', sans-serif;
-            font-size: 10px; color: #1e3048;
+            font-size: 10px; color: #3d5a7a;
             text-align: center; padding: 10px 0 4px;
             font-weight: 600; letter-spacing: 1px;
         }
