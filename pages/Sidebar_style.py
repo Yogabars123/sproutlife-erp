@@ -15,73 +15,118 @@ PAGES = [
 
 def inject_sidebar(current_page: str = ""):
     with st.sidebar:
+
         st.markdown(f"""
         <div style="
-            background: #5bc8c0;
-            border-radius: 16px; padding: 16px 16px 12px;
-            margin-bottom: 8px; text-align: center;">
-            <img src="{LOGO_URI}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:6px;">
-            <div style="color:#fff;font-size:17px;font-weight:800;margin-top:4px;letter-spacing:0.3px;">YogaBar</div>
-            <div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:2px;">Inventory Management</div>
+            background: linear-gradient(160deg, #0a4d48 0%, #5bc8c0 100%);
+            border-radius: 18px;
+            padding: 22px 16px 18px;
+            margin-bottom: 6px;
+            text-align: center;
+            box-shadow: 0 4px 24px rgba(91,200,192,0.18);
+            border: 1px solid rgba(91,200,192,0.25);
+        ">
+            <img src="{LOGO_URI}"
+                 style="width:72px;height:72px;border-radius:50%;
+                        object-fit:cover;
+                        border:3px solid rgba(255,255,255,0.4);
+                        box-shadow:0 2px 12px rgba(0,0,0,0.3);
+                        margin-bottom:10px;">
+            <div style="color:#fff;font-size:20px;font-weight:900;
+                        letter-spacing:0.5px;line-height:1;">YogaBar</div>
+            <div style="color:rgba(255,255,255,0.65);font-size:10px;
+                        font-weight:600;letter-spacing:2px;
+                        text-transform:uppercase;margin-top:4px;">
+                Inventory Management
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <style>
-        /* Force sidebar always visible and expanded */
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        /* ── Force sidebar always open ── */
         section[data-testid="stSidebar"] {
             transform: none !important;
             margin-left: 0 !important;
             visibility: visible !important;
-            width: 244px !important;
-            min-width: 244px !important;
+            width: 260px !important;
+            min-width: 260px !important;
         }
         section[data-testid="stSidebar"][aria-expanded="false"] {
             transform: none !important;
             margin-left: 0 !important;
         }
-        /* Hide collapse/expand buttons */
         [data-testid="collapsedControl"],
-        [data-testid="baseButton-header"] {
-            display: none !important;
-        }
+        [data-testid="baseButton-header"] { display: none !important; }
+
+        /* ── Sidebar background ── */
         section[data-testid="stSidebar"] > div:first-child {
-            background: #0f172a !important;
-            padding: 12px 10px !important;
+            background: #080f1a !important;
+            padding: 14px 12px !important;
+            border-right: 1px solid #111d2e !important;
         }
+
+        /* ── Hide default Streamlit nav ── */
         section[data-testid="stSidebar"] ul { display:none !important; }
+
+        /* ── Section label ── */
         .snav-label {
-            font-size:10px; font-weight:700; color:#475569;
-            letter-spacing:1.4px; text-transform:uppercase;
-            padding:14px 8px 6px; display:block;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 9px; font-weight: 700; color: #2d4a6b;
+            letter-spacing: 2.5px; text-transform: uppercase;
+            padding: 16px 10px 8px; display: block;
+        }
+
+        /* ── Page links ── */
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] {
+            padding: 0 !important; margin: 0 0 2px 0 !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink"] a {
-            display:flex !important; align-items:center !important;
-            padding:9px 12px !important; border-radius:10px !important;
-            font-size:13.5px !important; font-weight:500 !important;
-            color:#94a3b8 !important; text-decoration:none !important;
-            transition:background .15s,color .15s !important;
-            margin-bottom:2px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 10px 14px !important;
+            border-radius: 12px !important;
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #4a6080 !important;
+            text-decoration: none !important;
+            transition: all 0.18s ease !important;
+            border: 1px solid transparent !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
-            background:rgba(91,200,192,.15) !important;
-            color:#5bc8c0 !important;
+            background: rgba(91,200,192,0.08) !important;
+            color: #7ee8e2 !important;
+            border-color: rgba(91,200,192,0.15) !important;
+            transform: translateX(3px) !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink-active"] a {
-            background:rgba(91,200,192,.2) !important;
-            color:#5bc8c0 !important;
-            font-weight:700 !important;
+            background: linear-gradient(135deg,
+                rgba(91,200,192,0.15), rgba(91,200,192,0.05)) !important;
+            color: #5bc8c0 !important;
+            font-weight: 700 !important;
+            border-color: rgba(91,200,192,0.3) !important;
+            box-shadow: 0 2px 12px rgba(91,200,192,0.1) !important;
         }
-        section[data-testid="stSidebar"] [data-testid="stPageLink"] {
-            padding: 0 !important; margin: 0 !important;
-        }
-        .snav-footer {
-            font-size:11px; color:#334155;
-            text-align:center; padding-top:12px;
-        }
-        section[data-testid="stSidebar"] { min-width:230px !important; }
-        </style>
 
+        /* ── Divider ── */
+        .snav-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #111d2e, transparent);
+            margin: 10px 6px;
+        }
+
+        /* ── Footer ── */
+        .snav-footer {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 10px; color: #1e3048;
+            text-align: center; padding: 10px 0 4px;
+            font-weight: 600; letter-spacing: 1px;
+        }
+        </style>
         """, unsafe_allow_html=True)
 
         st.markdown('<span class="snav-label">Navigation</span>', unsafe_allow_html=True)
@@ -89,5 +134,5 @@ def inject_sidebar(current_page: str = ""):
         for icon, label, path in PAGES:
             st.page_link(path, label=f"{icon}  {label}")
 
-        st.markdown('<hr style="border-color:#1e293b;margin:10px 0">', unsafe_allow_html=True)
+        st.markdown('<div class="snav-divider"></div>', unsafe_allow_html=True)
         st.markdown('<div class="snav-footer">© 2025 YogaBar</div>', unsafe_allow_html=True)
