@@ -9,7 +9,7 @@ st.set_page_config(
 )
 
 from pages.Sidebar_style import inject_sidebar
-from data_loader import load_sheet
+from pages.data_loader import load_sheet
 inject_sidebar("GRN Data")
 
 st.markdown("""
