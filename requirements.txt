@@ -4,3 +4,4 @@ openpyxl
 streamlit-js-eval
 openai>=1.0.0
 plotly
+requests
