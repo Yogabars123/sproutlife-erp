@@ -269,7 +269,9 @@ st.markdown(f"""
 
 # ── CONSUMPTION TREND CHART (last 6 months) ───────────────────────────────────
 if "Batch Date" in df_raw.columns and "Consumed (As per BOM)" in df_raw.columns:
-    cutoff = pd.Timestamp.today() - pd.DateOffset(months=6)
+    # Use last 6 months of ACTUAL data (not from today)
+    max_date = df_raw["Batch Date"].max()
+    cutoff = max_date - pd.DateOffset(months=6)
     df_trend = df_raw[df_raw["Batch Date"] >= cutoff].copy()
     df_trend["Month"] = df_trend["Batch Date"].dt.to_period("M").astype(str)
     monthly = df_trend.groupby("Month").agg(
