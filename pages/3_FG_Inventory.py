@@ -12,6 +12,7 @@ st.set_page_config(
 )
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("FG Inventory")
 
 st.markdown("""
@@ -164,10 +165,8 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
 # ── DATA LOADING ────────────────────────────────────────────────────────────
 @st.cache_data
 def load_fg():
-    fp = os.path.join(os.path.dirname(__file__), "..", "Sproutlife Inventory.xlsx")
-    if not os.path.exists(fp):
-        fp = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df = pd.read_excel(fp, sheet_name="FG-Inventory")
+    # Data loaded from OneDrive via data_loader
+    df = load_sheet("FG-Inventory")
     df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
     for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
         if col in df.columns:
