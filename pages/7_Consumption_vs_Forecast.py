@@ -6,6 +6,7 @@ import io
 st.set_page_config(page_title="Consumption vs Forecast", layout="wide")
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("Consumption vs Forecast")
 
 st.markdown("""
@@ -29,7 +30,7 @@ st.caption("Material-wise comparison of actual consumption against forecast")
 @st.cache_data
 def load_data():
     file_path = os.path.join(os.getcwd(), "Sproutlife Inventory.xlsx")
-    df_con = pd.read_excel(file_path, sheet_name="Consumption")
+    df_con = load_sheet("Consumption")
     df_con.columns = df_con.columns.str.strip()
     if "Material Code" in df_con.columns:
         df_con["Material Code"] = df_con["Material Code"].astype(str).str.strip().str.upper()
@@ -39,7 +40,7 @@ def load_data():
         df_con["Batch Date"] = pd.to_datetime(df_con["Batch Date"], errors="coerce")
     xl = pd.ExcelFile(file_path)
     sheet = next((s for s in xl.sheet_names if s.lower() == "forecast"), None)
-    df_fc = pd.read_excel(file_path, sheet_name=sheet)
+    df_fc = load_sheet("Consumption", sheet_name=sheet)
     df_fc.columns = df_fc.columns.str.strip()
     if "Location" in df_fc.columns:
         df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
