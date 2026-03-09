@@ -9,6 +9,7 @@ st.set_page_config(
 )
 
 from pages.Sidebar_style import inject_sidebar
+from pages.data_loader import load_sheet
 inject_sidebar("GRN Data")
 
 st.markdown("""
@@ -144,7 +145,7 @@ div[data-testid="stDataFrame"] {
 # ════════════════════════════════════════
 @st.cache_data
 def load_data():
-    df = pd.read_excel("Sproutlife Inventory.xlsx", sheet_name="GRN-Data")
+    df = load_sheet("GRN-Data")
     df.columns = df.columns.str.strip()
     return df
 
