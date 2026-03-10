@@ -30,13 +30,10 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .kpi-row { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:16px; }
 .kpi-box { border-radius:16px; padding:20px 24px; border:1px solid; position:relative; overflow:hidden; }
 .kpi-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
-.kpi-box::after  { content:''; position:absolute; bottom:-30px; right:-30px; width:110px; height:110px; border-radius:50%; opacity:.1; }
 .kpi-box.teal   { background:linear-gradient(135deg,#061413,#0a2825); border-color:#134e4a; }
 .kpi-box.teal::before  { background:linear-gradient(90deg,#5bc8c0,#2dd4bf); }
-.kpi-box.teal::after   { background:radial-gradient(circle,#5bc8c0,transparent); }
 .kpi-box.violet { background:linear-gradient(135deg,#130a2a,#1e0f40); border-color:#3b1f6e; }
 .kpi-box.violet::before { background:linear-gradient(90deg,#a855f7,#818cf8); }
-.kpi-box.violet::after  { background:radial-gradient(circle,#a855f7,transparent); }
 .kpi-inner { display:flex; align-items:flex-start; justify-content:space-between; }
 .kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.3px; margin-bottom:8px; }
 .kpi-value { font-size:34px; font-weight:800; line-height:1; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
@@ -128,6 +125,14 @@ if df_fg.empty:
     st.error("⚠️ No FG data found.")
     st.stop()
 
+# ── DEBUG (remove after confirming data loads) ────────────────────────────────
+with st.expander("🔍 Debug — click to inspect column names", expanded=False):
+    st.write("**FG columns:**", list(df_fg.columns))
+    st.write("**STN columns:**", list(df_stn.columns) if not df_stn.empty else "STN empty")
+    if not df_stn.empty:
+        st.write("**STN sample (3 rows):**")
+        st.dataframe(df_stn.head(3))
+
 # ── FILTERS ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
 st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=True)
@@ -162,7 +167,6 @@ shelf_map = {"Below 90%": 90, "Below 80%": 80, "Below 70%": 70, "Below 50%": 50}
 if sel_shelf in shelf_map and "Shelf Life %" in df.columns:
     df = df[df["Shelf Life %"] < shelf_map[sel_shelf]]
 
-# STN filters — keep original "Qty" column intact for KPI
 df_stn_f = df_stn.copy() if not df_stn.empty else pd.DataFrame()
 if not df_stn_f.empty:
     if search:
@@ -173,7 +177,7 @@ if not df_stn_f.empty:
     if sel_stat != "All Status" and "Status" in df_stn_f.columns:
         df_stn_f = df_stn_f[df_stn_f["Status"].astype(str) == sel_stat]
 
-# ── KPI (computed BEFORE any renaming) ───────────────────────────────────────
+# ── KPI ───────────────────────────────────────────────────────────────────────
 total_qty  = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
 stn_raised = df_stn_f["Qty"].sum() if not df_stn_f.empty and "Qty" in df_stn_f.columns else 0
 
@@ -202,73 +206,94 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── BUILD STN VIEW (join AFTER KPI calc) ──────────────────────────────────────
+# ── BUILD STN VIEW ────────────────────────────────────────────────────────────
 def build_stn_view(stn_df, fg_df):
-    """
-    Join STN rows with FG Inventory to produce the display format:
-    Item Name | Item SKU | Category | Warehouse | Qty Available | Shelf Life %
-    | STN No | STN Quantity | STN WH | STN Status | STN Date | From WH
-    
-    STN columns (exact names from sheet):
-        FG Code, FG Name, FG Category, Request No, Qty, To Warehouse,
-        From Warehouse, Status, Date
-    FG columns (exact names from sheet):
-        Item SKU, Item Name, Category, Warehouse, Qty Available, Shelf Life %
-    """
     if stn_df.empty:
         return pd.DataFrame()
 
     stn = stn_df.copy()
 
-    # ── Step 1: prepare FG lookup (SKU → Name, Category, Warehouse, Qty, Shelf) 
-    if not fg_df.empty and "Item SKU" in fg_df.columns:
-        fg_lookup = (
-            fg_df
-            .groupby("Item SKU")
-            .agg(
-                Item_Name    =("Item Name",     "first"),
-                Category     =("Category",      "first"),
-                Warehouse    =("Warehouse",      "first"),
-                Qty_Available=("Qty Available",  "sum"),
-                Shelf_Life   =("Shelf Life %",   "mean"),
-            )
-            .reset_index()
-        )
-        fg_lookup.columns = ["_sku","Item Name","Category","Warehouse","Qty Available","Shelf Life %"]
-        fg_lookup["_sku"] = fg_lookup["_sku"].astype(str).str.strip()
+    # Auto-detect the FG code column in STN sheet
+    # Possible names: "FG Code", "Item Code", "SKU", "Item SKU" etc.
+    fg_code_col = None
+    for candidate in ["FG Code","Item Code","Item SKU","SKU","fg code","item code"]:
+        if candidate in stn.columns:
+            fg_code_col = candidate
+            break
+    # Fallback: any column with "code" or "sku" in name
+    if fg_code_col is None:
+        for col in stn.columns:
+            if "code" in col.lower() or "sku" in col.lower():
+                fg_code_col = col
+                break
+
+    # Auto-detect Request No column
+    req_col = next((c for c in stn.columns if "request" in c.lower()), None)
+    to_wh_col = next((c for c in stn.columns if "to warehouse" in c.lower() or c.lower() == "to wh"), None)
+    from_wh_col = next((c for c in stn.columns if "from warehouse" in c.lower() or c.lower() == "from wh"), None)
+    stat_col = next((c for c in stn.columns if c.lower() == "status"), None)
+    date_col = next((c for c in stn.columns if c.lower() == "date"), None)
+    qty_col  = next((c for c in stn.columns if c.lower() == "qty"), None)
+    fg_name_col = next((c for c in stn.columns if "fg name" in c.lower() or "item name" in c.lower()), None)
+    fg_cat_col  = next((c for c in stn.columns if "fg category" in c.lower() or ("category" in c.lower() and "fg" in c.lower())), None)
+
+    # Build FG lookup: Item SKU → Item Name, Category, Warehouse, total Qty, avg Shelf Life
+    if not fg_df.empty and "Item SKU" in fg_df.columns and "Qty Available" in fg_df.columns:
+        fg_grp = fg_df.copy()
+        fg_grp["_sku_key"] = fg_grp["Item SKU"].astype(str).str.strip().str.upper()
+
+        # Simple groupby without named agg (most compatible)
+        fg_qty   = fg_grp.groupby("_sku_key")["Qty Available"].sum().reset_index()
+        fg_shelf = fg_grp.groupby("_sku_key")["Shelf Life %"].mean().reset_index() if "Shelf Life %" in fg_grp.columns else None
+        fg_first = fg_grp.drop_duplicates("_sku_key")[["_sku_key"] +
+                   [c for c in ["Item Name","Category","Warehouse"] if c in fg_grp.columns]]
+
+        fg_lookup = fg_first.merge(fg_qty, on="_sku_key", how="left")
+        if fg_shelf is not None:
+            fg_lookup = fg_lookup.merge(fg_shelf, on="_sku_key", how="left")
+        else:
+            fg_lookup["Shelf Life %"] = 0.0
     else:
-        fg_lookup = pd.DataFrame(columns=["_sku","Item Name","Category","Warehouse","Qty Available","Shelf Life %"])
+        fg_lookup = pd.DataFrame(columns=["_sku_key","Item Name","Category","Warehouse","Qty Available","Shelf Life %"])
 
-    # ── Step 2: create join key from STN "FG Code"
-    if "FG Code" in stn.columns:
-        stn["_sku"] = stn["FG Code"].astype(str).str.strip()
+    # Create join key on STN
+    if fg_code_col:
+        stn["_sku_key"] = stn[fg_code_col].astype(str).str.strip().str.upper()
     else:
-        stn["_sku"] = ""
+        stn["_sku_key"] = ""
 
-    # ── Step 3: merge FG data onto each STN row
-    stn = stn.merge(fg_lookup, on="_sku", how="left")
+    # Merge
+    stn = stn.merge(fg_lookup, on="_sku_key", how="left")
 
-    # Fallback: use STN's own FG Name / Category if FG join didn't resolve
-    if "FG Name" in stn.columns:
-        stn["Item Name"] = stn["Item Name"].fillna(stn["FG Name"])
-    if "FG Category" in stn.columns:
-        stn["Category"]  = stn["Category"].fillna(stn["FG Category"])
+    # Fallbacks from STN sheet's own columns
+    if fg_name_col and "Item Name" in stn.columns:
+        stn["Item Name"] = stn["Item Name"].fillna(stn[fg_name_col])
+    elif fg_name_col:
+        stn["Item Name"] = stn[fg_name_col]
 
-    stn["Item SKU"]      = stn["_sku"]
-    stn["Qty Available"] = stn["Qty Available"].fillna(0)
-    stn["Shelf Life %"]  = stn["Shelf Life %"].fillna(0.0)
+    if fg_cat_col and "Category" in stn.columns:
+        stn["Category"] = stn["Category"].fillna(stn[fg_cat_col])
+    elif fg_cat_col:
+        stn["Category"] = stn[fg_cat_col]
 
-    # ── Step 4: rename STN columns to display names
-    stn = stn.rename(columns={
-        "Request No":     "STN No",
-        "Qty":            "STN Quantity",
-        "To Warehouse":   "STN WH",
-        "Status":         "STN Status",
-        "Date":           "STN Date",
-        "From Warehouse": "From WH",
-    })
+    if "Item Name"     not in stn.columns: stn["Item Name"]     = ""
+    if "Category"      not in stn.columns: stn["Category"]      = ""
+    if "Warehouse"     not in stn.columns: stn["Warehouse"]     = ""
+    if "Qty Available" not in stn.columns: stn["Qty Available"] = 0
+    if "Shelf Life %"  not in stn.columns: stn["Shelf Life %"]  = 0.0
 
-    # ── Step 5: select and order final columns
+    stn["Item SKU"] = stn["_sku_key"]
+
+    # Rename STN operational columns
+    rename_map = {}
+    if req_col:     rename_map[req_col]     = "STN No"
+    if qty_col:     rename_map[qty_col]     = "STN Quantity"
+    if to_wh_col:   rename_map[to_wh_col]   = "STN WH"
+    if stat_col:    rename_map[stat_col]    = "STN Status"
+    if date_col:    rename_map[date_col]    = "STN Date"
+    if from_wh_col: rename_map[from_wh_col] = "From WH"
+    stn = stn.rename(columns=rename_map)
+
     wanted = ["Item Name","Item SKU","Category","Warehouse",
               "Qty Available","Shelf Life %",
               "STN No","STN Quantity","STN WH","STN Status","STN Date","From WH"]
@@ -280,7 +305,6 @@ df_stn_view = build_stn_view(df_stn_f, df_fg)
 # ── TABS ──────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["📦  FG Inventory", "🚚  STN Transfers"])
 
-# ═══ TAB 1 ════════════════════════════════════════════════════════════════════
 with tab1:
     st.markdown(f"""
     <div class="tbl-hdr">
@@ -319,10 +343,13 @@ with tab1:
                 "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",      format="%.0f"),
             })
 
-# ═══ TAB 2 ════════════════════════════════════════════════════════════════════
 with tab2:
     if df_stn_view.empty:
-        st.warning("⚠️ No STN data found or no records match the current filters.")
+        st.warning("⚠️ No STN data found or no records match filters.")
+        # Show raw STN for debugging
+        if not df_stn_f.empty:
+            st.info(f"Raw STN has {len(df_stn_f)} rows. Showing raw data below:")
+            st.dataframe(df_stn_f.head(20), use_container_width=True, height=300)
     else:
         st.markdown(f"""
         <div class="tbl-hdr">
