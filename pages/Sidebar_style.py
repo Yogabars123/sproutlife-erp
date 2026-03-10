@@ -34,7 +34,7 @@ def inject_sidebar(current_page: str = ""):
                         margin-bottom:10px;">
             <div style="color:#fff;font-size:20px;font-weight:900;
                         letter-spacing:0.5px;line-height:1;">YogaBar</div>
-            <div style="color:rgba(255,255,255,0.85);font-size:10px;
+            <div style="color:rgba(255,255,255,0.9);font-size:10px;
                         font-weight:700;letter-spacing:2px;
                         text-transform:uppercase;margin-top:4px;">
                 Inventory Management
@@ -44,7 +44,7 @@ def inject_sidebar(current_page: str = ""):
 
         st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
         /* ── Force sidebar always open ── */
         section[data-testid="stSidebar"] {
@@ -73,49 +73,73 @@ def inject_sidebar(current_page: str = ""):
 
         /* ── Section label ── */
         .snav-label {
-            font-family: 'DM Sans', sans-serif;
-            font-size: 10px;
-            font-weight: 800;
-            color: #5bc8c0;
-            letter-spacing: 2.5px;
-            text-transform: uppercase;
-            padding: 16px 10px 8px;
-            display: block;
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 10px !important;
+            font-weight: 800 !important;
+            color: #5bc8c0 !important;
+            letter-spacing: 2.5px !important;
+            text-transform: uppercase !important;
+            padding: 16px 10px 8px !important;
+            display: block !important;
         }
 
-        /* ── Page links ── */
+        /* ── Target ALL text inside page link anchors — ultra-specific ── */
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a,
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a *,
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a span,
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a p,
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a div {
+            color: #e8f4fd !important;
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            text-decoration: none !important;
+            opacity: 1 !important;
+        }
+
         section[data-testid="stSidebar"] [data-testid="stPageLink"] {
             padding: 0 !important;
             margin: 0 0 2px 0 !important;
         }
+
         section[data-testid="stSidebar"] [data-testid="stPageLink"] a {
             display: flex !important;
             align-items: center !important;
             gap: 10px !important;
             padding: 10px 14px !important;
             border-radius: 12px !important;
-            font-family: 'DM Sans', sans-serif !important;
-            font-size: 13.5px !important;
-            font-weight: 600 !important;
-            color: #cde8f5 !important;
-            text-decoration: none !important;
-            transition: all 0.18s ease !important;
             border: 1px solid transparent !important;
-            letter-spacing: 0.2px !important;
+            transition: all 0.18s ease !important;
+            background: transparent !important;
         }
-        section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
+
+        /* Hover state */
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover,
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover *,
+        section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover span {
             background: rgba(91,200,192,0.12) !important;
             color: #ffffff !important;
             border-color: rgba(91,200,192,0.25) !important;
-            transform: translateX(3px) !important;
         }
-        section[data-testid="stSidebar"] [data-testid="stPageLink-active"] a {
-            background: linear-gradient(135deg,
-                rgba(91,200,192,0.2), rgba(91,200,192,0.07)) !important;
+
+        /* Active / current page */
+        section[data-testid="stSidebar"] [data-testid="stPageLink-active"] a,
+        section[data-testid="stSidebar"] [data-testid="stPageLink-active"] a *,
+        section[data-testid="stSidebar"] [data-testid="stPageLink-active"] a span {
+            background: linear-gradient(135deg, rgba(91,200,192,0.22), rgba(91,200,192,0.08)) !important;
             color: #7eeee7 !important;
             font-weight: 800 !important;
             border-color: rgba(91,200,192,0.4) !important;
             box-shadow: 0 2px 14px rgba(91,200,192,0.15) !important;
+        }
+
+        /* Kill any Streamlit default opacity/muting on sidebar links */
+        section[data-testid="stSidebar"] a {
+            opacity: 1 !important;
+            color: #e8f4fd !important;
+        }
+        section[data-testid="stSidebar"] a:visited {
+            color: #e8f4fd !important;
         }
 
         /* ── Divider ── */
@@ -127,13 +151,13 @@ def inject_sidebar(current_page: str = ""):
 
         /* ── Footer ── */
         .snav-footer {
-            font-family: 'DM Sans', sans-serif;
-            font-size: 10px;
-            color: #4a7a9b;
-            text-align: center;
-            padding: 10px 0 4px;
-            font-weight: 700;
-            letter-spacing: 1px;
+            font-family: 'DM Sans', sans-serif !important;
+            font-size: 10px !important;
+            color: #4a7a9b !important;
+            text-align: center !important;
+            padding: 10px 0 4px !important;
+            font-weight: 700 !important;
+            letter-spacing: 1px !important;
         }
         </style>
         """, unsafe_allow_html=True)
