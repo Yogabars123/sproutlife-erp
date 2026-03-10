@@ -34,8 +34,8 @@ def inject_sidebar(current_page: str = ""):
                         margin-bottom:10px;">
             <div style="color:#fff;font-size:20px;font-weight:900;
                         letter-spacing:0.5px;line-height:1;">YogaBar</div>
-            <div style="color:rgba(255,255,255,0.65);font-size:10px;
-                        font-weight:600;letter-spacing:2px;
+            <div style="color:rgba(255,255,255,0.85);font-size:10px;
+                        font-weight:700;letter-spacing:2px;
                         text-transform:uppercase;margin-top:4px;">
                 Inventory Management
             </div>
@@ -74,14 +74,19 @@ def inject_sidebar(current_page: str = ""):
         /* ── Section label ── */
         .snav-label {
             font-family: 'DM Sans', sans-serif;
-            font-size: 9px; font-weight: 700; color: #3d6080;
-            letter-spacing: 2.5px; text-transform: uppercase;
-            padding: 16px 10px 8px; display: block;
+            font-size: 10px;
+            font-weight: 800;
+            color: #5bc8c0;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            padding: 16px 10px 8px;
+            display: block;
         }
 
         /* ── Page links ── */
         section[data-testid="stSidebar"] [data-testid="stPageLink"] {
-            padding: 0 !important; margin: 0 0 2px 0 !important;
+            padding: 0 !important;
+            margin: 0 0 2px 0 !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink"] a {
             display: flex !important;
@@ -90,41 +95,45 @@ def inject_sidebar(current_page: str = ""):
             padding: 10px 14px !important;
             border-radius: 12px !important;
             font-family: 'DM Sans', sans-serif !important;
-            font-size: 13px !important;
-            font-weight: 500 !important;
-            color: #8faec8 !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            color: #cde8f5 !important;
             text-decoration: none !important;
             transition: all 0.18s ease !important;
             border: 1px solid transparent !important;
+            letter-spacing: 0.2px !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
-            background: rgba(91,200,192,0.08) !important;
-            color: #a8f0ec !important;
-            border-color: rgba(91,200,192,0.15) !important;
+            background: rgba(91,200,192,0.12) !important;
+            color: #ffffff !important;
+            border-color: rgba(91,200,192,0.25) !important;
             transform: translateX(3px) !important;
         }
         section[data-testid="stSidebar"] [data-testid="stPageLink-active"] a {
             background: linear-gradient(135deg,
-                rgba(91,200,192,0.15), rgba(91,200,192,0.05)) !important;
-            color: #5bc8c0 !important;
-            font-weight: 700 !important;
-            border-color: rgba(91,200,192,0.3) !important;
-            box-shadow: 0 2px 12px rgba(91,200,192,0.1) !important;
+                rgba(91,200,192,0.2), rgba(91,200,192,0.07)) !important;
+            color: #7eeee7 !important;
+            font-weight: 800 !important;
+            border-color: rgba(91,200,192,0.4) !important;
+            box-shadow: 0 2px 14px rgba(91,200,192,0.15) !important;
         }
 
         /* ── Divider ── */
         .snav-divider {
             height: 1px;
-            background: linear-gradient(90deg, transparent, #111d2e, transparent);
+            background: linear-gradient(90deg, transparent, #1e3045, transparent);
             margin: 10px 6px;
         }
 
         /* ── Footer ── */
         .snav-footer {
             font-family: 'DM Sans', sans-serif;
-            font-size: 10px; color: #3d5a7a;
-            text-align: center; padding: 10px 0 4px;
-            font-weight: 600; letter-spacing: 1px;
+            font-size: 10px;
+            color: #4a7a9b;
+            text-align: center;
+            padding: 10px 0 4px;
+            font-weight: 700;
+            letter-spacing: 1px;
         }
         </style>
         """, unsafe_allow_html=True)
