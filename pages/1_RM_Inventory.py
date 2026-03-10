@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import io
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="RM Inventory · YogaBar", layout="wide", page_icon="📦", initial_sidebar_state="expanded")
 
@@ -114,47 +113,57 @@ ALLOWED_WH = SOH_WH + [
 ]
 
 @st.cache_data(ttl=300)
-def load_data():
+def load_rm():
     df = load_sheet("RM-Inventory")
-    if df.empty: return pd.DataFrame(), pd.DataFrame()
+    if df.empty: return pd.DataFrame()
     df.columns = df.columns.str.strip()
     df["Warehouse"] = df["Warehouse"].astype(str).str.strip()
-    for c in ["Inventory Date","Expiry Date","MFG Date"]:
-        if c in df.columns: df[c] = pd.to_datetime(df[c], errors="coerce")
-    for c in ["Qty Available","Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]:
-        if c in df.columns: df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
-    df = df[df["Warehouse"].isin(ALLOWED_WH)]
+    for col in ["Inventory Date","Expiry Date","MFG Date"]:
+        if col in df.columns: df[col] = pd.to_datetime(df[col], errors="coerce")
+    for col in ["Qty Available","Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]:
+        if col in df.columns: df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    return df[df["Warehouse"].isin(ALLOWED_WH)]
 
-    # Forecast — Plant only, Per Day = Forecast/24
+@st.cache_data(ttl=300)
+def load_forecast_agg():
     df_fc = load_sheet("Forecast")
-    fc_agg = pd.DataFrame(columns=["_k","Forecast","Per Day Req"])
-    if not df_fc.empty:
-        df_fc.columns = df_fc.columns.str.strip()
-        if "Location" in df_fc.columns:
-            df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"]
-        df_fc["Forecast"] = pd.to_numeric(df_fc.get("Forecast", 0), errors="coerce").fillna(0)
-        df_fc = df_fc[df_fc["Forecast"] > 0]
-        ic = "Item code" if "Item code" in df_fc.columns else "Item Code"
-        if ic in df_fc.columns:
-            df_fc["_k"] = df_fc[ic].astype(str).str.strip().str.upper()
-            fc_agg = df_fc.groupby("_k")["Forecast"].sum().reset_index()
-            fc_agg["Per Day Req"] = (fc_agg["Forecast"] / 24).round(2)
+    if df_fc.empty:
+        return pd.DataFrame(columns=["_k","Forecast","Per Day Req"])
+    df_fc.columns = df_fc.columns.str.strip()
+    if "Location" in df_fc.columns:
+        df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"].copy()
+    if "Forecast" not in df_fc.columns:
+        return pd.DataFrame(columns=["_k","Forecast","Per Day Req"])
+    df_fc["Forecast"] = pd.to_numeric(df_fc["Forecast"], errors="coerce").fillna(0)
+    df_fc = df_fc[df_fc["Forecast"] > 0]
+    ic = "Item code" if "Item code" in df_fc.columns else ("Item Code" if "Item Code" in df_fc.columns else None)
+    if ic is None:
+        return pd.DataFrame(columns=["_k","Forecast","Per Day Req"])
+    df_fc["_k"] = df_fc[ic].astype(str).str.strip().str.upper()
+    agg = df_fc.groupby("_k")["Forecast"].sum().reset_index()
+    agg["Per Day Req"] = (agg["Forecast"] / 24).round(2)
+    return agg
 
-    # SOH per SKU
-    df_soh = df[df["Warehouse"].isin(SOH_WH)]
-    soh_sku = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
-    soh_sku.columns = ["Item SKU","SOH"]
-    soh_sku["_k"] = soh_sku["Item SKU"].astype(str).str.upper()
-    soh_sku = soh_sku.merge(fc_agg, on="_k", how="left")
-    soh_sku["Forecast"]    = soh_sku["Forecast"].fillna(0)
-    soh_sku["Per Day Req"] = soh_sku["Per Day Req"].fillna(0)
-    soh_sku["Days of Stock"] = soh_sku.apply(
+def build_soh_sku(df_rm, fc_agg):
+    df_soh = df_rm[df_rm["Warehouse"].isin(SOH_WH)]
+    soh = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
+    soh.columns = ["Item SKU","SOH"]
+    soh["_k"] = soh["Item SKU"].astype(str).str.upper()
+    if not fc_agg.empty and "_k" in fc_agg.columns:
+        soh = soh.merge(fc_agg[["_k","Forecast","Per Day Req"]], on="_k", how="left")
+    else:
+        soh["Forecast"] = 0.0
+        soh["Per Day Req"] = 0.0
+    soh["Forecast"]    = soh["Forecast"].fillna(0)
+    soh["Per Day Req"] = soh["Per Day Req"].fillna(0)
+    soh["Days of Stock"] = soh.apply(
         lambda r: round(r["SOH"] / r["Per Day Req"], 1) if r["Per Day Req"] > 0 else None, axis=1)
-    soh_sku.drop(columns=["_k"], inplace=True)
+    soh.drop(columns=["_k"], inplace=True)
+    return soh
 
-    return df, soh_sku
-
-df_raw, soh_sku = load_data()
+df_raw  = load_rm()
+fc_agg  = load_forecast_agg()
+soh_sku = build_soh_sku(df_raw, fc_agg) if not df_raw.empty else pd.DataFrame()
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -178,11 +187,12 @@ if df_raw.empty:
     st.error("⚠️ No RM Inventory data found."); st.stop()
 
 # ── KPI CARDS ─────────────────────────────────────────────────────────────────
-total_soh     = df_raw[df_raw["Warehouse"].isin(SOH_WH)]["Qty Available"].sum()
-total_fc      = soh_sku["Forecast"].sum()
-critical      = (soh_sku["Days of Stock"] < 7).sum()
-no_forecast   = (soh_sku["Days of Stock"].isna()).sum()
-avg_dos       = soh_sku["Days of Stock"].mean()
+total_soh   = df_raw[df_raw["Warehouse"].isin(SOH_WH)]["Qty Available"].sum() if not df_raw.empty else 0
+total_fc    = soh_sku["Forecast"].sum()                   if not soh_sku.empty else 0
+critical    = int((soh_sku["Days of Stock"] < 7).sum())   if not soh_sku.empty else 0
+no_forecast = int((soh_sku["Days of Stock"].isna()).sum()) if not soh_sku.empty else 0
+avg_dos     = soh_sku["Days of Stock"].mean()             if not soh_sku.empty else 0
+avg_dos     = avg_dos if pd.notna(avg_dos) else 0
 
 st.markdown(f"""
 <div class="kpi-grid">
@@ -229,75 +239,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── CHARTS ────────────────────────────────────────────────────────────────────
-# Chart data: top 15 items by SOH, with DoS colour
-chart_df = soh_sku[soh_sku["SOH"] > 0].nlargest(15, "SOH").copy()
-chart_df["Item Name"] = chart_df["Item SKU"]  # fallback label
-
-# Try to get Item Name from raw data
-if "Item Name" in df_raw.columns:
-    name_map = df_raw.drop_duplicates("Item SKU")[["Item SKU","Item Name"]].set_index("Item SKU")["Item Name"].to_dict()
-    chart_df["Item Name"] = chart_df["Item SKU"].map(name_map).fillna(chart_df["Item SKU"])
-chart_df["Short Name"] = chart_df["Item Name"].str[:22]
-
-# DoS colours per bar
-def dos_color(dos):
-    if pd.isna(dos): return "#475569"
-    if dos < 7:  return "#ef4444"
-    if dos <= 14: return "#f59e0b"
-    return "#5bc8c0"
-
-bar_colors = chart_df["Days of Stock"].apply(dos_color).tolist()
-
-col_left, col_right = st.columns(2)
-
-with col_left:
-    st.markdown('<div class="chart-box"><div class="chart-title">📦 Top 15 Items — Stock on Hand</div>', unsafe_allow_html=True)
-    fig1 = go.Figure(go.Bar(
-        x=chart_df["Short Name"], y=chart_df["SOH"],
-        marker_color=bar_colors, marker_line_width=0, opacity=.9,
-        hovertemplate="<b>%{x}</b><br>SOH: %{y:,.0f}<extra></extra>",
-    ))
-    fig1.update_layout(
-        paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
-        font=dict(family="Inter", color="#94a3b8", size=11),
-        height=280, margin=dict(l=0,r=0,t=0,b=60),
-        xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(size=9,color="#64748b"), tickangle=-35, linecolor="#1e2535"),
-        yaxis=dict(showgrid=True, gridcolor="#111827", zeroline=False, tickfont=dict(size=10,color="#64748b"), tickformat=","),
-        hoverlabel=dict(bgcolor="#111827", bordercolor="#1e2535", font=dict(color="#e2e8f0")),
-    )
-    st.plotly_chart(fig1, use_container_width=True, config={"displayModeBar": False})
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col_right:
-    st.markdown('<div class="chart-box"><div class="chart-title">⏱ Top 15 Items — Days of Stock</div>', unsafe_allow_html=True)
-    dos_df = soh_sku[soh_sku["Days of Stock"].notna()].nlargest(15, "Days of Stock").copy()
-    if "Item Name" in df_raw.columns:
-        dos_df["Item Name"] = dos_df["Item SKU"].map(name_map).fillna(dos_df["Item SKU"])
-    else:
-        dos_df["Item Name"] = dos_df["Item SKU"]
-    dos_df["Short Name"] = dos_df["Item Name"].str[:22]
-    dos_colors = dos_df["Days of Stock"].apply(dos_color).tolist()
-
-    fig2 = go.Figure(go.Bar(
-        x=dos_df["Short Name"], y=dos_df["Days of Stock"],
-        marker_color=dos_colors, marker_line_width=0, opacity=.9,
-        hovertemplate="<b>%{x}</b><br>DoS: %{y:.1f} days<extra></extra>",
-    ))
-    fig2.add_hline(y=7,  line_dash="dot", line_color="#ef4444", line_width=1.5,
-                   annotation_text="Critical (7d)", annotation_font_color="#ef4444", annotation_font_size=10)
-    fig2.add_hline(y=14, line_dash="dot", line_color="#f59e0b", line_width=1.5,
-                   annotation_text="Low (14d)", annotation_font_color="#f59e0b", annotation_font_size=10)
-    fig2.update_layout(
-        paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
-        font=dict(family="Inter", color="#94a3b8", size=11),
-        height=280, margin=dict(l=0,r=0,t=0,b=60),
-        xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(size=9,color="#64748b"), tickangle=-35, linecolor="#1e2535"),
-        yaxis=dict(showgrid=True, gridcolor="#111827", zeroline=False, tickfont=dict(size=10,color="#64748b")),
-        hoverlabel=dict(bgcolor="#111827", bordercolor="#1e2535", font=dict(color="#e2e8f0")),
-    )
-    st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-    st.markdown('</div>', unsafe_allow_html=True)
+# ── CHARTS REMOVED ──
 
 # ── FILTERS ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
