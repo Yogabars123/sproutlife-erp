@@ -30,16 +30,24 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 5px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
 
-/* KPI ROW */
-.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
-.kpi-box { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:16px 18px; }
-.kpi-box-label { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:6px; }
-.kpi-box-value { font-size:26px; font-weight:800; font-family:'JetBrains Mono',monospace; color:#e2e8f0; }
-.kpi-box-sub   { font-size:11px; color:#334155; margin-top:4px; }
-.kpi-box.teal  { border-color:#134e4a; } .kpi-box.teal  .kpi-box-value { color:#99f6e4; }
-.kpi-box.blue  { border-color:#1e3a5f; } .kpi-box.blue  .kpi-box-value { color:#93c5fd; }
-.kpi-box.amber { border-color:#78350f; } .kpi-box.amber .kpi-box-value { color:#fde68a; }
-.kpi-box.red   { border-color:#7f1d1d; } .kpi-box.red   .kpi-box-value { color:#fca5a5; }
+/* KPI ROW — 2 cards only */
+.kpi-row { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:16px; }
+.kpi-box { border-radius:16px; padding:20px 24px; border:1px solid; position:relative; overflow:hidden; }
+.kpi-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
+.kpi-box::after  { content:''; position:absolute; bottom:-30px; right:-30px; width:110px; height:110px; border-radius:50%; opacity:.1; }
+.kpi-box.teal  { background:linear-gradient(135deg,#061413,#0a2825); border-color:#134e4a; }
+.kpi-box.teal::before { background:linear-gradient(90deg,#5bc8c0,#2dd4bf); }
+.kpi-box.teal::after  { background:radial-gradient(circle,#5bc8c0,transparent); }
+.kpi-box.violet{ background:linear-gradient(135deg,#130a2a,#1e0f40); border-color:#3b1f6e; }
+.kpi-box.violet::before { background:linear-gradient(90deg,#a855f7,#818cf8); }
+.kpi-box.violet::after  { background:radial-gradient(circle,#a855f7,transparent); }
+.kpi-inner { display:flex; align-items:flex-start; justify-content:space-between; }
+.kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.3px; margin-bottom:8px; }
+.kpi-value { font-size:34px; font-weight:800; line-height:1; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
+.kpi-sub   { font-size:11px; margin-top:6px; }
+.kpi-ico   { font-size:28px; opacity:.6; margin-top:2px; }
+.kpi-box.teal   .kpi-label { color:#5bc8c0; } .kpi-box.teal   .kpi-value { color:#99f6e4; } .kpi-box.teal   .kpi-sub { color:#0d9488; }
+.kpi-box.violet .kpi-label { color:#c084fc; } .kpi-box.violet .kpi-value { color:#e9d5ff; } .kpi-box.violet .kpi-sub { color:#7c3aed; }
 
 /* FILTER */
 .filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
@@ -65,8 +73,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .tbl-hdr { display:flex; align-items:center; justify-content:space-between; padding:8px 0 6px; }
 .tbl-lbl { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; }
 .tbl-badge { background:#0f172a; border:1px solid #1e2d45; color:#818cf8; font-size:11px; font-weight:700; padding:3px 11px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
-.sec-div { font-size:10px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:1.2px; padding:10px 0 6px; display:flex; align-items:center; gap:7px; }
-.sec-div::after { content:''; flex:1; height:1px; background:#161d2e; }
 div[data-testid="stDataFrame"] { border-radius:10px !important; overflow:hidden !important; border:1px solid #1e2535 !important; }
 .app-footer { margin-top:2rem; padding-top:12px; border-top:1px solid #161d2e; text-align:center; font-size:10px; font-weight:600; color:#334155; letter-spacing:1.5px; font-family:'JetBrains Mono',monospace; }
 </style>
@@ -81,7 +87,7 @@ def load_fg():
     if "Qty Available" in df.columns:
         df["Qty Available"] = pd.to_numeric(df["Qty Available"], errors="coerce").fillna(0)
     today = pd.Timestamp(datetime.today().date())
-    for col in ["Expiry Date", "MFG Date"]:
+    for col in ["Expiry Date", "MFG Date", "Inventory Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
     if "Expiry Date" in df.columns and "MFG Date" in df.columns:
@@ -93,6 +99,11 @@ def load_fg():
         df["Shelf Life %"] = pct.round(1)
     else:
         df["Shelf Life %"] = 0.0
+    # Numeric inward / issue
+    for col in ["Qty Inward", "Qty (Issue / Hold)", "Val (Inc)", "Val (Ex)",
+                "Value (Inc Tax)", "Value (Ex Tax)"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
 @st.cache_data(ttl=300)
@@ -157,7 +168,7 @@ with c5:
     sel_shelf  = st.selectbox("sh", shelf_opts, label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── APPLY FILTERS TO FG ───────────────────────────────────────────────────────
+# ── APPLY FILTERS ─────────────────────────────────────────────────────────────
 df = df_fg.copy()
 if search:
     df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
@@ -168,15 +179,10 @@ if "Shelf Life %" in df.columns:
     if sel_shelf in shelf_map:
         df = df[df["Shelf Life %"] < shelf_map[sel_shelf]]
 
-# ── APPLY FILTERS TO STN ─────────────────────────────────────────────────────
 df_stn_f = df_stn.copy() if not df_stn.empty else pd.DataFrame()
 if not df_stn_f.empty:
     fg_code_col = next((c for c in df_stn_f.columns if "fg code" in c.lower()), None)
-    req_col     = next((c for c in df_stn_f.columns if "request no" in c.lower()), None)
     to_wh_col   = next((c for c in df_stn_f.columns if "to warehouse" in c.lower()), None)
-    stat_col    = next((c for c in df_stn_f.columns if "status" in c.lower()), None)
-
-    # Filter STN by search (match on FG code / name if possible)
     if search and fg_code_col:
         df_stn_f = df_stn_f[df_stn_f.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
     if sel_stn_wh != "All STN WH" and to_wh_col:
@@ -184,42 +190,40 @@ if not df_stn_f.empty:
     if sel_stat != "All Status" and stat_col:
         df_stn_f = df_stn_f[df_stn_f[stat_col].astype(str) == sel_stat]
 
-# ── KPI CARDS ────────────────────────────────────────────────────────────────
-total_qty    = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
-total_skus   = df["Item SKU"].nunique() if "Item SKU" in df.columns else 0
-low_shelf    = int((df["Shelf Life %"] < 50).sum()) if "Shelf Life %" in df.columns else 0
-stn_total    = int(df_stn_f["Qty"].sum()) if not df_stn_f.empty and "Qty" in df_stn_f.columns else 0
+# ── KPI CARDS — only 2 ───────────────────────────────────────────────────────
+total_qty  = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
+stn_raised = int(df_stn_f["Qty"].sum()) if not df_stn_f.empty and "Qty" in df_stn_f.columns else 0
 
 st.markdown(f"""
 <div class="kpi-row">
   <div class="kpi-box teal">
-    <div class="kpi-box-label">Total Qty Available</div>
-    <div class="kpi-box-value">{total_qty:,.0f}</div>
-    <div class="kpi-box-sub">Across filtered warehouses</div>
+    <div class="kpi-inner">
+      <div>
+        <div class="kpi-label">Total Qty Available</div>
+        <div class="kpi-value">{total_qty:,.0f}</div>
+        <div class="kpi-sub">Across filtered warehouses</div>
+      </div>
+      <div class="kpi-ico">📦</div>
+    </div>
   </div>
-  <div class="kpi-box blue">
-    <div class="kpi-box-label">Unique SKUs</div>
-    <div class="kpi-box-value">{total_skus:,}</div>
-    <div class="kpi-box-sub">In current filter</div>
-  </div>
-  <div class="kpi-box red">
-    <div class="kpi-box-label">Low Shelf Life (&lt;50%)</div>
-    <div class="kpi-box-value">{low_shelf:,}</div>
-    <div class="kpi-box-sub">Rows needing attention</div>
-  </div>
-  <div class="kpi-box amber">
-    <div class="kpi-box-label">STN Transfer Qty</div>
-    <div class="kpi-box-value">{stn_total:,}</div>
-    <div class="kpi-box-sub">Filtered STN records</div>
+  <div class="kpi-box violet">
+    <div class="kpi-inner">
+      <div>
+        <div class="kpi-label">STN Qty Raised</div>
+        <div class="kpi-value">{stn_raised:,}</div>
+        <div class="kpi-sub">Total quantity raised via STN transfers</div>
+      </div>
+      <div class="kpi-ico">🚚</div>
+    </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── TABS: FG Inventory | STN Transfers ───────────────────────────────────────
+# ── TABS ──────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["📦  FG Inventory", "🚚  STN Transfers"])
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — FG INVENTORY (clean, no STN columns mixed in)
+# TAB 1 — FG INVENTORY
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab1:
     st.markdown(f"""
@@ -228,7 +232,6 @@ with tab1:
         <span class="tbl-badge">{len(df):,} rows</span>
     </div>""", unsafe_allow_html=True)
 
-    # Export
     buf1 = io.BytesIO()
     with pd.ExcelWriter(buf1, engine="openpyxl") as w:
         df.to_excel(w, index=False, sheet_name="FG Inventory")
@@ -240,39 +243,40 @@ with tab1:
     if df.empty:
         st.warning("⚠️ No FG records match the current filters.")
     else:
-        # Only FG columns — no STN columns at all
-        fg_priority = ["Item Name","Item SKU","Category","Warehouse",
-                       "Qty Available","Shelf Life %","MFG Date","Expiry Date",
-                       "Batch No","UoM","Value (Inc Tax)","Value (Ex Tax)"]
+        fg_priority = ["Item Name","Item SKU","Category","Warehouse","UoM",
+                       "Qty Available","Shelf Life %",
+                       "Batch No","MFG Date","Expiry Date","Inventory Date",
+                       "Item Type","Primary Category",
+                       "Current Aging (Days)",
+                       "Qty Inward","Qty (Issue / Hold)",
+                       "Value (Inc Tax)","Value (Ex Tax)",
+                       "Val (Inc)","Val (Ex)"]
         fg_cols = [c for c in fg_priority if c in df.columns]
-        fg_cols += [c for c in df.columns if c not in fg_cols and not c.startswith("STN")]
+        fg_cols += [c for c in df.columns if c not in fg_cols and "STN" not in c]
         df_show = df[fg_cols].copy()
 
-        for c in ["MFG Date","Expiry Date"]:
+        # ── Clean all date columns — strip time, format to dd-Mon-YYYY ────────
+        for c in ["MFG Date","Expiry Date","Inventory Date"]:
             if c in df_show.columns:
                 df_show[c] = pd.to_datetime(df_show[c], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
 
-        def shelf_colour(row):
-            sl = row.get("Shelf Life %", 100)
-            if pd.isna(sl): return [""] * len(row)
-            if sl < 50:  return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
-            if sl < 70:  return ["background-color:#2d1f00; color:#fde68a"] * len(row)
-            if sl < 90:  return ["background-color:#0d1a00; color:#d9f99d"] * len(row)
-            return [""] * len(row)
-
         st.dataframe(
-            df_show.style.apply(shelf_colour, axis=1),
-            use_container_width=True, height=520, hide_index=True,
+            df_show,          # no colour styling — uniform default table look
+            use_container_width=True, height=540, hide_index=True,
             column_config={
-                "Qty Available": st.column_config.NumberColumn("Qty Available", format="%.0f"),
-                "Shelf Life %":  st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
-                "Value (Inc Tax)": st.column_config.NumberColumn("Val (Inc)", format="%.0f"),
-                "Value (Ex Tax)":  st.column_config.NumberColumn("Val (Ex)",  format="%.0f"),
+                "Qty Available":      st.column_config.NumberColumn("Qty Available",  format="%.0f"),
+                "Shelf Life %":       st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
+                "Qty Inward":         st.column_config.NumberColumn("Qty Inward",     format="%.0f"),
+                "Qty (Issue / Hold)": st.column_config.NumberColumn("Issue / Hold",   format="%.0f"),
+                "Value (Inc Tax)":    st.column_config.NumberColumn("Val (Inc)",      format="%.0f"),
+                "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",       format="%.0f"),
+                "Val (Inc)":          st.column_config.NumberColumn("Val (Inc)",      format="%.0f"),
+                "Val (Ex)":           st.column_config.NumberColumn("Val (Ex)",       format="%.0f"),
             }
         )
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — STN TRANSFERS (clean dedicated table)
+# TAB 2 — STN TRANSFERS
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab2:
     if df_stn_f.empty:
@@ -284,7 +288,6 @@ with tab2:
             <span class="tbl-badge">{len(df_stn_f):,} rows</span>
         </div>""", unsafe_allow_html=True)
 
-        # Export
         buf2 = io.BytesIO()
         with pd.ExcelWriter(buf2, engine="openpyxl") as w:
             df_stn_f.to_excel(w, index=False, sheet_name="STN Transfers")
@@ -293,27 +296,18 @@ with tab2:
 
         st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 
-        # Format date
         df_stn_disp = df_stn_f.copy()
+        # Clean date
         if "Date" in df_stn_disp.columns:
             df_stn_disp["Date"] = pd.to_datetime(df_stn_disp["Date"], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
 
-        # Clean column config
         col_cfg = {}
         if "Qty" in df_stn_disp.columns:
             col_cfg["Qty"] = st.column_config.NumberColumn("Qty", format="%.0f")
 
-        # Status badge colour
-        def stn_colour(row):
-            s = str(row.get("Status", "")).lower() if "Status" in row.index else ""
-            if "pending"   in s: return ["background-color:#1a1500; color:#fde68a"] * len(row)
-            if "approved"  in s or "complete" in s: return ["background-color:#061410; color:#99f6e4"] * len(row)
-            if "reject"    in s or "cancel" in s:   return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
-            return [""] * len(row)
-
         st.dataframe(
-            df_stn_disp.style.apply(stn_colour, axis=1),
-            use_container_width=True, height=520, hide_index=True,
+            df_stn_disp,      # uniform colour — no styling
+            use_container_width=True, height=540, hide_index=True,
             column_config=col_cfg
         )
 
