@@ -29,16 +29,16 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 6px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
 
-/* KPI GRID — 5 cards in one row */
-.kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:18px; }
+/* KPI GRID — 3 cards */
+.kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px; }
 .kpi-card {
-    border-radius:18px; padding:20px 22px; position:relative;
-    overflow:hidden; border:1px solid; min-height:118px;
+    border-radius:18px; padding:22px 26px; position:relative;
+    overflow:hidden; border:1px solid; min-height:130px;
     transition: transform .15s;
 }
 .kpi-card:hover { transform: translateY(-2px); }
 .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:18px 18px 0 0; }
-.kpi-card::after  { content:''; position:absolute; bottom:-40px; right:-40px; width:120px; height:120px; border-radius:50%; opacity:.12; }
+.kpi-card::after  { content:''; position:absolute; bottom:-40px; right:-40px; width:130px; height:130px; border-radius:50%; opacity:.12; }
 
 .kpi-card.violet { background:linear-gradient(135deg,#130a2a,#1e0f40); border-color:#3b1f6e; }
 .kpi-card.violet::before { background:linear-gradient(90deg,#a855f7,#818cf8); }
@@ -52,25 +52,20 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .kpi-card.amber::before  { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
 .kpi-card.amber::after   { background:radial-gradient(circle,#f59e0b,transparent); }
 
-.kpi-card.red    { background:linear-gradient(135deg,#1a0000,#2a0808); border-color:#7f1d1d; }
-.kpi-card.red::before    { background:linear-gradient(90deg,#ef4444,#f87171); }
-.kpi-card.red::after     { background:radial-gradient(circle,#ef4444,transparent); }
-
-.kpi-card.slate  { background:linear-gradient(135deg,#0a0e1a,#111827); border-color:#1e293b; }
-.kpi-card.slate::before  { background:linear-gradient(90deg,#64748b,#94a3b8); }
-.kpi-card.slate::after   { background:radial-gradient(circle,#64748b,transparent); }
-
 .kpi-inner { display:flex; align-items:flex-start; justify-content:space-between; }
 .kpi-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.3px; margin-bottom:8px; }
-.kpi-num  { font-size:32px; font-weight:800; line-height:1; font-family:'JetBrains Mono',monospace; letter-spacing:-1.5px; }
-.kpi-cap  { font-size:11px; margin-top:6px; }
-.kpi-ico  { font-size:28px; opacity:.6; margin-top:2px; }
+.kpi-num  { font-size:36px; font-weight:800; line-height:1; font-family:'JetBrains Mono',monospace; letter-spacing:-1.5px; }
+.kpi-cap  { font-size:11px; margin-top:7px; }
+.kpi-ico  { font-size:30px; opacity:.6; margin-top:2px; }
+.kpi-sub  { font-size:10px; margin-top:4px; font-family:'JetBrains Mono',monospace; }
 
-.kpi-card.violet .kpi-lbl { color:#c084fc; } .kpi-card.violet .kpi-num { color:#e9d5ff; } .kpi-card.violet .kpi-cap { color:#7c3aed; }
-.kpi-card.teal   .kpi-lbl { color:#5bc8c0; } .kpi-card.teal   .kpi-num { color:#99f6e4; } .kpi-card.teal   .kpi-cap { color:#0d9488; }
-.kpi-card.amber  .kpi-lbl { color:#fbbf24; } .kpi-card.amber  .kpi-num { color:#fde68a; } .kpi-card.amber  .kpi-cap { color:#d97706; }
-.kpi-card.red    .kpi-lbl { color:#f87171; } .kpi-card.red    .kpi-num { color:#fecaca; } .kpi-card.red    .kpi-cap { color:#dc2626; }
-.kpi-card.slate  .kpi-lbl { color:#94a3b8; } .kpi-card.slate  .kpi-num { color:#cbd5e1; } .kpi-card.slate  .kpi-cap { color:#475569; }
+.kpi-card.violet .kpi-lbl { color:#c084fc; } .kpi-card.violet .kpi-num { color:#e9d5ff; } .kpi-card.violet .kpi-cap { color:#9d6fe8; } .kpi-card.violet .kpi-sub { color:#6d3aad; }
+.kpi-card.teal   .kpi-lbl { color:#5bc8c0; } .kpi-card.teal   .kpi-num { color:#99f6e4; } .kpi-card.teal   .kpi-cap { color:#0d9488; } .kpi-card.teal   .kpi-sub { color:#0f5e59; }
+.kpi-card.amber  .kpi-lbl { color:#fbbf24; } .kpi-card.amber  .kpi-num { color:#fde68a; } .kpi-card.amber  .kpi-cap { color:#d97706; } .kpi-card.amber  .kpi-sub { color:#92510b; }
+
+.dos-critical { color:#f87171 !important; font-weight:800; }
+.dos-low      { color:#fbbf24 !important; font-weight:800; }
+.dos-healthy  { color:#6ee7b7 !important; font-weight:800; }
 
 /* FILTER */
 .filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
@@ -99,18 +94,26 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
 </style>
 """, unsafe_allow_html=True)
 
-# ── DATA ──────────────────────────────────────────────────────────────────────
+# ── WAREHOUSE LISTS ───────────────────────────────────────────────────────────
 SOH_WH = [
-    "Central","RM Warehouse Tumkur","Central Warehouse - Cold Storage RM",
-    "Tumkur Warehouse","Tumkur New Warehouse",
-    "HF Factory FG Warehouse","Sproutlife Foods Private Ltd (SNOWMAN)"
+    "Central",
+    "RM Warehouse Tumkur",
+    "Central Warehouse - Cold Storage RM",
+    "Tumkur Warehouse",
+    "Tumkur New Warehouse",
+    "HF Factory FG Warehouse",
+    "Sproutlife Foods Private Ltd (SNOWMAN)"
 ]
 ALLOWED_WH = SOH_WH + [
-    "Central Production -Bar Line","Central Production - Oats Line",
-    "Central Production - Peanut Line","Central Production - Muesli Line",
-    "Central Production -Dry Fruits Line","Central Production -Packing",
+    "Central Production -Bar Line",
+    "Central Production - Oats Line",
+    "Central Production - Peanut Line",
+    "Central Production - Muesli Line",
+    "Central Production -Dry Fruits Line",
+    "Central Production -Packing",
 ]
 
+# ── DATA LOADERS ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def load_rm():
     df = load_sheet("RM-Inventory")
@@ -144,7 +147,7 @@ def load_forecast_agg():
     return agg
 
 def build_soh_sku(df_rm, fc_agg):
-    # Aggregate SOH only from SOH warehouses, deduplicated at SKU level
+    """Aggregate SOH at SKU level from SOH warehouses only. Merge forecast. Compute Days of Stock."""
     df_soh = df_rm[df_rm["Warehouse"].isin(SOH_WH)]
     soh = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
     soh.columns = ["Item SKU", "SOH"]
@@ -152,16 +155,16 @@ def build_soh_sku(df_rm, fc_agg):
     if not fc_agg.empty and "_k" in fc_agg.columns:
         soh = soh.merge(fc_agg[["_k","Forecast","Per Day Req"]], on="_k", how="left")
     else:
-        soh["Forecast"] = 0.0
+        soh["Forecast"]    = 0.0
         soh["Per Day Req"] = 0.0
     soh["Forecast"]    = soh["Forecast"].fillna(0)
     soh["Per Day Req"] = soh["Per Day Req"].fillna(0)
-    # Days of Stock: only meaningful when Per Day Req > 0 AND SOH > 0
     soh["Days of Stock"] = soh.apply(
         lambda r: round(r["SOH"] / r["Per Day Req"], 1) if r["Per Day Req"] > 0 else None, axis=1)
     soh.drop(columns=["_k"], inplace=True)
     return soh
 
+# ── LOAD ──────────────────────────────────────────────────────────────────────
 df_raw  = load_rm()
 fc_agg  = load_forecast_agg()
 soh_sku = build_soh_sku(df_raw, fc_agg) if not df_raw.empty else pd.DataFrame()
@@ -187,85 +190,7 @@ if st.button("↺  Refresh Data", use_container_width=True):
 if df_raw.empty:
     st.error("⚠️ No RM Inventory data found."); st.stop()
 
-# ── KPI CALCULATIONS (SKU-deduplicated, correct scope) ─────────────────────
-# Total SOH: sum of Qty Available across SOH warehouses (all rows)
-total_soh = df_raw[df_raw["Warehouse"].isin(SOH_WH)]["Qty Available"].sum()
-
-# Total Forecast: sum of per-SKU forecast (already deduplicated in soh_sku)
-total_fc = soh_sku["Forecast"].sum() if not soh_sku.empty else 0
-
-# SKUs WITH a forecast (Per Day Req > 0) — used for meaningful DoS stats
-sku_with_fc = soh_sku[soh_sku["Per Day Req"] > 0] if not soh_sku.empty else pd.DataFrame()
-
-# Avg DoS: only over SKUs that HAVE a forecast (exclude None/NaN)
-avg_dos = sku_with_fc["Days of Stock"].dropna().mean() if not sku_with_fc.empty else 0
-avg_dos = avg_dos if pd.notna(avg_dos) else 0
-
-# Critical: SKUs with DoS < 7 days (must have forecast)
-critical = int((sku_with_fc["Days of Stock"] < 7).sum()) if not sku_with_fc.empty else 0
-
-# Low stock: SKUs with DoS between 7 and 14 days
-low_stock = int(((sku_with_fc["Days of Stock"] >= 7) & (sku_with_fc["Days of Stock"] <= 14)).sum()) if not sku_with_fc.empty else 0
-
-# No forecast: SKUs present in inventory but missing forecast entirely
-no_forecast = int((soh_sku["Per Day Req"] == 0).sum()) if not soh_sku.empty else 0
-
-st.markdown(f"""
-<div class="kpi-grid">
-    <div class="kpi-card violet">
-        <div class="kpi-inner">
-            <div>
-                <div class="kpi-lbl">Total Stock on Hand</div>
-                <div class="kpi-num">{total_soh:,.0f}</div>
-                <div class="kpi-cap">Across all SOH warehouses</div>
-            </div>
-            <div class="kpi-ico">📦</div>
-        </div>
-    </div>
-    <div class="kpi-card teal">
-        <div class="kpi-inner">
-            <div>
-                <div class="kpi-lbl">Total Forecast Qty</div>
-                <div class="kpi-num">{total_fc:,.0f}</div>
-                <div class="kpi-cap">Plant location · Forecast ÷ 24 per day</div>
-            </div>
-            <div class="kpi-ico">📈</div>
-        </div>
-    </div>
-    <div class="kpi-card amber">
-        <div class="kpi-inner">
-            <div>
-                <div class="kpi-lbl">Avg Days of Stock</div>
-                <div class="kpi-num">{avg_dos:.1f}</div>
-                <div class="kpi-cap">SKUs with forecast only · {len(sku_with_fc):,} SKUs</div>
-            </div>
-            <div class="kpi-ico">⏱</div>
-        </div>
-    </div>
-    <div class="kpi-card red">
-        <div class="kpi-inner">
-            <div>
-                <div class="kpi-lbl">Critical (&lt; 7 Days)</div>
-                <div class="kpi-num">{critical:,}</div>
-                <div class="kpi-cap">{low_stock:,} SKUs low (7–14 days)</div>
-            </div>
-            <div class="kpi-ico">🚨</div>
-        </div>
-    </div>
-    <div class="kpi-card slate">
-        <div class="kpi-inner">
-            <div>
-                <div class="kpi-lbl">No Forecast</div>
-                <div class="kpi-num">{no_forecast:,}</div>
-                <div class="kpi-cap">SKUs with no demand plan</div>
-            </div>
-            <div class="kpi-ico">⚫</div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# ── FILTERS ───────────────────────────────────────────────────────────────────
+# ── FILTERS — rendered first so values flow into KPI calc ─────────────────────
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
 st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=True)
 c1, c2, c3, c4, c5 = st.columns([2.5, 1.8, 1.8, 1.8, 1.8])
@@ -289,13 +214,13 @@ st.markdown('</div>', unsafe_allow_html=True)
 df = df_raw.copy()
 if search:
     df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-if sel_wh  != "All Warehouses":  df = df[df["Warehouse"] == sel_wh]
+if sel_wh  != "All Warehouses": df = df[df["Warehouse"] == sel_wh]
 if sel_cat != "All Categories" and "Category" in df.columns:
     df = df[df["Category"].astype(str) == sel_cat]
 if sel_st == "Available Only": df = df[df["Qty Available"] > 0]
 elif sel_st == "Zero / Neg":   df = df[df["Qty Available"] <= 0]
 
-# Merge forecast & DoS into view
+# Merge forecast & DoS into the filtered view
 df_m = df.merge(soh_sku[["Item SKU","Forecast","Per Day Req","Days of Stock"]], on="Item SKU", how="left")
 
 if sel_dos == "🔴 Critical (< 7d)":
@@ -306,6 +231,87 @@ elif sel_dos == "✅ Healthy (> 14d)":
     df_m = df_m[df_m["Days of Stock"] > 14]
 elif sel_dos == "⚫ No Forecast":
     df_m = df_m[df_m["Days of Stock"].isna()]
+
+# ── KPI CALC — derived from filtered + merged data ────────────────────────────
+# SOH: only rows in SOH warehouses from the filtered set
+df_m_soh = df_m[df_m["Warehouse"].isin(SOH_WH)]
+
+# Deduplicate at SKU level so multi-warehouse rows don't double-count Forecast/DoS
+sku_dedup = (
+    df_m_soh
+    .groupby("Item SKU")
+    .agg(
+        SOH_sum      = ("Qty Available", "sum"),
+        Forecast     = ("Forecast",      "first"),   # same value per SKU across warehouses
+        Per_Day_Req  = ("Per Day Req",   "first"),
+        Days_of_Stock= ("Days of Stock", "first"),
+    )
+    .reset_index()
+)
+
+kpi_soh      = sku_dedup["SOH_sum"].sum()
+kpi_forecast = sku_dedup["Forecast"].fillna(0).sum()
+
+sku_with_fc  = sku_dedup[sku_dedup["Per_Day_Req"] > 0]
+kpi_avg_dos  = sku_with_fc["Days_of_Stock"].dropna().mean()
+kpi_avg_dos  = kpi_avg_dos if pd.notna(kpi_avg_dos) else 0
+
+total_skus    = sku_dedup["Item SKU"].nunique()
+forecast_skus = len(sku_with_fc)
+per_day_total = sku_with_fc["Per_Day_Req"].sum()
+
+if kpi_avg_dos > 0:
+    if kpi_avg_dos < 7:
+        dos_cls, dos_label = "dos-critical", "⚠ Critical — reorder now"
+    elif kpi_avg_dos <= 14:
+        dos_cls, dos_label = "dos-low",      "⚡ Low — reorder soon"
+    else:
+        dos_cls, dos_label = "dos-healthy",  "✅ Healthy stock level"
+else:
+    dos_cls, dos_label = "", "No forecast data"
+
+# ── KPI CARDS ─────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="kpi-grid">
+
+  <div class="kpi-card violet">
+    <div class="kpi-inner">
+      <div>
+        <div class="kpi-lbl">Stock on Hand (SOH)</div>
+        <div class="kpi-num">{kpi_soh:,.0f}</div>
+        <div class="kpi-cap">Central · Tumkur · Cold Storage · Snowman</div>
+        <div class="kpi-sub">{total_skus:,} unique SKUs in current filter</div>
+      </div>
+      <div class="kpi-ico">📦</div>
+    </div>
+  </div>
+
+  <div class="kpi-card teal">
+    <div class="kpi-inner">
+      <div>
+        <div class="kpi-lbl">Forecast Qty</div>
+        <div class="kpi-num">{kpi_forecast:,.0f}</div>
+        <div class="kpi-cap">Plant forecast · {forecast_skus:,} SKUs with demand plan</div>
+        <div class="kpi-sub">Per day req: {per_day_total:,.1f} units / day</div>
+      </div>
+      <div class="kpi-ico">📈</div>
+    </div>
+  </div>
+
+  <div class="kpi-card amber">
+    <div class="kpi-inner">
+      <div>
+        <div class="kpi-lbl">Avg Days of Stock</div>
+        <div class="kpi-num">{kpi_avg_dos:.1f}</div>
+        <div class="kpi-cap"><span class="{dos_cls}">{dos_label}</span></div>
+        <div class="kpi-sub">SOH ÷ (Forecast ÷ 24) · {forecast_skus:,} SKUs</div>
+      </div>
+      <div class="kpi-ico">⏱</div>
+    </div>
+  </div>
+
+</div>
+""", unsafe_allow_html=True)
 
 # ── TABLE ─────────────────────────────────────────────────────────────────────
 st.markdown('<div class="sec-div">Detailed Records</div>', unsafe_allow_html=True)
@@ -356,14 +362,14 @@ else:
     st.dataframe(df_show.style.apply(colour_row, axis=1),
         use_container_width=True, height=520, hide_index=True,
         column_config={
-            "Qty Available":      st.column_config.NumberColumn("Qty Avail",   format="%.0f"),
-            "Forecast":           st.column_config.NumberColumn("Forecast",    format="%.0f"),
-            "Per Day Req":        st.column_config.NumberColumn("Per Day Req", format="%.2f"),
-            "Days of Stock":      st.column_config.NumberColumn("Days of Stock ⏱", format="%.1f"),
-            "Qty Inward":         st.column_config.NumberColumn("Inward",      format="%.0f"),
-            "Qty (Issue / Hold)": st.column_config.NumberColumn("Issue/Hold",  format="%.0f"),
-            "Value (Inc Tax)":    st.column_config.NumberColumn("Val (Inc)",   format="%.0f"),
-            "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",    format="%.0f"),
+            "Qty Available":      st.column_config.NumberColumn("Qty Avail",        format="%.0f"),
+            "Forecast":           st.column_config.NumberColumn("Forecast",         format="%.0f"),
+            "Per Day Req":        st.column_config.NumberColumn("Per Day Req",      format="%.2f"),
+            "Days of Stock":      st.column_config.NumberColumn("Days of Stock ⏱",  format="%.1f"),
+            "Qty Inward":         st.column_config.NumberColumn("Inward",           format="%.0f"),
+            "Qty (Issue / Hold)": st.column_config.NumberColumn("Issue/Hold",       format="%.0f"),
+            "Value (Inc Tax)":    st.column_config.NumberColumn("Val (Inc)",        format="%.0f"),
+            "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",         format="%.0f"),
         })
 
 st.markdown('<div class="app-footer">YOGABAR · RM INVENTORY</div>', unsafe_allow_html=True)
