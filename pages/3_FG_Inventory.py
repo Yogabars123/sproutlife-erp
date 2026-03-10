@@ -27,26 +27,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-pill { display:inline-flex; align-items:center; gap:5px; background:#071a0f; border:1px solid #166534; border-radius:20px; padding:5px 11px; font-size:10px; font-weight:700; color:#22c55e; letter-spacing:1px; font-family:'JetBrains Mono',monospace; }
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 5px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
-.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
-.kpi-card { border-radius:16px; padding:16px 18px; position:relative; overflow:hidden; border:1px solid; min-height:100px; }
-.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
-.kpi-card.blue   { background:linear-gradient(135deg,#0c1a3a,#0f2460); border-color:#1a3a6e; }
-.kpi-card.blue::before   { background:linear-gradient(90deg,#3b82f6,#60a5fa); }
-.kpi-card.amber  { background:linear-gradient(135deg,#1a1000,#2a1800); border-color:#78350f; }
-.kpi-card.amber::before  { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
-.kpi-card.red    { background:linear-gradient(135deg,#1a0000,#2a0808); border-color:#7f1d1d; }
-.kpi-card.red::before    { background:linear-gradient(90deg,#ef4444,#f87171); }
-.kpi-card.teal   { background:linear-gradient(135deg,#061413,#0a2825); border-color:#134e4a; }
-.kpi-card.teal::before   { background:linear-gradient(90deg,#5bc8c0,#2dd4bf); }
-.kpi-lbl { font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:8px; }
-.kpi-card.blue  .kpi-lbl { color:#60a5fa; } .kpi-card.amber .kpi-lbl { color:#fbbf24; }
-.kpi-card.red   .kpi-lbl { color:#f87171; } .kpi-card.teal  .kpi-lbl { color:#5bc8c0; }
-.kpi-num { font-size:28px; font-weight:800; line-height:1; font-family:'JetBrains Mono',monospace; letter-spacing:-1px; }
-.kpi-card.blue  .kpi-num { color:#bfdbfe; } .kpi-card.amber .kpi-num { color:#fde68a; }
-.kpi-card.red   .kpi-num { color:#fecaca; } .kpi-card.teal  .kpi-num { color:#99f6e4; }
-.kpi-cap { font-size:11px; margin-top:5px; }
-.kpi-card.blue  .kpi-cap { color:#3b5a8a; } .kpi-card.amber .kpi-cap { color:#78540a; }
-.kpi-card.red   .kpi-cap { color:#7a2020; } .kpi-card.teal  .kpi-cap { color:#134e4a; }
 .filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
 .filter-title { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
 .filter-title::after { content:''; flex:1; height:1px; background:#1e2535; }
@@ -72,73 +52,65 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
 # ── DATA LOADING ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def load_all():
-    # FG Inventory
+    # ── FG Inventory ──────────────────────────────────────────────────────────
     df_fg = load_sheet("FG-Inventory")
     if df_fg.empty:
         return pd.DataFrame()
     df_fg.columns = df_fg.columns.str.strip()
-    df_fg["Warehouse"] = df_fg["Warehouse"].astype(str).str.strip()
-    for col in ["Inventory Date", "Expiry Date", "MFG Date"]:
-        if col in df_fg.columns:
-            df_fg[col] = pd.to_datetime(df_fg[col], errors="coerce")
-    for col in ["Qty Available", "Qty Inward", "Qty (Issue / Hold)", "Value (Inc Tax)", "Value (Ex Tax)", "Current Aging (Days)"]:
-        if col in df_fg.columns:
-            df_fg[col] = pd.to_numeric(df_fg[col], errors="coerce").fillna(0)
+
+    # Numeric
+    if "Qty Available" in df_fg.columns:
+        df_fg["Qty Available"] = pd.to_numeric(df_fg["Qty Available"], errors="coerce").fillna(0)
 
     # Shelf life %
     today = pd.Timestamp(datetime.today().date())
-    if "Expiry Date" in df_fg.columns:
-        rem = (df_fg["Expiry Date"] - today).dt.days
-        df_fg["_remaining_days"] = rem.fillna(0).astype(int)
-        if "MFG Date" in df_fg.columns:
-            total = (df_fg["Expiry Date"] - df_fg["MFG Date"]).dt.days
-            valid = total > 0
-            pct = pd.Series(0.0, index=df_fg.index)
-            pct[valid] = ((rem[valid] / total[valid]) * 100).clip(0, 100)
-            df_fg["Shelf Life %"] = pct.round(1)
-        else:
-            df_fg["Shelf Life %"] = 0.0
+    for col in ["Expiry Date", "MFG Date"]:
+        if col in df_fg.columns:
+            df_fg[col] = pd.to_datetime(df_fg[col], errors="coerce")
+    if "Expiry Date" in df_fg.columns and "MFG Date" in df_fg.columns:
+        rem   = (df_fg["Expiry Date"] - today).dt.days
+        total = (df_fg["Expiry Date"] - df_fg["MFG Date"]).dt.days
+        valid = total > 0
+        pct   = pd.Series(0.0, index=df_fg.index)
+        pct[valid] = ((rem[valid] / total[valid]) * 100).clip(0, 100)
+        df_fg["Shelf Life %"] = pct.round(1)
     else:
-        df_fg["_remaining_days"] = 0
         df_fg["Shelf Life %"] = 0.0
 
-    # STN - aggregate latest transfer per Item SKU
+    # ── STN — latest transfer per FG SKU ─────────────────────────────────────
     df_stn = load_sheet("STN")
     if not df_stn.empty:
         df_stn.columns = df_stn.columns.str.strip()
-        # Parse date
         if "Date" in df_stn.columns:
             df_stn["Date"] = pd.to_datetime(df_stn["Date"], errors="coerce")
         if "Qty" in df_stn.columns:
             df_stn["Qty"] = pd.to_numeric(df_stn["Qty"], errors="coerce").fillna(0)
 
-        # Find FG Code column
         fg_code_col = next((c for c in df_stn.columns if "fg code" in c.lower()), None)
         to_wh_col   = next((c for c in df_stn.columns if "to warehouse" in c.lower()), None)
         req_col     = next((c for c in df_stn.columns if "request no" in c.lower()), None)
 
         if fg_code_col:
             df_stn[fg_code_col] = df_stn[fg_code_col].astype(str).str.strip()
-            # Get latest STN per FG Code
+            # Latest transfer per SKU
             if "Date" in df_stn.columns:
-                df_stn_latest = df_stn.sort_values("Date", ascending=False).drop_duplicates(subset=[fg_code_col])
-            else:
-                df_stn_latest = df_stn.drop_duplicates(subset=[fg_code_col])
+                df_stn = df_stn.sort_values("Date", ascending=False)
+            df_stn_latest = df_stn.drop_duplicates(subset=[fg_code_col]).copy()
 
-            rename_map = {}
-            if fg_code_col: rename_map[fg_code_col] = "_stn_sku"
-            if to_wh_col:   rename_map[to_wh_col]   = "STN WH"
-            if req_col:     rename_map[req_col]      = "STN No"
-            if "Date" in df_stn_latest.columns: rename_map["Date"] = "STN Date"
-            if "Status" in df_stn_latest.columns: rename_map["Status"] = "STN Status"
-            if "Qty" in df_stn_latest.columns: rename_map["Qty"] = "STN Qty"
+            # Rename to STN columns
+            rmap = {fg_code_col: "_stn_sku"}
+            if req_col:    rmap[req_col]    = "STN No"
+            if "Date" in df_stn_latest.columns: rmap["Date"] = "STN Date"
+            if to_wh_col:  rmap[to_wh_col]  = "STN WH"
+            if "Qty" in df_stn_latest.columns:  rmap["Qty"]  = "STN Qty"
+            if "Status" in df_stn_latest.columns: rmap["Status"] = "STN Status"
+            df_stn_latest = df_stn_latest.rename(columns=rmap)
 
-            df_stn_latest = df_stn_latest.rename(columns=rename_map)
-            keep = ["_stn_sku"] + [v for v in ["STN No","STN Date","STN WH","STN Qty","STN Status"] if v in df_stn_latest.columns]
+            keep = ["_stn_sku"] + [c for c in ["STN No","STN Date","STN WH","STN Qty","STN Status"] if c in df_stn_latest.columns]
             df_stn_latest = df_stn_latest[keep]
 
-            # Merge into FG
-            sku_col = "Item SKU" if "Item SKU" in df_fg.columns else next((c for c in df_fg.columns if "sku" in c.lower()), None)
+            # Merge on Item SKU
+            sku_col = next((c for c in df_fg.columns if "item sku" in c.lower() or c.lower() == "sku"), None)
             if sku_col:
                 df_fg[sku_col] = df_fg[sku_col].astype(str).str.strip()
                 df_fg = df_fg.merge(df_stn_latest, left_on=sku_col, right_on="_stn_sku", how="left")
@@ -155,7 +127,7 @@ st.markdown("""
         <div class="hdr-logo">📦</div>
         <div>
             <div class="hdr-title">FG Inventory</div>
-            <div class="hdr-sub">YogaBar · Finished Goods Stock + STN Transfer</div>
+            <div class="hdr-sub">YogaBar · Finished Goods + STN Transfer</div>
         </div>
     </div>
     <div class="live-pill"><span class="live-dot"></span>LIVE</div>
@@ -176,10 +148,10 @@ st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=Tr
 c1, c2, c3, c4, c5 = st.columns([2.5, 1.8, 1.8, 1.8, 1.8])
 
 with c1:
-    search = st.text_input("s", placeholder="🔍 Search item / SKU / batch…", label_visibility="collapsed")
+    search = st.text_input("s", placeholder="🔍 Search item name / SKU…", label_visibility="collapsed")
 with c2:
-    fg_wh_opts = ["All FG WH"] + sorted(df_raw["Warehouse"].dropna().astype(str).unique().tolist())
-    sel_fg_wh  = st.selectbox("fw", fg_wh_opts, label_visibility="collapsed")
+    wh_opts = ["All Warehouses"] + sorted(df_raw["Warehouse"].dropna().astype(str).unique().tolist()) if "Warehouse" in df_raw.columns else ["All Warehouses"]
+    sel_wh = st.selectbox("fw", wh_opts, label_visibility="collapsed")
 with c3:
     stn_wh_opts = ["All STN WH"]
     if "STN WH" in df_raw.columns:
@@ -191,7 +163,14 @@ with c4:
         stat_opts += sorted(df_raw["STN Status"].dropna().astype(str).unique().tolist())
     sel_stat = st.selectbox("ss", stat_opts, label_visibility="collapsed")
 with c5:
-    sel_shelf = st.selectbox("sh", ["All", "Expiring in 30 days", "Expired"], label_visibility="collapsed")
+    shelf_opts = [
+        "All Shelf Life",
+        "Below 90%",
+        "Below 80%",
+        "Below 70%",
+        "Below 50%",
+    ]
+    sel_shelf = st.selectbox("sh", shelf_opts, label_visibility="collapsed")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -199,60 +178,28 @@ st.markdown('</div>', unsafe_allow_html=True)
 df = df_raw.copy()
 if search:
     df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-if sel_fg_wh != "All FG WH":
-    df = df[df["Warehouse"].astype(str) == sel_fg_wh]
+if sel_wh != "All Warehouses" and "Warehouse" in df.columns:
+    df = df[df["Warehouse"].astype(str) == sel_wh]
 if sel_stn_wh != "All STN WH" and "STN WH" in df.columns:
     df = df[df["STN WH"].astype(str) == sel_stn_wh]
 if sel_stat != "All Status" and "STN Status" in df.columns:
     df = df[df["STN Status"].astype(str) == sel_stat]
-if "_remaining_days" in df.columns:
-    if sel_shelf == "Expiring in 30 days":
-        df = df[(df["_remaining_days"] >= 0) & (df["_remaining_days"] <= 30)]
-    elif sel_shelf == "Expired":
-        df = df[df["_remaining_days"] < 0]
-
-# ── KPI CARDS ─────────────────────────────────────────────────────────────────
-total_qty    = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
-expiring_qty = df[df["_remaining_days"].between(0, 30)]["Qty Available"].sum() if "_remaining_days" in df.columns else 0
-expired_qty  = df[df["_remaining_days"] < 0]["Qty Available"].sum()            if "_remaining_days" in df.columns else 0
-stn_count    = df["STN No"].notna().sum() if "STN No" in df.columns else 0
-
-st.markdown(f"""
-<div class="kpi-grid">
-    <div class="kpi-card blue">
-        <div class="kpi-lbl">Total Available Qty</div>
-        <div class="kpi-num">{total_qty:,.0f}</div>
-        <div class="kpi-cap">{len(df):,} records shown</div>
-    </div>
-    <div class="kpi-card amber">
-        <div class="kpi-lbl">Expiring in 30 Days</div>
-        <div class="kpi-num">{expiring_qty:,.0f}</div>
-        <div class="kpi-cap">Requires immediate attention</div>
-    </div>
-    <div class="kpi-card red">
-        <div class="kpi-lbl">Expired · Qty</div>
-        <div class="kpi-num">{expired_qty:,.0f}</div>
-        <div class="kpi-cap">Past expiry date</div>
-    </div>
-    <div class="kpi-card teal">
-        <div class="kpi-lbl">Items with STN</div>
-        <div class="kpi-num">{stn_count:,}</div>
-        <div class="kpi-cap">Transfer records linked</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+if "Shelf Life %" in df.columns:
+    shelf_map = {"Below 90%": 90, "Below 80%": 80, "Below 70%": 70, "Below 50%": 50}
+    if sel_shelf in shelf_map:
+        df = df[df["Shelf Life %"] < shelf_map[sel_shelf]]
 
 # ── TABLE ─────────────────────────────────────────────────────────────────────
 st.markdown('<div class="sec-div">FG Records + STN Transfer</div>', unsafe_allow_html=True)
 st.markdown(f"""
 <div class="tbl-hdr">
-    <span class="tbl-lbl">📋 FG Inventory · STN Combined</span>
+    <span class="tbl-lbl">📋 FG Inventory</span>
     <span class="tbl-badge">{len(df):,} rows</span>
 </div>""", unsafe_allow_html=True)
 
 buf = io.BytesIO()
 with pd.ExcelWriter(buf, engine="openpyxl") as w:
-    df.drop(columns=["_remaining_days"], errors="ignore").to_excel(w, index=False, sheet_name="FG Inventory")
+    df.to_excel(w, index=False, sheet_name="FG Inventory")
 st.download_button("⬇  Export to Excel", buf.getvalue(), "FG_Inventory.xlsx",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
@@ -261,40 +208,61 @@ st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 if df.empty:
     st.warning("⚠️ No records match the current filters.")
 else:
+    # Build display with only required columns
+    item_name_col = next((c for c in df.columns if "item name" in c.lower()), None)
+    item_sku_col  = next((c for c in df.columns if "item sku"  in c.lower() or c.lower() == "sku"), None)
+    cat_col       = next((c for c in df.columns if "category"  in c.lower()), None)
+    wh_col        = "Warehouse" if "Warehouse" in df.columns else None
+
+    ordered_cols = []
+    for c in [item_name_col, item_sku_col, cat_col, wh_col,
+              "Qty Available", "Shelf Life %",
+              "STN No", "STN Qty", "STN WH", "STN Status", "STN Date"]:
+        if c and c in df.columns:
+            ordered_cols.append(c)
+
+    disp = df[ordered_cols].copy() if ordered_cols else df.copy()
+
+    # Format STN Date
+    if "STN Date" in disp.columns:
+        disp["STN Date"] = pd.to_datetime(disp["STN Date"], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
+
+    # Row colours by shelf life
     def colour_row(row):
-        rem = row.get("_remaining_days", 999)
-        if isinstance(rem, (int, float)):
-            if rem < 0:  return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
-            if rem <= 30: return ["background-color:#2d1f00; color:#fde68a"] * len(row)
+        pct = row.get("Shelf Life %", 100)
+        if pd.isna(pct): return [""] * len(row)
+        if pct < 50:  return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
+        if pct < 70:  return ["background-color:#2d1500; color:#fed7aa"] * len(row)
+        if pct < 80:  return ["background-color:#2d1f00; color:#fde68a"] * len(row)
+        if pct < 90:  return ["background-color:#0f1f0f; color:#bbf7d0"] * len(row)
         return [""] * len(row)
 
-    display_df = df.drop(columns=["_remaining_days"], errors="ignore").copy()
-
-    # Format dates
-    for dc in ["Inventory Date", "Expiry Date", "MFG Date"]:
-        if dc in display_df.columns:
-            display_df[dc] = display_df[dc].dt.strftime("%d-%b-%Y").fillna("")
-    if "STN Date" in display_df.columns:
-        display_df["STN Date"] = pd.to_datetime(display_df["STN Date"], errors="coerce").dt.strftime("%d-%b-%Y").fillna("")
-
-    # Column order: FG cols first, then STN cols at end
-    fg_cols  = [c for c in display_df.columns if not c.startswith("STN")]
-    stn_cols = [c for c in display_df.columns if c.startswith("STN")]
-    display_df = display_df[fg_cols + stn_cols]
+    # Rename for clean display
+    rename = {}
+    if item_name_col: rename[item_name_col] = "Item Name"
+    if item_sku_col:  rename[item_sku_col]  = "Item SKU"
+    if cat_col:       rename[cat_col]        = "Category"
+    disp = disp.rename(columns=rename)
 
     st.dataframe(
-        display_df.style.apply(colour_row, axis=1),
-        use_container_width=True, height=530, hide_index=True,
+        disp.style.apply(colour_row, axis=1),
+        use_container_width=True, height=560, hide_index=True,
         column_config={
-            "Qty Available":    st.column_config.NumberColumn("Qty Avail",    format="%.0f"),
-            "Qty Inward":       st.column_config.NumberColumn("Inward",       format="%.0f"),
-            "Qty (Issue / Hold)":st.column_config.NumberColumn("Issue/Hold",  format="%.0f"),
-            "Value (Inc Tax)":  st.column_config.NumberColumn("Val (Inc)",    format="%.0f"),
-            "Value (Ex Tax)":   st.column_config.NumberColumn("Val (Ex)",     format="%.0f"),
-            "Current Aging (Days)": st.column_config.NumberColumn("Aging (d)", format="%d"),
-            "Shelf Life %":     st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
-            "STN Qty":          st.column_config.NumberColumn("STN Qty",      format="%.0f"),
+            "Qty Available": st.column_config.NumberColumn("Qty Available", format="%.0f"),
+            "Shelf Life %":  st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
+            "STN Qty":       st.column_config.NumberColumn("STN Qty",       format="%.0f"),
         }
     )
+
+    # Legend
+    st.markdown("""
+    <div style="display:flex;gap:16px;font-size:11px;margin-top:8px;padding:8px 12px;background:#0d1117;border:1px solid #1e2535;border-radius:8px;">
+        <span style="color:#fca5a5">🔴 Below 50%</span>
+        <span style="color:#fed7aa">🟠 50–70%</span>
+        <span style="color:#fde68a">🟡 70–80%</span>
+        <span style="color:#bbf7d0">🟢 80–90%</span>
+        <span style="color:#94a3b8">⚪ Above 90%</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · STN</div>', unsafe_allow_html=True)
