@@ -227,15 +227,8 @@ else:
     if "STN Date" in disp.columns:
         disp["STN Date"] = pd.to_datetime(disp["STN Date"], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
 
-    # Row colours by shelf life
-    def colour_row(row):
-        pct = row.get("Shelf Life %", 100)
-        if pd.isna(pct): return [""] * len(row)
-        if pct < 50:  return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
-        if pct < 70:  return ["background-color:#2d1500; color:#fed7aa"] * len(row)
-        if pct < 80:  return ["background-color:#2d1f00; color:#fde68a"] * len(row)
-        if pct < 90:  return ["background-color:#0f1f0f; color:#bbf7d0"] * len(row)
-        return [""] * len(row)
+    # ── Single standard colour — no shelf-life-based row colouring ──
+    # (colour_row function removed; no .style.apply() used)
 
     # Rename for clean display
     rename = {}
@@ -245,7 +238,7 @@ else:
     disp = disp.rename(columns=rename)
 
     st.dataframe(
-        disp.style.apply(colour_row, axis=1),
+        disp,                          # plain DataFrame — no colour styling
         use_container_width=True, height=560, hide_index=True,
         column_config={
             "Qty Available": st.column_config.NumberColumn("Qty Available", format="%.0f"),
@@ -253,16 +246,5 @@ else:
             "STN Qty":       st.column_config.NumberColumn("STN Qty",       format="%.0f"),
         }
     )
-
-    # Legend
-    st.markdown("""
-    <div style="display:flex;gap:16px;font-size:11px;margin-top:8px;padding:8px 12px;background:#0d1117;border:1px solid #1e2535;border-radius:8px;">
-        <span style="color:#fca5a5">🔴 Below 50%</span>
-        <span style="color:#fed7aa">🟠 50–70%</span>
-        <span style="color:#fde68a">🟡 70–80%</span>
-        <span style="color:#bbf7d0">🟢 80–90%</span>
-        <span style="color:#94a3b8">⚪ Above 90%</span>
-    </div>
-    """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · STN</div>', unsafe_allow_html=True)
