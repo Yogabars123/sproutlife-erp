@@ -29,8 +29,8 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 6px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
 
-/* KPI GRID — 4 cards */
-.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+/* KPI GRID — 5 cards in one row */
+.kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:18px; }
 .kpi-card {
     border-radius:18px; padding:20px 22px; position:relative;
     overflow:hidden; border:1px solid; min-height:118px;
@@ -56,16 +56,21 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .kpi-card.red::before    { background:linear-gradient(90deg,#ef4444,#f87171); }
 .kpi-card.red::after     { background:radial-gradient(circle,#ef4444,transparent); }
 
+.kpi-card.slate  { background:linear-gradient(135deg,#0a0e1a,#111827); border-color:#1e293b; }
+.kpi-card.slate::before  { background:linear-gradient(90deg,#64748b,#94a3b8); }
+.kpi-card.slate::after   { background:radial-gradient(circle,#64748b,transparent); }
+
 .kpi-inner { display:flex; align-items:flex-start; justify-content:space-between; }
 .kpi-lbl  { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.3px; margin-bottom:8px; }
 .kpi-num  { font-size:32px; font-weight:800; line-height:1; font-family:'JetBrains Mono',monospace; letter-spacing:-1.5px; }
 .kpi-cap  { font-size:11px; margin-top:6px; }
 .kpi-ico  { font-size:28px; opacity:.6; margin-top:2px; }
 
-.kpi-card.violet .kpi-lbl { color:#c084fc; } .kpi-card.violet .kpi-num { color:#e9d5ff; } .kpi-card.violet .kpi-cap { color:#4a2a7a; }
-.kpi-card.teal   .kpi-lbl { color:#5bc8c0; } .kpi-card.teal   .kpi-num { color:#99f6e4; } .kpi-card.teal   .kpi-cap { color:#134e4a; }
-.kpi-card.amber  .kpi-lbl { color:#fbbf24; } .kpi-card.amber  .kpi-num { color:#fde68a; } .kpi-card.amber  .kpi-cap { color:#78540a; }
-.kpi-card.red    .kpi-lbl { color:#f87171; } .kpi-card.red    .kpi-num { color:#fecaca; } .kpi-card.red    .kpi-cap { color:#7a2020; }
+.kpi-card.violet .kpi-lbl { color:#c084fc; } .kpi-card.violet .kpi-num { color:#e9d5ff; } .kpi-card.violet .kpi-cap { color:#7c3aed; }
+.kpi-card.teal   .kpi-lbl { color:#5bc8c0; } .kpi-card.teal   .kpi-num { color:#99f6e4; } .kpi-card.teal   .kpi-cap { color:#0d9488; }
+.kpi-card.amber  .kpi-lbl { color:#fbbf24; } .kpi-card.amber  .kpi-num { color:#fde68a; } .kpi-card.amber  .kpi-cap { color:#d97706; }
+.kpi-card.red    .kpi-lbl { color:#f87171; } .kpi-card.red    .kpi-num { color:#fecaca; } .kpi-card.red    .kpi-cap { color:#dc2626; }
+.kpi-card.slate  .kpi-lbl { color:#94a3b8; } .kpi-card.slate  .kpi-num { color:#cbd5e1; } .kpi-card.slate  .kpi-cap { color:#475569; }
 
 /* FILTER */
 .filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
@@ -80,12 +85,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .stButton > button { width:100% !important; background:#0d1117 !important; border:1.5px solid #1e2535 !important; border-radius:9px !important; color:#64748b !important; font-size:13px !important; font-weight:600 !important; padding:9px !important; transition:all .2s !important; margin-bottom:6px !important; }
 .stButton > button:hover { border-color:#a855f7 !important; color:#c084fc !important; background:#130a2a !important; }
 .stDownloadButton > button { width:100% !important; background:linear-gradient(135deg,#0f172a,#1e1b4b) !important; border:1.5px solid #4338ca !important; border-radius:9px !important; color:#a5b4fc !important; font-size:13px !important; font-weight:700 !important; padding:10px !important; }
-
-/* CHARTS */
-.chart-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
-.chart-box { background:#0d1117; border:1px solid #1e2535; border-radius:16px; padding:16px 18px; }
-.chart-title { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:10px; display:flex; align-items:center; gap:7px; }
-.chart-title::after { content:''; flex:1; height:1px; background:#1e2535; }
 
 /* TABLE */
 .sec-div { font-size:10px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:1.2px; padding:12px 0 8px; display:flex; align-items:center; gap:7px; }
@@ -145,9 +144,10 @@ def load_forecast_agg():
     return agg
 
 def build_soh_sku(df_rm, fc_agg):
+    # Aggregate SOH only from SOH warehouses, deduplicated at SKU level
     df_soh = df_rm[df_rm["Warehouse"].isin(SOH_WH)]
     soh = df_soh.groupby("Item SKU")["Qty Available"].sum().reset_index()
-    soh.columns = ["Item SKU","SOH"]
+    soh.columns = ["Item SKU", "SOH"]
     soh["_k"] = soh["Item SKU"].astype(str).str.upper()
     if not fc_agg.empty and "_k" in fc_agg.columns:
         soh = soh.merge(fc_agg[["_k","Forecast","Per Day Req"]], on="_k", how="left")
@@ -156,6 +156,7 @@ def build_soh_sku(df_rm, fc_agg):
         soh["Per Day Req"] = 0.0
     soh["Forecast"]    = soh["Forecast"].fillna(0)
     soh["Per Day Req"] = soh["Per Day Req"].fillna(0)
+    # Days of Stock: only meaningful when Per Day Req > 0 AND SOH > 0
     soh["Days of Stock"] = soh.apply(
         lambda r: round(r["SOH"] / r["Per Day Req"], 1) if r["Per Day Req"] > 0 else None, axis=1)
     soh.drop(columns=["_k"], inplace=True)
@@ -186,13 +187,28 @@ if st.button("↺  Refresh Data", use_container_width=True):
 if df_raw.empty:
     st.error("⚠️ No RM Inventory data found."); st.stop()
 
-# ── KPI CARDS ─────────────────────────────────────────────────────────────────
-total_soh   = df_raw[df_raw["Warehouse"].isin(SOH_WH)]["Qty Available"].sum() if not df_raw.empty else 0
-total_fc    = soh_sku["Forecast"].sum()                   if not soh_sku.empty else 0
-critical    = int((soh_sku["Days of Stock"] < 7).sum())   if not soh_sku.empty else 0
-no_forecast = int((soh_sku["Days of Stock"].isna()).sum()) if not soh_sku.empty else 0
-avg_dos     = soh_sku["Days of Stock"].mean()             if not soh_sku.empty else 0
-avg_dos     = avg_dos if pd.notna(avg_dos) else 0
+# ── KPI CALCULATIONS (SKU-deduplicated, correct scope) ─────────────────────
+# Total SOH: sum of Qty Available across SOH warehouses (all rows)
+total_soh = df_raw[df_raw["Warehouse"].isin(SOH_WH)]["Qty Available"].sum()
+
+# Total Forecast: sum of per-SKU forecast (already deduplicated in soh_sku)
+total_fc = soh_sku["Forecast"].sum() if not soh_sku.empty else 0
+
+# SKUs WITH a forecast (Per Day Req > 0) — used for meaningful DoS stats
+sku_with_fc = soh_sku[soh_sku["Per Day Req"] > 0] if not soh_sku.empty else pd.DataFrame()
+
+# Avg DoS: only over SKUs that HAVE a forecast (exclude None/NaN)
+avg_dos = sku_with_fc["Days of Stock"].dropna().mean() if not sku_with_fc.empty else 0
+avg_dos = avg_dos if pd.notna(avg_dos) else 0
+
+# Critical: SKUs with DoS < 7 days (must have forecast)
+critical = int((sku_with_fc["Days of Stock"] < 7).sum()) if not sku_with_fc.empty else 0
+
+# Low stock: SKUs with DoS between 7 and 14 days
+low_stock = int(((sku_with_fc["Days of Stock"] >= 7) & (sku_with_fc["Days of Stock"] <= 14)).sum()) if not sku_with_fc.empty else 0
+
+# No forecast: SKUs present in inventory but missing forecast entirely
+no_forecast = int((soh_sku["Per Day Req"] == 0).sum()) if not soh_sku.empty else 0
 
 st.markdown(f"""
 <div class="kpi-grid">
@@ -211,7 +227,7 @@ st.markdown(f"""
             <div>
                 <div class="kpi-lbl">Total Forecast Qty</div>
                 <div class="kpi-num">{total_fc:,.0f}</div>
-                <div class="kpi-cap">Plant location · Forecast/24 per day</div>
+                <div class="kpi-cap">Plant location · Forecast ÷ 24 per day</div>
             </div>
             <div class="kpi-ico">📈</div>
         </div>
@@ -221,7 +237,7 @@ st.markdown(f"""
             <div>
                 <div class="kpi-lbl">Avg Days of Stock</div>
                 <div class="kpi-num">{avg_dos:.1f}</div>
-                <div class="kpi-cap">SOH ÷ Per Day Req</div>
+                <div class="kpi-cap">SKUs with forecast only · {len(sku_with_fc):,} SKUs</div>
             </div>
             <div class="kpi-ico">⏱</div>
         </div>
@@ -231,15 +247,23 @@ st.markdown(f"""
             <div>
                 <div class="kpi-lbl">Critical (&lt; 7 Days)</div>
                 <div class="kpi-num">{critical:,}</div>
-                <div class="kpi-cap">{no_forecast:,} items have no forecast</div>
+                <div class="kpi-cap">{low_stock:,} SKUs low (7–14 days)</div>
             </div>
             <div class="kpi-ico">🚨</div>
         </div>
     </div>
+    <div class="kpi-card slate">
+        <div class="kpi-inner">
+            <div>
+                <div class="kpi-lbl">No Forecast</div>
+                <div class="kpi-num">{no_forecast:,}</div>
+                <div class="kpi-cap">SKUs with no demand plan</div>
+            </div>
+            <div class="kpi-ico">⚫</div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
-
-# ── CHARTS REMOVED ──
 
 # ── FILTERS ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
