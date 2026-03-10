@@ -296,3 +296,185 @@ else:
         })
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY</div>', unsafe_allow_html=True)
+
+# ── STN TRANSFER LOOKUP ──────────────────────────────────────────────────────
+st.markdown("""
+<style>
+.stn-header {
+    margin-top:2rem; padding-top:16px; border-top:2px solid #1e2535;
+    margin-bottom:14px;
+}
+.stn-title { font-size:14px; font-weight:800; color:#f1f5f9; display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.stn-sub   { font-size:11px; color:#64748b; }
+.stn-filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
+
+.status-pill {
+    display:inline-block; padding:2px 10px; border-radius:20px;
+    font-size:10px; font-weight:700; letter-spacing:.8px;
+}
+.status-completed  { background:#0a1f0a; color:#4ade80; border:1px solid #166534; }
+.status-cancelled  { background:#1a0000; color:#f87171; border:1px solid #7f1d1d; }
+.status-in-transit { background:#0c1a3a; color:#60a5fa; border:1px solid #1a3a6e; }
+.status-pending    { background:#1a1000; color:#fbbf24; border:1px solid #78350f; }
+
+.stn-kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+.stn-kpi { background:#0d1117; border:1px solid #1e2535; border-radius:12px; padding:12px 16px; }
+.stn-kpi-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#475569; margin-bottom:6px; }
+.stn-kpi-num { font-size:22px; font-weight:800; font-family:'JetBrains Mono',monospace; }
+.stn-kpi.teal .stn-kpi-lbl { color:#5bc8c0; } .stn-kpi.teal .stn-kpi-num { color:#99f6e4; }
+.stn-kpi.green .stn-kpi-lbl { color:#4ade80; } .stn-kpi.green .stn-kpi-num { color:#bbf7d0; }
+.stn-kpi.red .stn-kpi-lbl { color:#f87171; } .stn-kpi.red .stn-kpi-num { color:#fecaca; }
+.stn-kpi.blue .stn-kpi-lbl { color:#60a5fa; } .stn-kpi.blue .stn-kpi-num { color:#bfdbfe; }
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="stn-header">
+    <div class="stn-title">🚚 Stock Transfer (STN) Lookup</div>
+    <div class="stn-sub">Search by FG SKU to see all stock transfers — destination warehouse, date & status</div>
+</div>
+""", unsafe_allow_html=True)
+
+@st.cache_data(ttl=300)
+def load_stn():
+    df = load_sheet("STN")
+    if df.empty:
+        # Try alternate sheet names
+        for name in ["STN Report", "Stock Transfer", "STN-Report", "Stock Transfer Note"]:
+            df = load_sheet(name)
+            if not df.empty:
+                break
+    if df.empty:
+        return pd.DataFrame()
+    df.columns = df.columns.str.strip()
+    # Parse date
+    for dcol in ["Date", "GRN Date", "Timestamp"]:
+        if dcol in df.columns:
+            df[dcol] = pd.to_datetime(df[dcol], errors="coerce")
+    # Numeric
+    for ncol in ["Qty", "GRN Qty", "GRN Shortage", "GRN Rejection", "GRN Actual Qty",
+                 "Unit Cost (₹)", "Amount Cost (₹)", "Transit Time"]:
+        if ncol in df.columns:
+            df[ncol] = pd.to_numeric(df[ncol], errors="coerce").fillna(0)
+    return df
+
+df_stn = load_stn()
+
+if df_stn.empty:
+    st.info("ℹ️ STN sheet not found. Please ensure your Excel file has a sheet named **STN** or **STN Report**.")
+else:
+    # Determine key column names from your STN data
+    sku_col    = next((c for c in df_stn.columns if "fg code" in c.lower() or "sku" in c.lower()), None)
+    name_col   = next((c for c in df_stn.columns if "fg name" in c.lower() or "item name" in c.lower()), None)
+    to_wh_col  = next((c for c in df_stn.columns if "to warehouse" in c.lower()), None)
+    from_wh_col= next((c for c in df_stn.columns if "from warehouse" in c.lower()), None)
+    date_col   = "Date" if "Date" in df_stn.columns else None
+    req_col    = next((c for c in df_stn.columns if "request no" in c.lower()), None)
+    status_col = "Status" if "Status" in df_stn.columns else None
+
+    # ── STN FILTERS ──────────────────────────────────────────────────────────
+    st.markdown('<div class="stn-filter-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="filter-title">🔽 STN Filters</div>', unsafe_allow_html=True)
+    sc1, sc2, sc3, sc4 = st.columns([2.5, 2, 2, 2])
+    with sc1:
+        stn_search = st.text_input("ss", placeholder="🔍 Search FG SKU / Name / Request No…", label_visibility="collapsed")
+    with sc2:
+        if to_wh_col:
+            twh_opts = ["All Warehouses"] + sorted(df_stn[to_wh_col].dropna().astype(str).unique().tolist())
+        else:
+            twh_opts = ["All Warehouses"]
+        sel_twh = st.selectbox("tw", twh_opts, label_visibility="collapsed")
+    with sc3:
+        if status_col:
+            stat_opts = ["All Status"] + sorted(df_stn[status_col].dropna().astype(str).unique().tolist())
+        else:
+            stat_opts = ["All Status"]
+        sel_stat = st.selectbox("st", stat_opts, label_visibility="collapsed")
+    with sc4:
+        if date_col:
+            stn_months = ["All Months"] + sorted(
+                df_stn[date_col].dropna().dt.strftime("%b-%Y").unique().tolist(), reverse=True)
+        else:
+            stn_months = ["All Months"]
+        sel_stn_month = st.selectbox("sm", stn_months, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── APPLY STN FILTERS ────────────────────────────────────────────────────
+    dfs = df_stn.copy()
+    if stn_search:
+        dfs = dfs[dfs.astype(str).apply(
+            lambda x: x.str.contains(stn_search, case=False, na=False)).any(axis=1)]
+    if sel_twh != "All Warehouses" and to_wh_col:
+        dfs = dfs[dfs[to_wh_col].astype(str) == sel_twh]
+    if sel_stat != "All Status" and status_col:
+        dfs = dfs[dfs[status_col].astype(str) == sel_stat]
+    if sel_stn_month != "All Months" and date_col:
+        dfs = dfs[dfs[date_col].dt.strftime("%b-%Y") == sel_stn_month]
+
+    # ── STN KPI CARDS ────────────────────────────────────────────────────────
+    total_transfers = len(dfs)
+    total_qty_stn   = dfs["Qty"].sum()               if "Qty"           in dfs.columns else 0
+    cancelled       = (dfs[status_col] == "Cancelled").sum() if status_col else 0
+    completed       = (dfs[status_col] == "Completed").sum() if status_col else 0
+
+    st.markdown(f"""
+    <div class="stn-kpi-row">
+        <div class="stn-kpi teal"><div class="stn-kpi-lbl">Total Transfers</div><div class="stn-kpi-num">{total_transfers:,}</div></div>
+        <div class="stn-kpi blue"><div class="stn-kpi-lbl">Total Qty Transferred</div><div class="stn-kpi-num">{total_qty_stn:,.0f}</div></div>
+        <div class="stn-kpi green"><div class="stn-kpi-lbl">Completed</div><div class="stn-kpi-num">{completed:,}</div></div>
+        <div class="stn-kpi red"><div class="stn-kpi-lbl">Cancelled</div><div class="stn-kpi-num">{cancelled:,}</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── STN TABLE ────────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div class="tbl-hdr">
+        <span class="tbl-lbl">🚚 STN Records</span>
+        <span class="tbl-badge">{len(dfs):,} rows</span>
+    </div>""", unsafe_allow_html=True)
+
+    # Export STN
+    stn_buf = io.BytesIO()
+    with pd.ExcelWriter(stn_buf, engine="openpyxl") as w:
+        dfs.to_excel(w, index=False, sheet_name="STN")
+    st.download_button("⬇  Export STN to Excel", stn_buf.getvalue(), "STN_Report.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True)
+
+    st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
+
+    # Status colour rows
+    def colour_stn(row):
+        if not status_col or status_col not in row.index:
+            return [""] * len(row)
+        s = str(row[status_col]).lower()
+        if "cancel"  in s: return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
+        if "complet" in s: return ["background-color:#0a1f0a; color:#bbf7d0"] * len(row)
+        if "transit" in s: return ["background-color:#0c1a3a; color:#bfdbfe"] * len(row)
+        return ["background-color:#1a1000; color:#fde68a"] * len(row)
+
+    # Show only key columns for clean display
+    key_cols = [c for c in [
+        req_col, date_col, sku_col, name_col,
+        "FG Category", from_wh_col, to_wh_col,
+        "Qty", "GRN Qty", "GRN Shortage", "GRN Rejection",
+        status_col, "GRN Date", "Transit Time"
+    ] if c and c in dfs.columns]
+
+    disp_stn = dfs[key_cols].copy() if key_cols else dfs.copy()
+    for dc in [date_col, "GRN Date"]:
+        if dc and dc in disp_stn.columns:
+            disp_stn[dc] = disp_stn[dc].dt.strftime("%d-%b-%Y").fillna("")
+
+    st.dataframe(
+        disp_stn.style.apply(colour_stn, axis=1),
+        use_container_width=True, height=450, hide_index=True,
+        column_config={
+            "Qty":          st.column_config.NumberColumn("Qty",          format="%.0f"),
+            "GRN Qty":      st.column_config.NumberColumn("GRN Qty",      format="%.0f"),
+            "GRN Shortage": st.column_config.NumberColumn("Shortage",     format="%.0f"),
+            "GRN Rejection":st.column_config.NumberColumn("Rejection",    format="%.0f"),
+        }
+    )
+
+st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · STN</div>', unsafe_allow_html=True)
