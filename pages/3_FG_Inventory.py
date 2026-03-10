@@ -20,7 +20,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .block-container { padding: 1rem 1.2rem 3rem 1.2rem !important; max-width: 100% !important; }
 [data-testid="stVerticalBlock"] > div { gap: 0 !important; }
 
-/* HEADER */
 .app-header { display:flex; align-items:center; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid #161d2e; margin-bottom:14px; }
 .hdr-left { display:flex; align-items:center; gap:10px; }
 .hdr-logo { width:40px; height:40px; min-width:40px; background:#0f1f3a; border:1px solid #1a3a5c; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:19px; }
@@ -30,15 +29,14 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 5px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
 
-/* KPI ROW — 2 cards only */
 .kpi-row { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:16px; }
 .kpi-box { border-radius:16px; padding:20px 24px; border:1px solid; position:relative; overflow:hidden; }
 .kpi-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
 .kpi-box::after  { content:''; position:absolute; bottom:-30px; right:-30px; width:110px; height:110px; border-radius:50%; opacity:.1; }
-.kpi-box.teal  { background:linear-gradient(135deg,#061413,#0a2825); border-color:#134e4a; }
-.kpi-box.teal::before { background:linear-gradient(90deg,#5bc8c0,#2dd4bf); }
-.kpi-box.teal::after  { background:radial-gradient(circle,#5bc8c0,transparent); }
-.kpi-box.violet{ background:linear-gradient(135deg,#130a2a,#1e0f40); border-color:#3b1f6e; }
+.kpi-box.teal   { background:linear-gradient(135deg,#061413,#0a2825); border-color:#134e4a; }
+.kpi-box.teal::before  { background:linear-gradient(90deg,#5bc8c0,#2dd4bf); }
+.kpi-box.teal::after   { background:radial-gradient(circle,#5bc8c0,transparent); }
+.kpi-box.violet { background:linear-gradient(135deg,#130a2a,#1e0f40); border-color:#3b1f6e; }
 .kpi-box.violet::before { background:linear-gradient(90deg,#a855f7,#818cf8); }
 .kpi-box.violet::after  { background:radial-gradient(circle,#a855f7,transparent); }
 .kpi-inner { display:flex; align-items:flex-start; justify-content:space-between; }
@@ -49,7 +47,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .kpi-box.teal   .kpi-label { color:#5bc8c0; } .kpi-box.teal   .kpi-value { color:#99f6e4; } .kpi-box.teal   .kpi-sub { color:#0d9488; }
 .kpi-box.violet .kpi-label { color:#c084fc; } .kpi-box.violet .kpi-value { color:#e9d5ff; } .kpi-box.violet .kpi-sub { color:#7c3aed; }
 
-/* FILTER */
 .filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
 .filter-title { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
 .filter-title::after { content:''; flex:1; height:1px; background:#1e2535; }
@@ -63,13 +60,11 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .stButton > button { width:100% !important; background:#0d1117 !important; border:1.5px solid #1e2535 !important; border-radius:9px !important; color:#64748b !important; font-size:13px !important; font-weight:600 !important; padding:9px !important; transition:all .2s !important; margin-bottom:6px !important; }
 .stButton > button:hover { border-color:#5bc8c0 !important; color:#5bc8c0 !important; }
 
-/* TABS */
 [data-testid="stTabs"] [data-baseweb="tab-list"] { background:#0d1117 !important; border-radius:12px 12px 0 0 !important; border:1px solid #1e2535 !important; border-bottom:none !important; padding:6px 8px 0 !important; gap:4px !important; }
 [data-testid="stTabs"] [data-baseweb="tab"] { background:transparent !important; border-radius:8px 8px 0 0 !important; color:#475569 !important; font-size:12px !important; font-weight:700 !important; padding:8px 18px !important; border:none !important; }
 [data-testid="stTabs"] [aria-selected="true"] { background:#111827 !important; color:#5bc8c0 !important; border-bottom:2px solid #5bc8c0 !important; }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] { background:#0d1117 !important; border:1px solid #1e2535 !important; border-radius:0 0 12px 12px !important; padding:14px !important; }
 
-/* TABLE */
 .tbl-hdr { display:flex; align-items:center; justify-content:space-between; padding:8px 0 6px; }
 .tbl-lbl { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; }
 .tbl-badge { background:#0f172a; border:1px solid #1e2d45; color:#818cf8; font-size:11px; font-weight:700; padding:3px 11px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
@@ -84,10 +79,11 @@ def load_fg():
     df = load_sheet("FG-Inventory")
     if df.empty: return pd.DataFrame()
     df.columns = df.columns.str.strip()
-    if "Qty Available" in df.columns:
-        df["Qty Available"] = pd.to_numeric(df["Qty Available"], errors="coerce").fillna(0)
+    for col in ["Qty Available","Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     today = pd.Timestamp(datetime.today().date())
-    for col in ["Expiry Date", "MFG Date", "Inventory Date"]:
+    for col in ["Expiry Date","MFG Date","Inventory Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
     if "Expiry Date" in df.columns and "MFG Date" in df.columns:
@@ -99,11 +95,6 @@ def load_fg():
         df["Shelf Life %"] = pct.round(1)
     else:
         df["Shelf Life %"] = 0.0
-    # Numeric inward / issue
-    for col in ["Qty Inward", "Qty (Issue / Hold)", "Val (Inc)", "Val (Ex)",
-                "Value (Inc Tax)", "Value (Ex Tax)"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
 @st.cache_data(ttl=300)
@@ -113,8 +104,9 @@ def load_stn():
     df.columns = df.columns.str.strip()
     if "Date" in df.columns:
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    if "Qty" in df.columns:
-        df["Qty"] = pd.to_numeric(df["Qty"], errors="coerce").fillna(0)
+    for col in ["Qty","Unit Cost (₹)","Amount Cost (₹)","GRN Qty","GRN Shortage","GRN Rejection","GRN Actual Qty"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
 df_fg  = load_fg()
@@ -152,16 +144,14 @@ with c2:
     wh_opts = ["All Warehouses"] + sorted(df_fg["Warehouse"].dropna().astype(str).unique().tolist()) if "Warehouse" in df_fg.columns else ["All Warehouses"]
     sel_wh = st.selectbox("fw", wh_opts, label_visibility="collapsed")
 with c3:
-    stn_wh_col = next((c for c in df_stn.columns if "to warehouse" in c.lower()), None) if not df_stn.empty else None
-    stn_wh_opts = ["All STN WH"]
-    if stn_wh_col and not df_stn.empty:
-        stn_wh_opts += sorted(df_stn[stn_wh_col].dropna().astype(str).unique().tolist())
-    sel_stn_wh = st.selectbox("sw", stn_wh_opts, label_visibility="collapsed")
+    stn_to_wh_opts = ["All STN WH"]
+    if not df_stn.empty and "To Warehouse" in df_stn.columns:
+        stn_to_wh_opts += sorted(df_stn["To Warehouse"].dropna().astype(str).unique().tolist())
+    sel_stn_wh = st.selectbox("sw", stn_to_wh_opts, label_visibility="collapsed")
 with c4:
-    stat_col = next((c for c in df_stn.columns if "status" in c.lower()), None) if not df_stn.empty else None
     stat_opts = ["All Status"]
-    if stat_col and not df_stn.empty:
-        stat_opts += sorted(df_stn[stat_col].dropna().astype(str).unique().tolist())
+    if not df_stn.empty and "Status" in df_stn.columns:
+        stat_opts += sorted(df_stn["Status"].dropna().astype(str).unique().tolist())
     sel_stat = st.selectbox("ss", stat_opts, label_visibility="collapsed")
 with c5:
     shelf_opts = ["All Shelf Life","Below 90%","Below 80%","Below 70%","Below 50%"]
@@ -174,23 +164,91 @@ if search:
     df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
 if sel_wh != "All Warehouses" and "Warehouse" in df.columns:
     df = df[df["Warehouse"].astype(str) == sel_wh]
-if "Shelf Life %" in df.columns:
-    shelf_map = {"Below 90%": 90, "Below 80%": 80, "Below 70%": 70, "Below 50%": 50}
-    if sel_shelf in shelf_map:
-        df = df[df["Shelf Life %"] < shelf_map[sel_shelf]]
+shelf_map = {"Below 90%": 90, "Below 80%": 80, "Below 70%": 70, "Below 50%": 50}
+if sel_shelf in shelf_map and "Shelf Life %" in df.columns:
+    df = df[df["Shelf Life %"] < shelf_map[sel_shelf]]
 
+# STN filters
 df_stn_f = df_stn.copy() if not df_stn.empty else pd.DataFrame()
 if not df_stn_f.empty:
-    fg_code_col = next((c for c in df_stn_f.columns if "fg code" in c.lower()), None)
-    to_wh_col   = next((c for c in df_stn_f.columns if "to warehouse" in c.lower()), None)
-    if search and fg_code_col:
+    if search:
         df_stn_f = df_stn_f[df_stn_f.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-    if sel_stn_wh != "All STN WH" and to_wh_col:
-        df_stn_f = df_stn_f[df_stn_f[to_wh_col].astype(str) == sel_stn_wh]
-    if sel_stat != "All Status" and stat_col:
-        df_stn_f = df_stn_f[df_stn_f[stat_col].astype(str) == sel_stat]
+    if sel_stn_wh != "All STN WH" and "To Warehouse" in df_stn_f.columns:
+        df_stn_f = df_stn_f[df_stn_f["To Warehouse"].astype(str) == sel_stn_wh]
+    if sel_stat != "All Status" and "Status" in df_stn_f.columns:
+        df_stn_f = df_stn_f[df_stn_f["Status"].astype(str) == sel_stat]
 
-# ── KPI CARDS — only 2 ───────────────────────────────────────────────────────
+# ── BUILD STN DISPLAY TABLE ───────────────────────────────────────────────────
+# Join STN with FG Inventory to get Item Name, SKU, Category, Warehouse,
+# Qty Available, Shelf Life % alongside STN columns.
+# STN has: FG Code, FG Name, FG Category, To Warehouse, Request No, Qty, Status
+# FG has:  Item SKU, Item Name, Category, Warehouse, Qty Available, Shelf Life %
+# Join key: STN["FG Code"] == FG["Item SKU"]  (deduplicated FG side)
+
+def build_stn_view(df_stn_filtered, df_fg_full):
+    if df_stn_filtered.empty:
+        return pd.DataFrame()
+
+    # Deduplicate FG at SKU level — take max Qty Available (sum across warehouses)
+    fg_sku = (
+        df_fg_full
+        .groupby("Item SKU", as_index=False)
+        .agg(
+            **{"Item Name":    ("Item Name",    "first")},
+            **{"Category":     ("Category",     "first")},
+            **{"Warehouse":    ("Warehouse",    "first")},
+            **{"Qty Available":("Qty Available","sum")},
+            **{"Shelf Life %": ("Shelf Life %", "mean")},
+        )
+    ) if "Item SKU" in df_fg_full.columns else pd.DataFrame()
+
+    stn = df_stn_filtered.copy()
+
+    # Rename STN cols to match display format
+    stn = stn.rename(columns={
+        "FG Code":      "_join_sku",
+        "FG Name":      "_fg_name",
+        "FG Category":  "_fg_cat",
+        "To Warehouse": "STN WH",
+        "Request No":   "STN No",
+        "Qty":          "STN Quantity",
+        "Status":       "STN Status",
+        "Date":         "STN Date",
+        "From Warehouse": "From WH",
+    })
+
+    # Join FG data onto STN rows
+    if not fg_sku.empty and "_join_sku" in stn.columns:
+        stn["_join_sku"] = stn["_join_sku"].astype(str).str.strip()
+        fg_sku["_join_key"] = fg_sku["Item SKU"].astype(str).str.strip()
+        stn = stn.merge(
+            fg_sku[["_join_key","Item Name","Category","Warehouse","Qty Available","Shelf Life %"]],
+            left_on="_join_sku", right_on="_join_key", how="left"
+        )
+        stn.drop(columns=["_join_key"], errors="ignore", inplace=True)
+        # Use FG Name from STN sheet if FG join didn't find a match
+        stn["Item Name"] = stn["Item Name"].fillna(stn.get("_fg_name", ""))
+        stn["Category"]  = stn["Category"].fillna(stn.get("_fg_cat", ""))
+    else:
+        # Fallback — use STN's own FG Name / Category
+        stn["Item Name"]    = stn.get("_fg_name", "")
+        stn["Category"]     = stn.get("_fg_cat", "")
+        stn["Warehouse"]    = ""
+        stn["Qty Available"]= 0
+        stn["Shelf Life %"] = 0.0
+
+    stn["Item SKU"] = stn["_join_sku"]
+
+    # Final column order matching the requested format
+    final_cols = ["Item Name","Item SKU","Category","Warehouse",
+                  "Qty Available","Shelf Life %",
+                  "STN No","STN Quantity","STN WH","STN Status","STN Date","From WH"]
+    out_cols = [c for c in final_cols if c in stn.columns]
+    return stn[out_cols].copy()
+
+df_stn_view = build_stn_view(df_stn_f, df_fg)
+
+# ── KPI CARDS ─────────────────────────────────────────────────────────────────
 total_qty  = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
 stn_raised = int(df_stn_f["Qty"].sum()) if not df_stn_f.empty and "Qty" in df_stn_f.columns else 0
 
@@ -222,9 +280,7 @@ st.markdown(f"""
 # ── TABS ──────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["📦  FG Inventory", "🚚  STN Transfers"])
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — FG INVENTORY
-# ═══════════════════════════════════════════════════════════════════════════════
+# ═══ TAB 1 — FG INVENTORY ════════════════════════════════════════════════════
 with tab1:
     st.markdown(f"""
     <div class="tbl-hdr">
@@ -237,78 +293,59 @@ with tab1:
         df.to_excel(w, index=False, sheet_name="FG Inventory")
     st.download_button("⬇  Export FG to Excel", buf1.getvalue(), "FG_Inventory.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-
     st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 
     if df.empty:
         st.warning("⚠️ No FG records match the current filters.")
     else:
-        fg_priority = ["Item Name","Item SKU","Category","Warehouse","UoM",
-                       "Qty Available","Shelf Life %",
-                       "Batch No","MFG Date","Expiry Date","Inventory Date",
-                       "Item Type","Primary Category",
-                       "Current Aging (Days)",
-                       "Qty Inward","Qty (Issue / Hold)",
-                       "Value (Inc Tax)","Value (Ex Tax)",
-                       "Val (Inc)","Val (Ex)"]
+        fg_priority = ["Item Name","Item SKU","Category","Primary Category","Warehouse","UoM",
+                       "Qty Available","Shelf Life %","Batch No","MFG Date","Expiry Date",
+                       "Inventory Date","Item Type","Current Aging (Days)",
+                       "Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]
         fg_cols = [c for c in fg_priority if c in df.columns]
-        fg_cols += [c for c in df.columns if c not in fg_cols and "STN" not in c]
+        fg_cols += [c for c in df.columns if c not in fg_cols]
         df_show = df[fg_cols].copy()
-
-        # ── Clean all date columns — strip time, format to dd-Mon-YYYY ────────
         for c in ["MFG Date","Expiry Date","Inventory Date"]:
             if c in df_show.columns:
                 df_show[c] = pd.to_datetime(df_show[c], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
 
-        st.dataframe(
-            df_show,          # no colour styling — uniform default table look
-            use_container_width=True, height=540, hide_index=True,
+        st.dataframe(df_show, use_container_width=True, height=540, hide_index=True,
             column_config={
-                "Qty Available":      st.column_config.NumberColumn("Qty Available",  format="%.0f"),
+                "Qty Available":      st.column_config.NumberColumn("Qty Available", format="%.0f"),
                 "Shelf Life %":       st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
-                "Qty Inward":         st.column_config.NumberColumn("Qty Inward",     format="%.0f"),
-                "Qty (Issue / Hold)": st.column_config.NumberColumn("Issue / Hold",   format="%.0f"),
-                "Value (Inc Tax)":    st.column_config.NumberColumn("Val (Inc)",      format="%.0f"),
-                "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",       format="%.0f"),
-                "Val (Inc)":          st.column_config.NumberColumn("Val (Inc)",      format="%.0f"),
-                "Val (Ex)":           st.column_config.NumberColumn("Val (Ex)",       format="%.0f"),
-            }
-        )
+                "Qty Inward":         st.column_config.NumberColumn("Qty Inward",    format="%.0f"),
+                "Qty (Issue / Hold)": st.column_config.NumberColumn("Issue / Hold",  format="%.0f"),
+                "Value (Inc Tax)":    st.column_config.NumberColumn("Val (Inc)",     format="%.0f"),
+                "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",      format="%.0f"),
+            })
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — STN TRANSFERS
-# ═══════════════════════════════════════════════════════════════════════════════
+# ═══ TAB 2 — STN TRANSFERS ═══════════════════════════════════════════════════
 with tab2:
-    if df_stn_f.empty:
+    if df_stn_view.empty:
         st.warning("⚠️ No STN data found or no records match the current filters.")
     else:
         st.markdown(f"""
         <div class="tbl-hdr">
             <span class="tbl-lbl">🚚 STN Transfer Records</span>
-            <span class="tbl-badge">{len(df_stn_f):,} rows</span>
+            <span class="tbl-badge">{len(df_stn_view):,} rows</span>
         </div>""", unsafe_allow_html=True)
 
         buf2 = io.BytesIO()
         with pd.ExcelWriter(buf2, engine="openpyxl") as w:
-            df_stn_f.to_excel(w, index=False, sheet_name="STN Transfers")
+            df_stn_view.to_excel(w, index=False, sheet_name="STN Transfers")
         st.download_button("⬇  Export STN to Excel", buf2.getvalue(), "STN_Transfers.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-
         st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 
-        df_stn_disp = df_stn_f.copy()
-        # Clean date
-        if "Date" in df_stn_disp.columns:
-            df_stn_disp["Date"] = pd.to_datetime(df_stn_disp["Date"], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
+        df_stn_disp = df_stn_view.copy()
+        if "STN Date" in df_stn_disp.columns:
+            df_stn_disp["STN Date"] = pd.to_datetime(df_stn_disp["STN Date"], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
 
-        col_cfg = {}
-        if "Qty" in df_stn_disp.columns:
-            col_cfg["Qty"] = st.column_config.NumberColumn("Qty", format="%.0f")
-
-        st.dataframe(
-            df_stn_disp,      # uniform colour — no styling
-            use_container_width=True, height=540, hide_index=True,
-            column_config=col_cfg
-        )
+        st.dataframe(df_stn_disp, use_container_width=True, height=540, hide_index=True,
+            column_config={
+                "Qty Available": st.column_config.NumberColumn("Qty Available", format="%.0f"),
+                "Shelf Life %":  st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
+                "STN Quantity":  st.column_config.NumberColumn("STN Quantity",  format="%.0f"),
+            })
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · STN</div>', unsafe_allow_html=True)
