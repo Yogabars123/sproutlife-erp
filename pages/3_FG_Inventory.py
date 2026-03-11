@@ -482,10 +482,37 @@ with tab2:
 
         st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
 
-        # Display column order
+        # ── Build batch-level shelf life lookup: (SKU, CFA WH) → list of batches ─
+        batch_lookup = {}   # key: (sku, wh) → list of dicts
+        if not df_cfa.empty and "Item SKU" in df_cfa.columns:
+            today = pd.Timestamp(datetime.today().date())
+            for (sku, wh), grp in df_cfa.groupby(["Item SKU","Warehouse"]):
+                batches = []
+                for _, r in grp.iterrows():
+                    batch_no = str(r.get("Batch No", "—")) if "Batch No" in r.index else "—"
+                    shelf    = round(float(r.get("Shelf Life %", 0)), 1)
+                    qty      = float(r.get("Qty Available", 0))
+                    exp      = r.get("Expiry Date", None)
+                    exp_str  = exp.strftime("%d-%b-%Y") if pd.notna(exp) else "—"
+                    batches.append({"Batch No": batch_no, "Qty": qty,
+                                    "Shelf Life %": shelf, "Expiry Date": exp_str})
+                batch_lookup[(str(sku).strip(), str(wh).strip())] = batches
+
+        # ── Add "Shelf Life (Batches)" text column to merged ─────────────────
+        def shelf_label(row):
+            key = (str(row["Item SKU"]).strip(), str(row["CFA Warehouse"]).strip())
+            batches = batch_lookup.get(key, [])
+            n = len(batches)
+            avg = row.get("Shelf Life %", 0)
+            if n == 0: return f"{avg:.1f}%"
+            return f"{avg:.1f}% · {n} batch{'es' if n>1 else ''}"
+
+        merged["Shelf Life"] = merged.apply(shelf_label, axis=1)
+
+        # Display column order — use text "Shelf Life" instead of ProgressColumn
         disp_cols = ["Item Name","Item SKU","Category","CFA Warehouse",
                      "FG Stock","STN In-Transit","STN Transfers",
-                     "Shelf Life %","Open PO Qty","Open Orders","Total Available","Diff"]
+                     "Shelf Life","Open PO Qty","Open Orders","Total Available","Diff"]
         if "Open PO Value (₹)" in merged.columns:
             disp_cols.insert(disp_cols.index("Diff"), "Open PO Value (₹)")
         disp_cols = [c for c in disp_cols if c in merged.columns]
@@ -497,10 +524,14 @@ with tab2:
             <span class="tbl-badge">{len(df_disp):,} SKUs</span>
         </div>""", unsafe_allow_html=True)
 
-        # Export
+        # Export (with numeric shelf life)
+        df_export = merged[["Item Name","Item SKU","Category","CFA Warehouse",
+                             "FG Stock","STN In-Transit","STN Transfers","Shelf Life %",
+                             "Open PO Qty","Open Orders","Total Available","Diff"] +
+                            (["Open PO Value (₹)"] if "Open PO Value (₹)" in merged.columns else [])].copy()
         buf2 = io.BytesIO()
         with pd.ExcelWriter(buf2, engine="openpyxl") as w:
-            df_disp.to_excel(w, index=False, sheet_name="CFA Analysis")
+            df_export.to_excel(w, index=False, sheet_name="CFA Analysis")
         st.download_button("⬇  Export to Excel", buf2.getvalue(), "CFA_Stock_Analysis.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
@@ -510,30 +541,88 @@ with tab2:
             d = row.get("Diff", 0)
             if pd.isna(d): return [""] * len(row)
             if d < 0:    return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
-            fg = row.get("FG Stock", 1)
             tot = row.get("Total Available", 1)
             if tot > 0 and d / tot < 0.15:
                 return ["background-color:#2d1f00; color:#fde68a"] * len(row)
             return ["background-color:#061410; color:#d1fae5"] * len(row)
 
         col_cfg = {
-            "FG Stock":         st.column_config.NumberColumn("FG Stock",        format="%.0f"),
-            "STN In-Transit":   st.column_config.NumberColumn("STN In-Transit 🚚",format="%.0f"),
-            "STN Transfers":    st.column_config.NumberColumn("# STNs",          format="%d"),
-            "Shelf Life %":     st.column_config.ProgressColumn("Shelf Life %",  min_value=0, max_value=100, format="%.1f%%"),
-            "Open PO Qty":      st.column_config.NumberColumn("Open PO Qty",     format="%.0f"),
-            "Open Orders":      st.column_config.NumberColumn("# Orders",        format="%d"),
-            "Total Available":  st.column_config.NumberColumn("Total Available", format="%.0f"),
-            "Diff":             st.column_config.NumberColumn("Diff ✅",          format="%.0f"),
+            "FG Stock":        st.column_config.NumberColumn("FG Stock",         format="%.0f"),
+            "STN In-Transit":  st.column_config.NumberColumn("STN In-Transit 🚚", format="%.0f"),
+            "STN Transfers":   st.column_config.NumberColumn("# STNs",           format="%d"),
+            "Shelf Life":      st.column_config.TextColumn("Shelf Life 📦"),
+            "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",      format="%.0f"),
+            "Open Orders":     st.column_config.NumberColumn("# Orders",         format="%d"),
+            "Total Available": st.column_config.NumberColumn("Total Available",  format="%.0f"),
+            "Diff":            st.column_config.NumberColumn("Diff ✅",           format="%.0f"),
         }
         if "Open PO Value (₹)" in df_disp.columns:
             col_cfg["Open PO Value (₹)"] = st.column_config.NumberColumn("PO Value (₹)", format="%.0f")
 
-        st.dataframe(
+        # Render main table with row selection enabled
+        event = st.dataframe(
             df_disp.style.apply(colour_row, axis=1),
-            use_container_width=True, height=560, hide_index=True,
-            column_config=col_cfg
+            use_container_width=True, height=480, hide_index=False,
+            column_config=col_cfg,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="cfa_table"
         )
+
+        # ── Batch Detail Panel (shown when a row is selected) ─────────────────
+        selected_rows = event.selection.get("rows", []) if hasattr(event, "selection") else []
+        if selected_rows:
+            sel_idx  = selected_rows[0]
+            sel_row  = df_disp.iloc[sel_idx]
+            sel_sku  = str(sel_row["Item SKU"]).strip()
+            sel_wh   = str(sel_row["CFA Warehouse"]).strip()
+            sel_name = sel_row.get("Item Name", sel_sku)
+            batches  = batch_lookup.get((sel_sku, sel_wh), [])
+
+            st.markdown(f"""
+            <div style="background:#0a0f1a; border:1.5px solid #5bc8c0; border-radius:12px;
+                        padding:14px 18px; margin-top:10px;">
+                <div style="font-size:11px; color:#5bc8c0; font-weight:700; text-transform:uppercase;
+                            letter-spacing:1px; margin-bottom:8px;">
+                    📦 Batch Shelf Life — {sel_name} · {sel_sku} · {sel_wh}
+                </div>
+            """, unsafe_allow_html=True)
+
+            if batches:
+                batch_df = pd.DataFrame(batches)[["Batch No","Qty","Shelf Life %","Expiry Date"]]
+                batch_df = batch_df.sort_values("Shelf Life %", ascending=True)
+
+                # Render each batch as a mini bar
+                for _, b in batch_df.iterrows():
+                    pct   = float(b["Shelf Life %"])
+                    color = "#5bc8c0"   # uniform teal — no red/green
+                    bar_w = max(2, int(pct))
+                    st.markdown(f"""
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px; font-size:12px;">
+                        <span style="width:160px; color:#94a3b8; font-family:'JetBrains Mono',monospace;
+                                     font-size:11px; white-space:nowrap; overflow:hidden;
+                                     text-overflow:ellipsis;">{b['Batch No']}</span>
+                        <div style="flex:1; background:#1e2535; border-radius:4px; height:10px; max-width:260px;">
+                            <div style="width:{bar_w}%; background:{color}; height:10px;
+                                        border-radius:4px; transition:width .3s;"></div>
+                        </div>
+                        <span style="width:52px; text-align:right; color:#e2e8f0; font-weight:700;
+                                     font-family:'JetBrains Mono',monospace; font-size:11px;">{pct:.1f}%</span>
+                        <span style="width:80px; text-align:right; color:#64748b;
+                                     font-size:11px; font-family:'JetBrains Mono',monospace;">{b['Qty']:,.0f} units</span>
+                        <span style="width:90px; color:#475569; font-size:11px;">Exp: {b['Expiry Date']}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="color:#475569; font-size:12px;">No batch data available for this SKU.</div>',
+                            unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="text-align:center; color:#334155; font-size:11px; font-family:'JetBrains Mono',monospace;
+                        padding:10px; margin-top:6px;">
+                👆 Click any row to see batch-level shelf life breakdown
+            </div>""", unsafe_allow_html=True)
 
         # ── Per-CFA Warehouse breakdown ───────────────────────────────────────
         st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
