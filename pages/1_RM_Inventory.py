@@ -243,17 +243,7 @@ if not soh_full.empty and "Days of Stock" in soh_full.columns:
     reorder_skus  = has_fc[(has_fc["Days of Stock"] >= 7) & (has_fc["Days of Stock"] <= 14)].sort_values("Days of Stock")
 
 cat_dos = pd.DataFrame()
-if not soh_full.empty and "Category" in soh_full.columns:
-    cat_dos = (soh_full[soh_full["Per Day Req"] > 0]
-               .groupby("Category").agg(Avg_DoS=("Days of Stock","mean"), SKUs=("Item SKU","count"), SOH=("SOH","sum"))
-               .reset_index().sort_values("Avg_DoS", ascending=True))
-
 wh_dist = pd.DataFrame()
-if not df_raw.empty:
-    wh_dist = (df_raw[df_raw["Warehouse"].isin(SOH_WH)]
-               .groupby("Warehouse")["Qty Available"].sum().reset_index()
-               .sort_values("Qty Available", ascending=False))
-    wh_dist = wh_dist[wh_dist["Qty Available"] > 0]
 
 st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 st.markdown('<div class="sec-div">🔍 Inventory Intelligence</div>', unsafe_allow_html=True)
@@ -427,92 +417,6 @@ with col_reorder:
                 unsafe_allow_html=True
             )
     st.markdown('</div>', unsafe_allow_html=True)
-
-# ── Row 2: Category DoS bars + Warehouse Distribution ────────────────────────
-col_cat, col_wh = st.columns([1.4, 1], gap="medium")
-
-with col_cat:
-    st.markdown('<div class="sec-div">📊 Days of Stock by Category</div>', unsafe_allow_html=True)
-    if cat_dos.empty:
-        st.info("No category data available.")
-    else:
-        max_dos = min(float(cat_dos["Avg_DoS"].max()), 60.0)
-        for _, row in cat_dos.iterrows():
-            dos_v  = float(row["Avg_DoS"]) if pd.notna(row["Avg_DoS"]) else 0
-            skus_n = int(row["SKUs"])
-            soh_v  = float(row["SOH"])
-            cat_n  = str(row["Category"])
-            bar_w  = min(int(dos_v / max(max_dos, 1) * 100), 100)
-            bar_c  = "#ef4444" if dos_v < 7 else "#f59e0b" if dos_v <= 14 else "#22c55e"
-            txt_c  = "#fca5a5" if dos_v < 7 else "#fde68a" if dos_v <= 14 else "#bbf7d0"
-            bg_c   = "#140608" if dos_v < 7 else "#0f0d02" if dos_v <= 14 else "#061a0a"
-            bdr_c  = "#450a0a" if dos_v < 7 else "#451a03" if dos_v <= 14 else "#14532d"
-            dos_f  = f"{dos_v:.1f}d"
-            soh_f  = f"{soh_v:,.0f}"
-            st.markdown(
-                f'<div style="background:{bg_c};border:1px solid {bdr_c};border-radius:10px;padding:10px 14px;margin-bottom:7px;">'
-                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
-                f'<span style="font-size:12px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{cat_n}</span>'
-                '<div style="display:flex;align-items:center;gap:8px;">'
-                f'<span style="font-size:10px;color:#475569;font-family:JetBrains Mono,monospace;">{skus_n} SKUs</span>'
-                f'<span style="font-size:13px;font-weight:800;color:{txt_c};font-family:JetBrains Mono,monospace;">{dos_f}</span>'
-                '</div></div>'
-                '<div style="background:#1e2535;border-radius:4px;height:7px;margin-bottom:5px;">'
-                f'<div style="width:{bar_w}%;background:{bar_c};height:7px;border-radius:4px;"></div>'
-                '</div>'
-                f'<div style="font-size:10px;color:#475569;font-family:JetBrains Mono,monospace;">SOH: <b style="color:#64748b;">{soh_f}</b></div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
-
-with col_wh:
-    st.markdown('<div class="sec-div">🏭 Stock by Warehouse</div>', unsafe_allow_html=True)
-    if wh_dist.empty:
-        st.info("No warehouse data.")
-    else:
-        total_wh = float(wh_dist["Qty Available"].sum())
-        max_wh   = float(wh_dist["Qty Available"].max())
-        wh_short = {
-            "Central": "Central",
-            "RM Warehouse Tumkur": "RM Tumkur",
-            "Central Warehouse - Cold Storage RM": "Cold Storage",
-            "Tumkur Warehouse": "Tumkur",
-            "Tumkur New Warehouse": "Tumkur New",
-            "HF Factory FG Warehouse": "HF Factory",
-            "Sproutlife Foods Private Ltd (SNOWMAN)": "SNOWMAN",
-        }
-        wh_colors = ["#5bc8c0","#818cf8","#60a5fa","#34d399","#f59e0b","#f472b6","#a78bfa"]
-        for i, (_, row) in enumerate(wh_dist.iterrows()):
-            wh_n  = str(row["Warehouse"])
-            qty   = float(row["Qty Available"])
-            bar_w = int(qty / max(max_wh, 1) * 100)
-            pct   = qty / total_wh * 100 if total_wh > 0 else 0
-            color = wh_colors[i % len(wh_colors)]
-            short = wh_short.get(wh_n, wh_n[:18])
-            qty_f = f"{qty:,.0f}"
-            pct_f = f"{pct:.1f}%"
-            st.markdown(
-                '<div style="background:#0d1117;border:1px solid #1e2535;border-radius:10px;padding:10px 14px;margin-bottom:7px;">'
-                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
-                f'<span style="font-size:12px;font-weight:700;color:#e2e8f0;">{short}</span>'
-                '<div style="display:flex;align-items:center;gap:8px;">'
-                f'<span style="font-size:10px;color:#475569;font-family:JetBrains Mono,monospace;">{pct_f}</span>'
-                f'<span style="font-size:12px;font-weight:800;color:{color};font-family:JetBrains Mono,monospace;">{qty_f}</span>'
-                '</div></div>'
-                '<div style="background:#1e2535;border-radius:4px;height:7px;">'
-                f'<div style="width:{bar_w}%;background:{color};height:7px;border-radius:4px;"></div>'
-                '</div></div>',
-                unsafe_allow_html=True
-            )
-        total_f = f"{total_wh:,.0f}"
-        st.markdown(
-            '<div style="background:#0a0f1a;border:1px solid #1e3a5f;border-radius:10px;padding:8px 14px;margin-top:4px;">'
-            '<div style="display:flex;justify-content:space-between;font-size:11px;font-family:JetBrains Mono,monospace;">'
-            '<span style="color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Total SOH</span>'
-            f'<span style="color:#60a5fa;font-weight:800;">{total_f}</span>'
-            '</div></div>',
-            unsafe_allow_html=True
-        )
 
 # ── TABLE ─────────────────────────────────────────────────────────────────────
 st.markdown('<hr style="border:none;border-top:1px solid #161d2e;margin:14px 0;">', unsafe_allow_html=True)
