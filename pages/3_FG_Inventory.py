@@ -411,15 +411,22 @@ with tab2:
         today_ts = pd.Timestamp(datetime.today().date())
 
         # ── Fill Rate (CFA only, from merged which is already CFA-filtered) ──
+        # Correct formula: sum of min(available, po_qty) per SKU / sum of po_qty
+        # This catches cases where some SKUs have surplus but others have zero stock
         fill_rows = []
         for cfa_wh in sorted(merged["CFA Warehouse"].dropna().astype(str).unique()):
             cfa_m       = merged[merged["CFA Warehouse"] == cfa_wh]
             total_po    = cfa_m["Open PO Qty"].sum()
-            total_avl   = cfa_m["Total Available"].sum()
-            fill_pct    = (min(total_avl, total_po) / total_po * 100) if total_po > 0 else 100.0
+            # Per-SKU fulfillable = min(Total Available, Open PO Qty) for each SKU
+            fulfillable = cfa_m.apply(
+                lambda r: min(r["Total Available"], r["Open PO Qty"]), axis=1
+            ).sum()
+            fill_pct    = (fulfillable / total_po * 100) if total_po > 0 else 100.0
+            fill_pct    = min(fill_pct, 100.0)  # cap at 100
             short_skus  = int((cfa_m["Diff"] < 0).sum())
-            fill_rows.append({"CFA": cfa_wh, "Fill Rate %": round(fill_pct,1),
-                               "Total Available": total_avl, "Open PO Qty": total_po,
+            fill_rows.append({"CFA": cfa_wh, "Fill Rate %": round(fill_pct, 1),
+                               "Total Available": cfa_m["Total Available"].sum(),
+                               "Open PO Qty": total_po,
                                "Shortfall SKUs": short_skus})
         fill_df = pd.DataFrame(fill_rows).sort_values("Fill Rate %", ascending=True) \
                   if fill_rows else pd.DataFrame()
