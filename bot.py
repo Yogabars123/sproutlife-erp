@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
 # ================= CONFIG =================
-TOKEN = "YOUR_TELEGRAM_TOKEN"
+TOKEN = "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ"
 FILE_PATH = "https://raw.githubusercontent.com/Yogabars123/sproutlife-erp/main/Sproutlife%20Inventory.xlsx"
 CACHE_REFRESH_SECONDS = 300
 MAX_MESSAGE_LENGTH = 4000
@@ -24,16 +24,6 @@ RM_DISPLAY_WAREHOUSES = [
     "Central Warehouse - Cold Storage RM",
     "Tumkur Warehouse",
     "Central Production -Packing",
-    "Tumkur New Warehouse",
-    "HF Factory FG Warehouse",
-    "Sproutlife Foods Private Ltd (SNOWMAN)"
-]
-
-RM_FORECAST_WAREHOUSES = [
-    "Central",
-    "RM Warehouse Tumkur",
-    "Central Warehouse - Cold Storage RM",
-    "Tumkur Warehouse",
     "Tumkur New Warehouse",
     "HF Factory FG Warehouse",
     "Sproutlife Foods Private Ltd (SNOWMAN)"
@@ -61,7 +51,11 @@ def load_data():
 
         print("Downloading Excel from GitHub...")
 
-        response = requests.get(FILE_PATH)
+        response = requests.get(FILE_PATH, timeout=60)
+
+        if response.status_code != 200:
+            raise Exception("Failed to download Excel from GitHub")
+
         excel_file = io.BytesIO(response.content)
 
         # RM
@@ -78,41 +72,18 @@ def load_data():
         # GRN
         df_grn = pd.read_excel(excel_file, sheet_name="GRN-Data")
         df_grn.columns = df_grn.columns.str.strip()
-        df_grn["GRN Date"] = pd.to_datetime(df_grn["GRN Date"], errors="coerce")
-        df_grn["Item Code"] = df_grn["Item Code"].astype(str).str.strip()
-        df_grn["Item Name"] = df_grn["Item Name"].astype(str).str.strip()
-        df_grn["PO No"] = df_grn["PO No"].astype(str).str.strip()
-        df_grn["Vendor Name"] = df_grn["Vendor Name"].astype(str).str.strip()
-        df_grn["Warehouse"] = df_grn["Warehouse"].astype(str).str.strip()
-        df_grn["QuantityOrdered"] = pd.to_numeric(df_grn["QuantityOrdered"], errors="coerce").fillna(0)
-        df_grn["QuantityReceived"] = pd.to_numeric(df_grn["QuantityReceived"], errors="coerce").fillna(0)
-        df_grn["CleanCode"] = df_grn["Item Code"].str.lower()
-        df_grn["CleanPO"] = df_grn["PO No"].str.lower()
 
         excel_file.seek(0)
 
         # Forecast
         df_forecast = pd.read_excel(excel_file, sheet_name="Forecast")
         df_forecast.columns = df_forecast.columns.str.strip()
-        df_forecast["Item code"] = df_forecast["Item code"].astype(str).str.strip()
-        df_forecast["Product Name"] = df_forecast["Product Name"].astype(str).str.strip()
-        df_forecast["Location"] = df_forecast["Location"].astype(str).str.strip()
-        df_forecast["Forecast"] = pd.to_numeric(df_forecast["Forecast"], errors="coerce").fillna(0)
-        df_forecast = df_forecast[df_forecast["Location"].str.lower() == "plant"]
-        df_forecast["CleanCode"] = df_forecast["Item code"].str.lower()
 
         excel_file.seek(0)
 
         # Consumption
         df_cons = pd.read_excel(excel_file, sheet_name="Consumption")
         df_cons.columns = df_cons.columns.str.strip()
-        df_cons["Material Code"] = df_cons["Material Code"].astype(str).str.strip()
-        df_cons["Product SKU"] = df_cons["Product SKU"].astype(str).str.strip()
-        df_cons["Product Name"] = df_cons["Product Name"].astype(str).str.strip()
-        df_cons["Consumed (As per BOM)"] = pd.to_numeric(
-            df_cons["Consumed (As per BOM)"], errors="coerce"
-        ).fillna(0)
-        df_cons["CleanMaterial"] = df_cons["Material Code"].str.lower()
 
         excel_file.seek(0)
 
@@ -123,7 +94,6 @@ def load_data():
         df_fg["Item Name"] = df_fg["Item Name"].astype(str).str.strip()
         df_fg["Warehouse"] = df_fg["Warehouse"].astype(str).str.strip()
         df_fg["Qty Available"] = pd.to_numeric(df_fg["Qty Available"], errors="coerce").fillna(0)
-        df_fg["Expiry Date"] = pd.to_datetime(df_fg["Expiry Date"], errors="coerce")
         df_fg["CleanSKU"] = df_fg["Item SKU"].str.lower()
 
         df_rm_cache = df_rm
@@ -131,6 +101,7 @@ def load_data():
         df_forecast_cache = df_forecast
         df_cons_cache = df_cons
         df_fg_cache = df_fg
+
         last_refresh_time = time.time()
 
         print("Excel loaded successfully")
@@ -142,12 +113,16 @@ def load_data():
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
+
         user_input = update.message.text.strip().lower()
+
         df_rm, df_grn, df_forecast, df_cons, df_fg = load_data()
 
-        # FG
+        # ================= FG =================
         if user_input.startswith("fg-"):
+
             code = user_input.replace("fg-", "")
+
             fg_matches = df_fg[df_fg["CleanSKU"].str.contains(code)]
 
             if fg_matches.empty:
@@ -166,8 +141,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_long(update, reply)
             return
 
-        # RM
+        # ================= RM =================
         if user_input.startswith("rm-"):
+
             code = user_input.replace("rm-", "")
 
             rm_display = df_rm[
@@ -194,17 +170,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Command not recognized.")
 
     except Exception as e:
+
         print("ERROR:", e)
         traceback.print_exc()
+
         await update.message.reply_text("⚠️ Internal error.")
 
 
 # ================= START BOT =================
 def main():
+
     print("🚀 ENTERPRISE BOT RUNNING...")
+
     app = ApplicationBuilder().token(TOKEN).build()
+
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+
+    # drop_pending_updates prevents old messages from crashing deployment
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
