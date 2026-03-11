@@ -6,7 +6,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 
 # ================= CONFIG =================
 TOKEN = "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ"
-FILE_PATH = "https://raw.githubusercontent.com/Yogabars123/sproutlife-erp/main/pages/Sproutlife%20Inventory.xlsx"
+FILE_PATH = "https://raw.githubusercontent.com/Yogabars123/sproutlife-erp/main/Sproutlife%20Inventory.xlsx"
 CACHE_REFRESH_SECONDS = 300
 MAX_MESSAGE_LENGTH = 4000
 
@@ -287,4 +287,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
