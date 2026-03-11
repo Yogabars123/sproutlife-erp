@@ -507,9 +507,9 @@ with tab2:
 
                 # Header
                 hdr = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-bottom:6px;">'
-                hdr += '<div style="font-size:10px;color:#334155;font-weight:700;font-family:\'JetBrains Mono\',monospace;">CFA</div>'
+                hdr += '<div style="font-size:10px;color:#334155;font-weight:700;font-family:JetBrains Mono,monospace;">CFA</div>'
                 for b, bc in zip(buckets, bkt_cols):
-                    hdr += f'<div style="font-size:9px;color:{bc};font-weight:700;text-align:center;font-family:\'JetBrains Mono\',monospace;line-height:1.3;">{b}</div>'
+                    hdr += f'<div style="font-size:9px;color:{bc};font-weight:700;text-align:center;font-family:JetBrains Mono,monospace;line-height:1.3;">{b}</div>'
                 hdr += '</div>'
                 st.markdown(hdr, unsafe_allow_html=True)
 
@@ -520,17 +520,23 @@ with tab2:
                         val       = float(er[b])
                         intensity = val / max_vals[b] if max_vals[b] > 0 else 0
                         opacity   = min(0.4 + max(0.08, intensity), 1.0)
-                        val_str   = f"{val:,.0f}" if val > 0 else "—"
+                        val_str   = f"{val:,.0f}" if val > 0 else "&#8212;"
                         val_color = bc if val > 0 else "#1e2535"
-                        row += f'<div style="background:{bbg};border:1px solid {bbdr};border-radius:7px;padding:5px 4px;text-align:center;opacity:{opacity:.2f};"><div style="font-size:11px;font-weight:800;color:{val_color};font-family:\'JetBrains Mono\',monospace;line-height:1;">{val_str}</div></div>'
+                        row += (
+                            f'<div style="background:{bbg};border:1px solid {bbdr};border-radius:7px;'
+                            f'padding:5px 4px;text-align:center;opacity:{opacity:.2f};">'
+                            f'<div style="font-size:11px;font-weight:800;color:{val_color};'
+                            f'font-family:JetBrains Mono,monospace;line-height:1;">{val_str}</div>'
+                            f'</div>'
+                        )
                     row += '</div>'
                     st.markdown(row, unsafe_allow_html=True)
 
                 # Totals row
                 tot = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid #1e2535;">'
-                tot += '<div style="font-size:10px;font-weight:700;color:#475569;font-family:\'JetBrains Mono\',monospace;">TOTAL</div>'
+                tot += '<div style="font-size:10px;font-weight:700;color:#475569;font-family:JetBrains Mono,monospace;">TOTAL</div>'
                 for b, bc in zip(buckets, bkt_cols):
-                    tot += f'<div style="text-align:center;font-size:11px;font-weight:800;color:{bc};font-family:\'JetBrains Mono\',monospace;">{expiry_df[b].sum():,.0f}</div>'
+                    tot += f'<div style="text-align:center;font-size:11px;font-weight:800;color:{bc};font-family:JetBrains Mono,monospace;">{expiry_df[b].sum():,.0f}</div>'
                 tot += '</div>'
                 st.markdown(tot, unsafe_allow_html=True)
 
@@ -619,37 +625,44 @@ with tab2:
             batch_df       = pd.DataFrame(batches_show).sort_values("Shelf Life %", ascending=True)
             batch_rows_html = ""
             for _, b in batch_df.iterrows():
-                pct   = float(b["Shelf Life %"])
-                bar_w = max(2, int(pct))
-                batch_rows_html += f"""
-                <div style="display:flex;align-items:center;gap:14px;margin-bottom:7px;">
-                  <span style="min-width:130px;max-width:130px;color:#94a3b8;font-family:'JetBrains Mono',monospace;
-                               font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{b['Batch No']}</span>
-                  <div style="flex:1;background:#1e2535;border-radius:5px;height:12px;max-width:280px;">
-                    <div style="width:{bar_w}%;background:#5bc8c0;height:12px;border-radius:5px;"></div>
-                  </div>
-                  <span style="min-width:48px;text-align:right;color:#e2e8f0;font-weight:800;
-                               font-family:'JetBrains Mono',monospace;font-size:12px;">{pct:.1f}%</span>
-                  <span style="min-width:88px;text-align:right;color:#64748b;
-                               font-family:'JetBrains Mono',monospace;font-size:11px;">{b['Qty']:,.0f} units</span>
-                  <span style="min-width:96px;color:#475569;font-size:11px;">Exp: {b['Expiry Date']}</span>
-                </div>"""
-            st.markdown(f"""
-            <div style="background:#060d18;border:1.5px solid #5bc8c0;border-radius:14px;padding:16px 20px;margin-bottom:12px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <div>
-                  <div style="font-size:10px;color:#5bc8c0;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:3px;">📦 Batch Shelf Life Breakdown</div>
-                  <div style="font-size:13px;color:#f1f5f9;font-weight:700;">{sel_key[2] if len(sel_key)>2 else ""}
-                    <span style="color:#818cf8;font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:8px;">{sel_key[0]}</span>
-                  </div>
-                </div>
-                <div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:6px 14px;
-                            font-size:11px;color:#60a5fa;font-family:'JetBrains Mono',monospace;font-weight:700;">
-                  {len(batch_df)} batch{'es' if len(batch_df)>1 else ''}
-                </div>
-              </div>
-              {batch_rows_html}
-            </div>""", unsafe_allow_html=True)
+                pct      = float(b["Shelf Life %"])
+                bar_w    = max(2, int(pct))
+                batch_no = str(b["Batch No"])
+                qty_fmt  = f"{b['Qty']:,.0f}"
+                pct_fmt  = f"{pct:.1f}%"
+                exp_str  = str(b["Expiry Date"])
+                batch_rows_html += (
+                    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:7px;">'
+                    f'<span style="min-width:130px;max-width:130px;color:#94a3b8;font-family:JetBrains Mono,monospace;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{batch_no}</span>'
+                    '<div style="flex:1;background:#1e2535;border-radius:5px;height:12px;max-width:280px;">'
+                    f'<div style="width:{bar_w}%;background:#5bc8c0;height:12px;border-radius:5px;"></div>'
+                    '</div>'
+                    f'<span style="min-width:48px;text-align:right;color:#e2e8f0;font-weight:800;font-family:JetBrains Mono,monospace;font-size:12px;">{pct_fmt}</span>'
+                    f'<span style="min-width:88px;text-align:right;color:#64748b;font-family:JetBrains Mono,monospace;font-size:11px;">{qty_fmt} units</span>'
+                    f'<span style="min-width:96px;color:#475569;font-size:11px;">Exp: {exp_str}</span>'
+                    '</div>'
+                )
+
+            n_batches  = len(batch_df)
+            batch_lbl  = f"{n_batches} batch{'es' if n_batches>1 else ''}"
+            wh_display = sel_key[2] if len(sel_key) > 2 else ""
+            sku_display= sel_key[0]
+
+            panel_html = (
+                '<div style="background:#060d18;border:1.5px solid #5bc8c0;border-radius:14px;padding:16px 20px;margin-bottom:12px;">'
+                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+                '<div>'
+                '<div style="font-size:10px;color:#5bc8c0;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:3px;">📦 Batch Shelf Life Breakdown</div>'
+                f'<div style="font-size:13px;color:#f1f5f9;font-weight:700;">{wh_display}'
+                f'<span style="color:#818cf8;font-family:JetBrains Mono,monospace;font-size:12px;margin-left:8px;">{sku_display}</span>'
+                '</div>'
+                '</div>'
+                f'<div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:6px 14px;font-size:11px;color:#60a5fa;font-family:JetBrains Mono,monospace;font-weight:700;">{batch_lbl}</div>'
+                '</div>'
+                f'{batch_rows_html}'
+                '</div>'
+            )
+            st.markdown(panel_html, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div style="background:#060d18;border:1px dashed #1e2535;border-radius:14px;
