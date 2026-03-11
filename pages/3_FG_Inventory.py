@@ -462,27 +462,34 @@ with tab2:
                     txt_c = "#bbf7d0" if pct>=90 else "#fde68a" if pct>=60 else "#fca5a5"
                     bdg_bg= "#061a0a" if pct>=90 else "#2d1f00" if pct>=60 else "#2d0a0a"
                     bdg_b = "#14532d" if pct>=90 else "#78350f" if pct>=60 else "#7f1d1d"
-                    stag  = f'<span style="font-size:10px;color:#f87171;margin-left:6px;">⚠️ {short} SKU{"s" if short!=1 else ""}</span>' if short else ""
-                    st.markdown(f"""
-                    <div style="background:#0d1117;border:1px solid #1e2535;border-radius:11px;padding:11px 14px;margin-bottom:8px;">
-                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
-                        <span style="font-size:12px;font-weight:700;color:#e2e8f0;
-                                     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">{fr['CFA']}</span>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                          {stag}
-                          <span style="background:{bdg_bg};border:1px solid {bdg_b};border-radius:20px;
-                                       padding:2px 10px;font-size:12px;font-weight:800;color:{txt_c};
-                                       font-family:'JetBrains Mono',monospace;">{pct:.1f}%</span>
-                        </div>
-                      </div>
-                      <div style="background:#1e2535;border-radius:5px;height:8px;margin-bottom:5px;">
-                        <div style="width:{min(pct,100):.1f}%;background:{bar_c};height:8px;border-radius:5px;"></div>
-                      </div>
-                      <div style="display:flex;justify-content:space-between;font-size:10px;font-family:'JetBrains Mono',monospace;">
-                        <span style="color:#475569;">Available: <b style="color:#94a3b8;">{avl:,.0f}</b></span>
-                        <span style="color:#475569;">Open PO: <b style="color:#94a3b8;">{po:,.0f}</b></span>
-                      </div>
-                    </div>""", unsafe_allow_html=True)
+                    bar_w = min(pct, 100)
+                    cfa_name = fr['CFA']
+                    avl_fmt  = f"{avl:,.0f}"
+                    po_fmt   = f"{po:,.0f}"
+                    pct_fmt  = f"{pct:.1f}%"
+                    # Build shortfall badge separately as plain string (no f-string HTML nesting)
+                    short_html = ""
+                    if short > 0:
+                        s_label = f"&#9888;&#65039; {short} SKU{'s' if short!=1 else ''}"
+                        short_html = f'<span style="font-size:10px;color:#f87171;margin-left:6px;">{s_label}</span>'
+
+                    html = (
+                        f'<div style="background:#0d1117;border:1px solid #1e2535;border-radius:11px;padding:11px 14px;margin-bottom:8px;">'
+                        f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">'
+                        f'<span style="font-size:12px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">{cfa_name}</span>'
+                        f'<div style="display:flex;align-items:center;gap:6px;">'
+                        f'{short_html}'
+                        f'<span style="background:{bdg_bg};border:1px solid {bdg_b};border-radius:20px;padding:2px 10px;font-size:12px;font-weight:800;color:{txt_c};font-family:JetBrains Mono,monospace;">{pct_fmt}</span>'
+                        f'</div></div>'
+                        f'<div style="background:#1e2535;border-radius:5px;height:8px;margin-bottom:5px;">'
+                        f'<div style="width:{bar_w:.1f}%;background:{bar_c};height:8px;border-radius:5px;"></div>'
+                        f'</div>'
+                        f'<div style="display:flex;justify-content:space-between;font-size:10px;font-family:JetBrains Mono,monospace;">'
+                        f'<span style="color:#475569;">Available: <b style="color:#94a3b8;">{avl_fmt}</b></span>'
+                        f'<span style="color:#475569;">Open PO: <b style="color:#94a3b8;">{po_fmt}</b></span>'
+                        f'</div></div>'
+                    )
+                    st.markdown(html, unsafe_allow_html=True)
 
         with col_exp:
             st.markdown('<div class="sec-div">🔥 Expiry Heatmap by CFA</div>', unsafe_allow_html=True)
