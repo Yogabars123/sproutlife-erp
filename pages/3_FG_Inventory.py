@@ -19,7 +19,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 #MainMenu, footer, header, [data-testid="stToolbar"] { visibility: hidden !important; }
 .block-container { padding: 1rem 1.2rem 3rem 1.2rem !important; max-width: 100% !important; }
 [data-testid="stVerticalBlock"] > div { gap: 0 !important; }
-
 .app-header { display:flex; align-items:center; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid #161d2e; margin-bottom:14px; }
 .hdr-left { display:flex; align-items:center; gap:10px; }
 .hdr-logo { width:40px; height:40px; min-width:40px; background:#0f1f3a; border:1px solid #1a3a5c; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:19px; }
@@ -28,8 +27,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .live-pill { display:inline-flex; align-items:center; gap:5px; background:#071a0f; border:1px solid #166534; border-radius:20px; padding:5px 11px; font-size:10px; font-weight:700; color:#22c55e; letter-spacing:1px; font-family:'JetBrains Mono',monospace; }
 .live-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:blink 1.8s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 5px #22c55e;} 50%{opacity:.2;box-shadow:none;} }
-
-/* KPI - 5 cards */
 .kpi-row { display:grid; grid-template-columns:repeat(5,1fr); gap:11px; margin-bottom:16px; }
 .kpi-box { border-radius:15px; padding:16px 18px; border:1px solid; position:relative; overflow:hidden; }
 .kpi-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:15px 15px 0 0; }
@@ -56,7 +53,6 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .kpi-box.amber  .kpi-label{color:#fbbf24;} .kpi-box.amber  .kpi-value{color:#fde68a;} .kpi-box.amber  .kpi-sub{color:#d97706;}
 .kpi-box.green  .kpi-label{color:#4ade80;} .kpi-box.green  .kpi-value{color:#bbf7d0;} .kpi-box.green  .kpi-sub{color:#16a34a;}
 .kpi-box.red    .kpi-label{color:#f87171;} .kpi-box.red    .kpi-value{color:#fecaca;} .kpi-box.red    .kpi-sub{color:#dc2626;}
-
 .filter-wrap { background:#0d1117; border:1px solid #1e2535; border-radius:14px; padding:12px 14px; margin-bottom:14px; }
 .filter-title { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
 .filter-title::after { content:''; flex:1; height:1px; background:#1e2535; }
@@ -69,30 +65,23 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-te
 .stDownloadButton > button { width:100% !important; background:linear-gradient(135deg,#0f172a,#1e1b4b) !important; border:1.5px solid #4338ca !important; border-radius:9px !important; color:#a5b4fc !important; font-size:13px !important; font-weight:700 !important; padding:10px !important; }
 .stButton > button { width:100% !important; background:#0d1117 !important; border:1.5px solid #1e2535 !important; border-radius:9px !important; color:#64748b !important; font-size:13px !important; font-weight:600 !important; padding:9px !important; transition:all .2s !important; margin-bottom:6px !important; }
 .stButton > button:hover { border-color:#5bc8c0 !important; color:#5bc8c0 !important; }
-
 [data-testid="stTabs"] [data-baseweb="tab-list"] { background:#0d1117 !important; border-radius:12px 12px 0 0 !important; border:1px solid #1e2535 !important; border-bottom:none !important; padding:6px 8px 0 !important; gap:4px !important; }
 [data-testid="stTabs"] [data-baseweb="tab"] { background:transparent !important; border-radius:8px 8px 0 0 !important; color:#475569 !important; font-size:12px !important; font-weight:700 !important; padding:8px 18px !important; border:none !important; }
 [data-testid="stTabs"] [aria-selected="true"] { background:#111827 !important; color:#5bc8c0 !important; border-bottom:2px solid #5bc8c0 !important; }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] { background:#0d1117 !important; border:1px solid #1e2535 !important; border-radius:0 0 12px 12px !important; padding:14px !important; }
-
 .tbl-hdr { display:flex; align-items:center; justify-content:space-between; padding:8px 0 6px; }
 .tbl-lbl { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:1.2px; }
 .tbl-badge { background:#0f172a; border:1px solid #1e2d45; color:#818cf8; font-size:11px; font-weight:700; padding:3px 11px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
 div[data-testid="stDataFrame"] { border-radius:10px !important; overflow:hidden !important; border:1px solid #1e2535 !important; }
 .sec-div { font-size:10px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:1.2px; padding:10px 0 6px; display:flex; align-items:center; gap:7px; }
 .sec-div::after { content:''; flex:1; height:1px; background:#161d2e; }
-
-/* Formula legend */
 .formula-bar { background:#0a0f1a; border:1px solid #1e2d45; border-radius:10px; padding:10px 16px; margin-bottom:12px; font-size:11px; font-family:'JetBrains Mono',monospace; color:#64748b; display:flex; gap:24px; flex-wrap:wrap; }
 .formula-bar span { color:#94a3b8; } .formula-bar b { color:#5bc8c0; }
-
 .app-footer { margin-top:2rem; padding-top:12px; border-top:1px solid #161d2e; text-align:center; font-size:10px; font-weight:600; color:#334155; letter-spacing:1.5px; font-family:'JetBrains Mono',monospace; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── CONSTANTS ─────────────────────────────────────────────────────────────────
-CLOSED_STATUSES  = {"cancelled", "closed"}
-# STN statuses that mean stock is in-transit TO a CFA (raised/approved but not yet received)
+CLOSED_STATUSES   = {"cancelled", "closed"}
 STN_OPEN_STATUSES = {"raised", "approved", "in transit", "intransit", "in-transit", "pending"}
 
 # ── DATA LOADING ──────────────────────────────────────────────────────────────
@@ -170,7 +159,7 @@ if df_fg.empty:
     st.stop()
 
 # ── CFA WAREHOUSE LIST ────────────────────────────────────────────────────────
-all_fg_wh = sorted(df_fg["Warehouse"].dropna().astype(str).unique().tolist()) if "Warehouse" in df_fg.columns else []
+all_fg_wh      = sorted(df_fg["Warehouse"].dropna().astype(str).unique().tolist()) if "Warehouse" in df_fg.columns else []
 cfa_warehouses = sorted([w for w in all_fg_wh if "cfa" in w.lower()])
 
 # ── FILTERS ───────────────────────────────────────────────────────────────────
@@ -180,14 +169,11 @@ c1, c2, c3, c4 = st.columns([2.5, 2, 2, 2])
 with c1:
     search = st.text_input("s", placeholder="🔍 Search SKU / product name…", label_visibility="collapsed")
 with c2:
-    fg_wh_opts = ["All Warehouses"] + all_fg_wh
-    sel_fg_wh  = st.selectbox("fg_wh", fg_wh_opts, label_visibility="collapsed")
+    sel_fg_wh = st.selectbox("fg_wh", ["All Warehouses"] + all_fg_wh, label_visibility="collapsed")
 with c3:
-    cfa_opts = ["All CFAs"] + cfa_warehouses
-    sel_cfa  = st.selectbox("cfa", cfa_opts, label_visibility="collapsed")
+    sel_cfa   = st.selectbox("cfa",   ["All CFAs"] + cfa_warehouses,  label_visibility="collapsed")
 with c4:
-    shelf_opts = ["All Shelf Life","Below 90%","Below 80%","Below 70%","Below 50%"]
-    sel_shelf  = st.selectbox("sh", shelf_opts, label_visibility="collapsed")
+    sel_shelf = st.selectbox("sh",    ["All Shelf Life","Below 90%","Below 80%","Below 70%","Below 50%"], label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ── APPLY FG FILTERS ──────────────────────────────────────────────────────────
@@ -201,93 +187,48 @@ if sel_shelf in shelf_map and "Shelf Life %" in df.columns:
     df = df[df["Shelf Life %"] < shelf_map[sel_shelf]]
 
 # ── GLOBAL KPIs ───────────────────────────────────────────────────────────────
-total_fg = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
-cfa_fg   = df[df["Warehouse"].astype(str).str.contains("cfa", case=False, na=False)]["Qty Available"].sum() \
-           if "Warehouse" in df.columns else 0
-
-# STN in-transit to CFA (To Warehouse contains CFA, Status in open statuses)
+total_fg    = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
+cfa_fg      = df[df["Warehouse"].astype(str).str.contains("cfa", case=False, na=False)]["Qty Available"].sum() \
+              if "Warehouse" in df.columns else 0
 stn_cfa_qty = 0
 if not df_stn.empty and "To Warehouse" in df_stn.columns and "Status" in df_stn.columns and "Qty" in df_stn.columns:
-    stn_cfa = df_stn[
+    stn_cfa_qty = df_stn[
         df_stn["To Warehouse"].astype(str).str.contains("cfa", case=False, na=False) &
         df_stn["Status"].astype(str).str.strip().str.lower().isin(STN_OPEN_STATUSES)
-    ]
-    stn_cfa_qty = stn_cfa["Qty"].sum()
-
-# Open PO qty
+    ]["Qty"].sum()
 open_so_qty = 0
 if not df_sos.empty and "SO Status" in df_sos.columns and "Order Qty" in df_sos.columns:
-    open_mask   = ~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)
-    open_so_qty = df_sos[open_mask]["Order Qty"].sum()
-
+    open_so_qty = df_sos[~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)]["Order Qty"].sum()
 total_available = cfa_fg + stn_cfa_qty
 diff            = total_available - open_so_qty
 
 st.markdown(f"""
 <div class="kpi-row">
-  <div class="kpi-box teal">
-    <div class="kpi-inner">
-      <div>
-        <div class="kpi-label">Total FG Stock</div>
-        <div class="kpi-value">{total_fg:,.0f}</div>
-        <div class="kpi-sub">All warehouses</div>
-      </div>
-      <div class="kpi-ico">📦</div>
-    </div>
-  </div>
-  <div class="kpi-box violet">
-    <div class="kpi-inner">
-      <div>
-        <div class="kpi-label">CFA FG Stock</div>
-        <div class="kpi-value">{cfa_fg:,.0f}</div>
-        <div class="kpi-sub">At CFA warehouses</div>
-      </div>
-      <div class="kpi-ico">🏭</div>
-    </div>
-  </div>
-  <div class="kpi-box blue">
-    <div class="kpi-inner">
-      <div>
-        <div class="kpi-label">STN In-Transit to CFA</div>
-        <div class="kpi-value">{stn_cfa_qty:,.0f}</div>
-        <div class="kpi-sub">Raised / Approved STNs → CFA</div>
-      </div>
-      <div class="kpi-ico">🚚</div>
-    </div>
-  </div>
-  <div class="kpi-box amber">
-    <div class="kpi-inner">
-      <div>
-        <div class="kpi-label">Open PO Qty</div>
-        <div class="kpi-value">{open_so_qty:,.0f}</div>
-        <div class="kpi-sub">Excl. Cancelled &amp; Closed</div>
-      </div>
-      <div class="kpi-ico">📋</div>
-    </div>
-  </div>
-  <div class="kpi-box {'green' if diff >= 0 else 'red'}">
-    <div class="kpi-inner">
-      <div>
-        <div class="kpi-label">Diff (FG+STN−PO)</div>
-        <div class="kpi-value">{diff:,.0f}</div>
-        <div class="kpi-sub">{'Surplus ✅' if diff >= 0 else 'Shortfall ⚠️'}</div>
-      </div>
-      <div class="kpi-ico">{'✅' if diff >= 0 else '⚠️'}</div>
-    </div>
-  </div>
+  <div class="kpi-box teal"><div class="kpi-inner"><div>
+    <div class="kpi-label">Total FG Stock</div><div class="kpi-value">{total_fg:,.0f}</div>
+    <div class="kpi-sub">All warehouses</div></div><div class="kpi-ico">📦</div></div></div>
+  <div class="kpi-box violet"><div class="kpi-inner"><div>
+    <div class="kpi-label">CFA FG Stock</div><div class="kpi-value">{cfa_fg:,.0f}</div>
+    <div class="kpi-sub">At CFA warehouses</div></div><div class="kpi-ico">🏭</div></div></div>
+  <div class="kpi-box blue"><div class="kpi-inner"><div>
+    <div class="kpi-label">STN In-Transit to CFA</div><div class="kpi-value">{stn_cfa_qty:,.0f}</div>
+    <div class="kpi-sub">Raised / Approved STNs → CFA</div></div><div class="kpi-ico">🚚</div></div></div>
+  <div class="kpi-box amber"><div class="kpi-inner"><div>
+    <div class="kpi-label">Open PO Qty</div><div class="kpi-value">{open_so_qty:,.0f}</div>
+    <div class="kpi-sub">Excl. Cancelled &amp; Closed</div></div><div class="kpi-ico">📋</div></div></div>
+  <div class="kpi-box {'green' if diff>=0 else 'red'}"><div class="kpi-inner"><div>
+    <div class="kpi-label">Diff (FG+STN−PO)</div><div class="kpi-value">{diff:,.0f}</div>
+    <div class="kpi-sub">{'Surplus ✅' if diff>=0 else 'Shortfall ⚠️'}</div></div>
+    <div class="kpi-ico">{'✅' if diff>=0 else '⚠️'}</div></div></div>
 </div>
 """, unsafe_allow_html=True)
 
 # ── TABS ──────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open Orders"])
 
-# ═══ TAB 1 — FG INVENTORY ════════════════════════════════════════════════════
+# ═══ TAB 1 ════════════════════════════════════════════════════════════════════
 with tab1:
-    st.markdown(f"""
-    <div class="tbl-hdr">
-        <span class="tbl-lbl">📋 Finished Goods Inventory</span>
-        <span class="tbl-badge">{len(df):,} rows</span>
-    </div>""", unsafe_allow_html=True)
+    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📋 Finished Goods Inventory</span><span class="tbl-badge">{len(df):,} rows</span></div>', unsafe_allow_html=True)
     buf1 = io.BytesIO()
     with pd.ExcelWriter(buf1, engine="openpyxl") as w:
         df.to_excel(w, index=False, sheet_name="FG Inventory")
@@ -301,9 +242,9 @@ with tab1:
                        "Qty Available","Shelf Life %","Batch No","MFG Date","Expiry Date",
                        "Inventory Date","Item Type","Current Aging (Days)",
                        "Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]
-        fg_cols = [c for c in fg_priority if c in df.columns]
+        fg_cols  = [c for c in fg_priority if c in df.columns]
         fg_cols += [c for c in df.columns if c not in fg_cols]
-        df_show = df[fg_cols].copy()
+        df_show  = df[fg_cols].copy()
         for c in ["MFG Date","Expiry Date","Inventory Date"]:
             if c in df_show.columns:
                 df_show[c] = pd.to_datetime(df_show[c], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
@@ -317,68 +258,56 @@ with tab1:
                 "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",      format="%.0f"),
             })
 
-# ═══ TAB 2 — CFA STOCK vs OPEN ORDERS ════════════════════════════════════════
+# ═══ TAB 2 ════════════════════════════════════════════════════════════════════
 with tab2:
 
-    # Formula legend
     st.markdown("""
     <div class="formula-bar">
         <span>📐 Formula:</span>
-        <b>FG Stock</b> <span>= Qty at CFA warehouse</span>
-        <span>+</span>
-        <b>STN In-Transit</b> <span>= Raised/Approved STNs → CFA</span>
-        <span>−</span>
-        <b>Open PO Qty</b> <span>= Order Qty (excl. Cancelled &amp; Closed)</span>
-        <span>=</span>
-        <b>Diff</b>
+        <b>FG Stock</b> <span>= Qty at CFA warehouse</span> <span>+</span>
+        <b>STN In-Transit</b> <span>= Raised/Approved STNs → CFA</span> <span>−</span>
+        <b>Open PO Qty</b> <span>= Order Qty (excl. Cancelled &amp; Closed)</span> <span>=</span> <b>Diff</b>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── STEP 1: FG stock at CFA warehouses, aggregated by SKU + CFA WH ───────
+    # ── STEP 1: FG — CFA only ─────────────────────────────────────────────────
     df_cfa = df_fg[df_fg["Warehouse"].astype(str).str.contains("cfa", case=False, na=False)].copy() \
              if "Warehouse" in df_fg.columns else pd.DataFrame()
     if sel_cfa != "All CFAs" and not df_cfa.empty:
         df_cfa = df_cfa[df_cfa["Warehouse"].astype(str) == sel_cfa]
     if search and not df_cfa.empty:
-        df_cfa = df_cfa[df_cfa.astype(str).apply(
-            lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
+        df_cfa = df_cfa[df_cfa.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
 
     if not df_cfa.empty and "Item SKU" in df_cfa.columns:
         fg_agg = df_cfa.groupby(["Item SKU","Warehouse"]).agg(
-            Item_Name  =("Item Name",    "first"),
-            Category   =("Category",     "first"),
-            FG_Stock   =("Qty Available","sum"),
-            Shelf_Life =("Shelf Life %", "mean"),
+            Item_Name =("Item Name",    "first"),
+            Category  =("Category",     "first"),
+            FG_Stock  =("Qty Available","sum"),
+            Shelf_Life=("Shelf Life %", "mean"),
         ).reset_index()
         fg_agg.columns = ["Item SKU","CFA Warehouse","Item Name","Category","FG Stock","Shelf Life %"]
         fg_agg["Shelf Life %"] = fg_agg["Shelf Life %"].round(1)
     else:
         fg_agg = pd.DataFrame(columns=["Item SKU","CFA Warehouse","Item Name","Category","FG Stock","Shelf Life %"])
 
-    # ── STEP 2: STN in-transit to CFA warehouses (Status = Raised/Approved) ──
+    # ── STEP 2: STN — CFA only ────────────────────────────────────────────────
     stn_agg = pd.DataFrame(columns=["Item SKU","CFA Warehouse","STN In-Transit","STN Transfers"])
     if not df_stn.empty:
-        fg_code_col = next((c for c in df_stn.columns if "fg code" in c.lower()), None)
-        if fg_code_col is None:
-            fg_code_col = next((c for c in df_stn.columns
-                                if "code" in c.lower() or "sku" in c.lower()), None)
+        fg_code_col = next((c for c in df_stn.columns if "fg code" in c.lower()), None) or \
+                      next((c for c in df_stn.columns if "code" in c.lower() or "sku" in c.lower()), None)
         to_wh_col  = next((c for c in df_stn.columns if "to warehouse" in c.lower()), None)
         stat_col   = next((c for c in df_stn.columns if c.lower() == "status"), None)
         qty_col    = next((c for c in df_stn.columns if c.lower() == "qty"), None)
-        req_col    = next((c for c in df_stn.columns if "request" in c.lower()), None)
 
         if fg_code_col and to_wh_col and stat_col and qty_col:
             stn_filt = df_stn[
                 df_stn[to_wh_col].astype(str).str.contains("cfa", case=False, na=False) &
                 df_stn[stat_col].astype(str).str.strip().str.lower().isin(STN_OPEN_STATUSES)
             ].copy()
-
             if sel_cfa != "All CFAs":
                 stn_filt = stn_filt[stn_filt[to_wh_col].astype(str) == sel_cfa]
             if search:
-                stn_filt = stn_filt[stn_filt.astype(str).apply(
-                    lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-
+                stn_filt = stn_filt[stn_filt.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
             if not stn_filt.empty:
                 stn_filt["_sku"] = stn_filt[fg_code_col].astype(str).str.strip()
                 stn_filt["_wh"]  = stn_filt[to_wh_col].astype(str).str.strip()
@@ -388,7 +317,7 @@ with tab2:
                 ).reset_index()
                 stn_agg.columns = ["Item SKU","CFA Warehouse","STN In-Transit","STN Transfers"]
 
-    # ── STEP 3: Open POs from SOS (not Cancelled / Closed) ───────────────────
+    # ── STEP 3: SOS — CFA warehouses only ────────────────────────────────────
     so_agg = pd.DataFrame(columns=["Item SKU","CFA Warehouse","Open PO Qty","Open Orders"])
     if not df_sos.empty and "SO Status" in df_sos.columns:
         sku_col_so = next((c for c in df_sos.columns if "product sku" in c.lower()), None)
@@ -399,12 +328,12 @@ with tab2:
         if sku_col_so and wh_col_so and qty_col_so:
             open_mask = ~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)
             sos_open  = df_sos[open_mask].copy()
+            # ★ KEY FIX: only keep rows where Warehouse is a CFA
+            sos_open  = sos_open[sos_open[wh_col_so].astype(str).str.contains("cfa", case=False, na=False)]
             if sel_cfa != "All CFAs":
                 sos_open = sos_open[sos_open[wh_col_so].astype(str) == sel_cfa]
             if search:
-                sos_open = sos_open[sos_open.astype(str).apply(
-                    lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-
+                sos_open = sos_open[sos_open.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
             if not sos_open.empty:
                 sos_open["_sku"] = sos_open[sku_col_so].astype(str).str.strip()
                 sos_open["_wh"]  = sos_open[wh_col_so].astype(str).str.strip()
@@ -414,12 +343,9 @@ with tab2:
                 so_agg = sos_open.groupby(["_sku","_wh"]).agg(**agg_dict).reset_index()
                 so_agg.columns = ["Item SKU","CFA Warehouse"] + list(agg_dict.keys())
 
-    # ── STEP 4: Merge all three on (Item SKU + CFA Warehouse) ─────────────────
-    # Start with FG, outer join STN, outer join SO
-    if not fg_agg.empty:
-        merged = fg_agg.copy()
-    else:
-        merged = pd.DataFrame(columns=["Item SKU","CFA Warehouse","Item Name","Category","FG Stock","Shelf Life %"])
+    # ── STEP 4: Merge ─────────────────────────────────────────────────────────
+    merged = fg_agg.copy() if not fg_agg.empty else \
+             pd.DataFrame(columns=["Item SKU","CFA Warehouse","Item Name","Category","FG Stock","Shelf Life %"])
 
     if not stn_agg.empty:
         merged = merged.merge(stn_agg, on=["Item SKU","CFA Warehouse"], how="outer")
@@ -430,13 +356,12 @@ with tab2:
     if not so_agg.empty:
         merged = merged.merge(so_agg, on=["Item SKU","CFA Warehouse"], how="outer")
     else:
-        merged["Open PO Qty"]   = 0
-        merged["Open Orders"]   = 0
+        merged["Open PO Qty"]  = 0
+        merged["Open Orders"]  = 0
 
     if merged.empty:
-        st.warning("⚠️ No data found. Check that FG Inventory has 'CFA' warehouses and SOS/STN sheets have data.")
+        st.warning("⚠️ No CFA data found.")
     else:
-        # Fill nulls
         merged["FG Stock"]       = merged["FG Stock"].fillna(0)
         merged["STN In-Transit"] = merged["STN In-Transit"].fillna(0)
         merged["STN Transfers"]  = merged["STN Transfers"].fillna(0).astype(int)
@@ -446,87 +371,74 @@ with tab2:
         if "Open PO Value (₹)" in merged.columns:
             merged["Open PO Value (₹)"] = merged["Open PO Value (₹)"].fillna(0)
 
-        # ── THE KEY FORMULA ──────────────────────────────────────────────────
+        # ★ Keep only CFA rows in merged (belt-and-suspenders)
+        merged = merged[merged["CFA Warehouse"].astype(str).str.contains("cfa", case=False, na=False)]
+
         merged["Total Available"] = merged["FG Stock"] + merged["STN In-Transit"]
         merged["Diff"]            = merged["Total Available"] - merged["Open PO Qty"]
 
-        # Populate Item Name / Category for STN-only or SO-only rows using FG lookup
+        # Fill Item Name / Category
         fg_name_map = df_fg.drop_duplicates("Item SKU").set_index("Item SKU")[["Item Name","Category"]].to_dict("index") \
                       if "Item SKU" in df_fg.columns else {}
         def fill_name(row):
-            if pd.isna(row.get("Item Name")) or row.get("Item Name") == "":
+            if pd.isna(row.get("Item Name")) or str(row.get("Item Name","")) == "":
                 info = fg_name_map.get(str(row["Item SKU"]).strip(), {})
                 row["Item Name"] = info.get("Item Name", row["Item SKU"])
                 row["Category"]  = info.get("Category", "")
             return row
         merged = merged.apply(fill_name, axis=1)
-
-        # Sort: shortfall first
         merged = merged.sort_values("Diff", ascending=True)
 
-        # Summary stats
-        t_fg    = merged["FG Stock"].sum()
-        t_stn   = merged["STN In-Transit"].sum()
-        t_po    = merged["Open PO Qty"].sum()
-        t_diff  = merged["Diff"].sum()
-        t_short = int((merged["Diff"] < 0).sum())
-
+        # Summary metrics
+        t_fg   = merged["FG Stock"].sum()
+        t_stn  = merged["STN In-Transit"].sum()
+        t_po   = merged["Open PO Qty"].sum()
+        t_diff = merged["Diff"].sum()
         s1, s2, s3, s4, s5 = st.columns(5)
-        s1.metric("CFA FG Stock",      f"{t_fg:,.0f}")
-        s2.metric("STN In-Transit",     f"{t_stn:,.0f}")
-        s3.metric("Total Available",    f"{(t_fg+t_stn):,.0f}", help="FG Stock + STN In-Transit")
-        s4.metric("Open PO Qty",        f"{t_po:,.0f}")
-        s5.metric("Net Diff",           f"{t_diff:,.0f}",
-                  delta=f"{'Surplus' if t_diff >= 0 else 'Shortfall'}: {abs(t_diff):,.0f}",
-                  delta_color="normal" if t_diff >= 0 else "inverse")
+        s1.metric("CFA FG Stock",   f"{t_fg:,.0f}")
+        s2.metric("STN In-Transit", f"{t_stn:,.0f}")
+        s3.metric("Total Available",f"{(t_fg+t_stn):,.0f}", help="FG + STN")
+        s4.metric("Open PO Qty",    f"{t_po:,.0f}")
+        s5.metric("Net Diff",       f"{t_diff:,.0f}",
+                  delta=f"{'Surplus' if t_diff>=0 else 'Shortfall'}: {abs(t_diff):,.0f}",
+                  delta_color="normal" if t_diff>=0 else "inverse")
 
-        st.markdown("<div style='margin-bottom:12px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom:14px'></div>", unsafe_allow_html=True)
 
         # ══════════════════════════════════════════════════════════════════════
-        # SECTION A — FILL RATE  +  EXPIRY HEATMAP  (side by side)
+        # FILL RATE  +  EXPIRY HEATMAP — CFA only
         # ══════════════════════════════════════════════════════════════════════
         today_ts = pd.Timestamp(datetime.today().date())
 
-        # ── Fill Rate per CFA ─────────────────────────────────────────────────
-        # Fill Rate % = min(Total Available, Open PO Qty) / Open PO Qty  × 100
-        # (how much of the demand can we actually satisfy right now)
+        # ── Fill Rate (CFA only, from merged which is already CFA-filtered) ──
         fill_rows = []
         for cfa_wh in sorted(merged["CFA Warehouse"].dropna().astype(str).unique()):
-            cfa_m = merged[merged["CFA Warehouse"] == cfa_wh]
-            total_po  = cfa_m["Open PO Qty"].sum()
-            total_avl = cfa_m["Total Available"].sum()
-            fulfillable = min(total_avl, total_po)
-            fill_pct = (fulfillable / total_po * 100) if total_po > 0 else 100.0
-            shortfall_skus = int((cfa_m["Diff"] < 0).sum())
-            fill_rows.append({
-                "CFA": cfa_wh,
-                "Fill Rate %": round(fill_pct, 1),
-                "Total Available": total_avl,
-                "Open PO Qty": total_po,
-                "Shortfall SKUs": shortfall_skus,
-            })
-        fill_df = pd.DataFrame(fill_rows).sort_values("Fill Rate %", ascending=True)
+            cfa_m       = merged[merged["CFA Warehouse"] == cfa_wh]
+            total_po    = cfa_m["Open PO Qty"].sum()
+            total_avl   = cfa_m["Total Available"].sum()
+            fill_pct    = (min(total_avl, total_po) / total_po * 100) if total_po > 0 else 100.0
+            short_skus  = int((cfa_m["Diff"] < 0).sum())
+            fill_rows.append({"CFA": cfa_wh, "Fill Rate %": round(fill_pct,1),
+                               "Total Available": total_avl, "Open PO Qty": total_po,
+                               "Shortfall SKUs": short_skus})
+        fill_df = pd.DataFrame(fill_rows).sort_values("Fill Rate %", ascending=True) \
+                  if fill_rows else pd.DataFrame()
 
-        # ── Expiry buckets per CFA (from raw df_cfa) ─────────────────────────
+        # ── Expiry buckets (CFA only — df_cfa is already CFA-filtered) ───────
         expiry_rows = []
-        if not df_cfa.empty and "Expiry Date" in df_cfa.columns and "Qty Available" in df_cfa.columns:
+        if not df_cfa.empty and "Expiry Date" in df_cfa.columns:
             exp_data = df_cfa[["Warehouse","Qty Available","Expiry Date"]].copy()
-            exp_data["Expiry Date"] = pd.to_datetime(exp_data["Expiry Date"], errors="coerce")
-            exp_data["days_to_exp"]  = (exp_data["Expiry Date"] - today_ts).dt.days
+            exp_data["Expiry Date"]  = pd.to_datetime(exp_data["Expiry Date"], errors="coerce")
+            exp_data["days_to_exp"] = (exp_data["Expiry Date"] - today_ts).dt.days
             for cfa_wh in sorted(exp_data["Warehouse"].dropna().astype(str).unique()):
                 cfa_e = exp_data[exp_data["Warehouse"] == cfa_wh]
-                qty_30  = cfa_e[cfa_e["days_to_exp"].between(0, 30,  inclusive="both")]["Qty Available"].sum()
-                qty_60  = cfa_e[cfa_e["days_to_exp"].between(31, 60, inclusive="both")]["Qty Available"].sum()
-                qty_90  = cfa_e[cfa_e["days_to_exp"].between(61, 90, inclusive="both")]["Qty Available"].sum()
-                qty_90p = cfa_e[cfa_e["days_to_exp"] > 90]["Qty Available"].sum()
-                qty_exp = cfa_e[cfa_e["days_to_exp"] < 0]["Qty Available"].sum()
                 expiry_rows.append({
-                    "CFA": cfa_wh,
-                    "Expired": qty_exp,
-                    "< 30 days": qty_30,
-                    "31–60 days": qty_60,
-                    "61–90 days": qty_90,
-                    "> 90 days": qty_90p,
+                    "CFA":        cfa_wh,
+                    "Expired":    cfa_e[cfa_e["days_to_exp"] <  0]["Qty Available"].sum(),
+                    "< 30 days":  cfa_e[cfa_e["days_to_exp"].between(0,  30, inclusive="both")]["Qty Available"].sum(),
+                    "31–60 days": cfa_e[cfa_e["days_to_exp"].between(31, 60, inclusive="both")]["Qty Available"].sum(),
+                    "61–90 days": cfa_e[cfa_e["days_to_exp"].between(61, 90, inclusive="both")]["Qty Available"].sum(),
+                    "> 90 days":  cfa_e[cfa_e["days_to_exp"] > 90]["Qty Available"].sum(),
                 })
         expiry_df = pd.DataFrame(expiry_rows) if expiry_rows else pd.DataFrame()
 
@@ -535,146 +447,130 @@ with tab2:
 
         with col_fill:
             st.markdown('<div class="sec-div">📊 Fill Rate by CFA</div>', unsafe_allow_html=True)
-            st.markdown("""
-            <div style="font-size:10px;color:#475569;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">
-              Fill Rate = what % of open PO demand can be fulfilled with current FG + STN stock
-            </div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="font-size:10px;color:#475569;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">
+              Fill Rate = % of open PO demand fulfillable with FG + STN stock</div>""", unsafe_allow_html=True)
 
-            for _, fr in fill_df.iterrows():
-                pct   = float(fr["Fill Rate %"])
-                avl   = float(fr["Total Available"])
-                po    = float(fr["Open PO Qty"])
-                short = int(fr["Shortfall SKUs"])
-                # colour: green ≥90, amber 60-90, red <60
-                bar_color  = "#22c55e" if pct >= 90 else "#f59e0b" if pct >= 60 else "#ef4444"
-                txt_color  = "#bbf7d0" if pct >= 90 else "#fde68a" if pct >= 60 else "#fca5a5"
-                badge_bg   = "#061a0a" if pct >= 90 else "#2d1f00" if pct >= 60 else "#2d0a0a"
-                badge_bdr  = "#14532d" if pct >= 90 else "#78350f" if pct >= 60 else "#7f1d1d"
-                short_tag  = f'<span style="font-size:10px;color:#f87171;margin-left:6px;">⚠️ {short} SKU{"s" if short!=1 else ""}</span>' if short else ""
-                st.markdown(f"""
-                <div style="background:#0d1117;border:1px solid #1e2535;border-radius:11px;
-                            padding:11px 14px;margin-bottom:8px;">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
-                    <span style="font-size:12px;font-weight:700;color:#e2e8f0;
-                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">{fr['CFA']}</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      {short_tag}
-                      <span style="background:{badge_bg};border:1px solid {badge_bdr};border-radius:20px;
-                                   padding:2px 10px;font-size:12px;font-weight:800;color:{txt_color};
-                                   font-family:'JetBrains Mono',monospace;">{pct:.1f}%</span>
-                    </div>
-                  </div>
-                  <div style="background:#1e2535;border-radius:5px;height:8px;margin-bottom:5px;">
-                    <div style="width:{min(pct,100):.1f}%;background:{bar_color};height:8px;border-radius:5px;"></div>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;font-size:10px;
-                              font-family:'JetBrains Mono',monospace;">
-                    <span style="color:#475569;">Available: <b style="color:#94a3b8;">{avl:,.0f}</b></span>
-                    <span style="color:#475569;">Open PO: <b style="color:#94a3b8;">{po:,.0f}</b></span>
-                  </div>
-                </div>""", unsafe_allow_html=True)
+            if fill_df.empty:
+                st.info("No open PO data for CFA warehouses.")
+            else:
+                for _, fr in fill_df.iterrows():
+                    pct   = float(fr["Fill Rate %"])
+                    avl   = float(fr["Total Available"])
+                    po    = float(fr["Open PO Qty"])
+                    short = int(fr["Shortfall SKUs"])
+                    bar_c = "#22c55e" if pct>=90 else "#f59e0b" if pct>=60 else "#ef4444"
+                    txt_c = "#bbf7d0" if pct>=90 else "#fde68a" if pct>=60 else "#fca5a5"
+                    bdg_bg= "#061a0a" if pct>=90 else "#2d1f00" if pct>=60 else "#2d0a0a"
+                    bdg_b = "#14532d" if pct>=90 else "#78350f" if pct>=60 else "#7f1d1d"
+                    stag  = f'<span style="font-size:10px;color:#f87171;margin-left:6px;">⚠️ {short} SKU{"s" if short!=1 else ""}</span>' if short else ""
+                    st.markdown(f"""
+                    <div style="background:#0d1117;border:1px solid #1e2535;border-radius:11px;padding:11px 14px;margin-bottom:8px;">
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+                        <span style="font-size:12px;font-weight:700;color:#e2e8f0;
+                                     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">{fr['CFA']}</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                          {stag}
+                          <span style="background:{bdg_bg};border:1px solid {bdg_b};border-radius:20px;
+                                       padding:2px 10px;font-size:12px;font-weight:800;color:{txt_c};
+                                       font-family:'JetBrains Mono',monospace;">{pct:.1f}%</span>
+                        </div>
+                      </div>
+                      <div style="background:#1e2535;border-radius:5px;height:8px;margin-bottom:5px;">
+                        <div style="width:{min(pct,100):.1f}%;background:{bar_c};height:8px;border-radius:5px;"></div>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;font-size:10px;font-family:'JetBrains Mono',monospace;">
+                        <span style="color:#475569;">Available: <b style="color:#94a3b8;">{avl:,.0f}</b></span>
+                        <span style="color:#475569;">Open PO: <b style="color:#94a3b8;">{po:,.0f}</b></span>
+                      </div>
+                    </div>""", unsafe_allow_html=True)
 
         with col_exp:
             st.markdown('<div class="sec-div">🔥 Expiry Heatmap by CFA</div>', unsafe_allow_html=True)
-            st.markdown("""
-            <div style="font-size:10px;color:#475569;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">
-              Qty of stock expiring within each time window · darker = more urgent
-            </div>""", unsafe_allow_html=True)
+            st.markdown("""<div style="font-size:10px;color:#475569;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">
+              Qty expiring within each window · cell intensity = urgency</div>""", unsafe_allow_html=True)
 
-            if not expiry_df.empty:
-                buckets  = ["Expired", "< 30 days", "31–60 days", "61–90 days", "> 90 days"]
+            if expiry_df.empty:
+                st.info("No expiry data — ensure FG Inventory has an Expiry Date column.")
+            else:
+                buckets  = ["Expired","< 30 days","31–60 days","61–90 days","> 90 days"]
                 bkt_cols = ["#7f1d1d","#b91c1c","#d97706","#ca8a04","#15803d"]
                 bkt_bg   = ["#1a0000","#2d0a0a","#2d1800","#2d2200","#061a0a"]
                 bkt_bdr  = ["#450a0a","#7f1d1d","#78350f","#713f12","#14532d"]
-
-                # Header row
-                header_html = '<div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:6px;">'
-                header_html += '<div style="font-size:10px;color:#334155;font-weight:700;font-family:\'JetBrains Mono\',monospace;">CFA</div>'
-                for b, bc in zip(buckets, bkt_cols):
-                    header_html += f'<div style="font-size:9px;color:{bc};font-weight:700;text-align:center;font-family:\'JetBrains Mono\',monospace;line-height:1.3;">{b}</div>'
-                header_html += '</div>'
-                st.markdown(header_html, unsafe_allow_html=True)
-
-                # Max per bucket for relative intensity
                 max_vals = {b: max(expiry_df[b].max(), 1) for b in buckets}
 
-                for _, er in expiry_df.sort_values("< 30 days", ascending=False).iterrows():
-                    row_html = '<div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-bottom:5px;align-items:center;">'
-                    row_html += f'<div style="font-size:11px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{er["CFA"]}</div>'
-                    for b, bc, bbg, bbdr in zip(buckets, bkt_cols, bkt_bg, bkt_bdr):
-                        val = float(er[b])
-                        intensity = val / max_vals[b] if max_vals[b] > 0 else 0
-                        # cell opacity scales with intensity
-                        cell_alpha = max(0.08, intensity)
-                        val_str = f"{val:,.0f}" if val > 0 else "—"
-                        val_color = bc if val > 0 else "#1e2535"
-                        row_html += f'''
-                        <div style="background:{bbg};border:1px solid {bbdr};border-radius:7px;
-                                    padding:5px 4px;text-align:center;opacity:{min(0.4+cell_alpha,1):.2f};">
-                          <div style="font-size:11px;font-weight:800;color:{val_color};
-                                      font-family:\'JetBrains Mono\',monospace;line-height:1;">{val_str}</div>
-                        </div>'''
-                    row_html += '</div>'
-                    st.markdown(row_html, unsafe_allow_html=True)
-
-                # Total row
-                tot_html = '<div style="display:grid;grid-template-columns:160px repeat(5,1fr);gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid #1e2535;">'
-                tot_html += '<div style="font-size:10px;font-weight:700;color:#475569;font-family:\'JetBrains Mono\',monospace;">TOTAL</div>'
+                # Header
+                hdr = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-bottom:6px;">'
+                hdr += '<div style="font-size:10px;color:#334155;font-weight:700;font-family:\'JetBrains Mono\',monospace;">CFA</div>'
                 for b, bc in zip(buckets, bkt_cols):
-                    t = expiry_df[b].sum()
-                    tot_html += f'<div style="text-align:center;font-size:11px;font-weight:800;color:{bc};font-family:\'JetBrains Mono\',monospace;">{t:,.0f}</div>'
-                tot_html += '</div>'
-                st.markdown(tot_html, unsafe_allow_html=True)
-            else:
-                st.info("No expiry data available — ensure FG Inventory has Expiry Date column.")
+                    hdr += f'<div style="font-size:9px;color:{bc};font-weight:700;text-align:center;font-family:\'JetBrains Mono\',monospace;line-height:1.3;">{b}</div>'
+                hdr += '</div>'
+                st.markdown(hdr, unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
-        st.markdown('<hr style="border:none;border-top:1px solid #161d2e;margin:8px 0 14px;">', unsafe_allow_html=True)
+                for _, er in expiry_df.sort_values("< 30 days", ascending=False).iterrows():
+                    row = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-bottom:5px;align-items:center;">'
+                    row += f'<div style="font-size:11px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{er["CFA"]}</div>'
+                    for b, bc, bbg, bbdr in zip(buckets, bkt_cols, bkt_bg, bkt_bdr):
+                        val       = float(er[b])
+                        intensity = val / max_vals[b] if max_vals[b] > 0 else 0
+                        opacity   = min(0.4 + max(0.08, intensity), 1.0)
+                        val_str   = f"{val:,.0f}" if val > 0 else "—"
+                        val_color = bc if val > 0 else "#1e2535"
+                        row += f'<div style="background:{bbg};border:1px solid {bbdr};border-radius:7px;padding:5px 4px;text-align:center;opacity:{opacity:.2f};"><div style="font-size:11px;font-weight:800;color:{val_color};font-family:\'JetBrains Mono\',monospace;line-height:1;">{val_str}</div></div>'
+                    row += '</div>'
+                    st.markdown(row, unsafe_allow_html=True)
 
-        # ── Fill Rate column added to merged ──────────────────────────────────
-        fill_rate_map = {r["CFA"]: r["Fill Rate %"] for _, r in fill_df.iterrows()}
-        merged["Fill Rate %"] = merged["CFA Warehouse"].map(fill_rate_map).fillna(0.0)
+                # Totals row
+                tot = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid #1e2535;">'
+                tot += '<div style="font-size:10px;font-weight:700;color:#475569;font-family:\'JetBrains Mono\',monospace;">TOTAL</div>'
+                for b, bc in zip(buckets, bkt_cols):
+                    tot += f'<div style="text-align:center;font-size:11px;font-weight:800;color:{bc};font-family:\'JetBrains Mono\',monospace;">{expiry_df[b].sum():,.0f}</div>'
+                tot += '</div>'
+                st.markdown(tot, unsafe_allow_html=True)
 
-        # ── Build batch-level shelf life lookup: (SKU, CFA WH) → list of batches ─
-        batch_lookup = {}   # key: (sku, wh) → list of dicts
+        st.markdown('<hr style="border:none;border-top:1px solid #161d2e;margin:14px 0;">', unsafe_allow_html=True)
+
+        # ── Fill Rate column in main table ────────────────────────────────────
+        if not fill_df.empty:
+            fill_rate_map = dict(zip(fill_df["CFA"], fill_df["Fill Rate %"]))
+            merged["Fill Rate %"] = merged["CFA Warehouse"].map(fill_rate_map).fillna(0.0)
+        else:
+            merged["Fill Rate %"] = 0.0
+
+        # ── Batch lookup ──────────────────────────────────────────────────────
+        batch_lookup = {}
         if not df_cfa.empty and "Item SKU" in df_cfa.columns:
-            today = pd.Timestamp(datetime.today().date())
             for (sku, wh), grp in df_cfa.groupby(["Item SKU","Warehouse"]):
                 batches = []
                 for _, r in grp.iterrows():
-                    batch_no = str(r.get("Batch No", "—")) if "Batch No" in r.index else "—"
-                    shelf    = round(float(r.get("Shelf Life %", 0)), 1)
-                    qty      = float(r.get("Qty Available", 0))
-                    exp      = r.get("Expiry Date", None)
-                    exp_str  = exp.strftime("%d-%b-%Y") if pd.notna(exp) else "—"
-                    batches.append({"Batch No": batch_no, "Qty": qty,
-                                    "Shelf Life %": shelf, "Expiry Date": exp_str})
+                    exp = r.get("Expiry Date", None)
+                    batches.append({
+                        "Batch No":    str(r.get("Batch No","—")) if "Batch No" in r.index else "—",
+                        "Qty":         float(r.get("Qty Available", 0)),
+                        "Shelf Life %":round(float(r.get("Shelf Life %", 0)), 1),
+                        "Expiry Date": exp.strftime("%d-%b-%Y") if pd.notna(exp) else "—",
+                    })
                 batch_lookup[(str(sku).strip(), str(wh).strip())] = batches
 
-        # ── Add "Shelf Life (Batches)" text column to merged ─────────────────
         def shelf_label(row):
             key = (str(row["Item SKU"]).strip(), str(row["CFA Warehouse"]).strip())
-            batches = batch_lookup.get(key, [])
-            n = len(batches)
+            n   = len(batch_lookup.get(key, []))
             avg = row.get("Shelf Life %", 0)
-            if n == 0: return f"{avg:.1f}%"
-            return f"{avg:.1f}% · {n} batch{'es' if n>1 else ''}"
-
+            return f"{avg:.1f}% · {n} batch{'es' if n>1 else ''}" if n else f"{avg:.1f}%"
         merged["Shelf Life"] = merged.apply(shelf_label, axis=1)
 
-        # Display column order — use text "Shelf Life" instead of ProgressColumn
+        # ── Display columns ───────────────────────────────────────────────────
         disp_cols = ["Item Name","Item SKU","Category","CFA Warehouse",
                      "FG Stock","STN In-Transit","STN Transfers",
                      "Shelf Life","Fill Rate %","Open PO Qty","Open Orders","Total Available","Diff"]
         if "Open PO Value (₹)" in merged.columns:
             disp_cols.insert(disp_cols.index("Diff"), "Open PO Value (₹)")
         disp_cols = [c for c in disp_cols if c in merged.columns]
-        df_disp = merged[disp_cols].copy()
+        df_disp   = merged[disp_cols].copy()
 
-        # Export (with numeric shelf life)
+        # Export
         df_export = merged[["Item Name","Item SKU","Category","CFA Warehouse",
                              "FG Stock","STN In-Transit","STN Transfers","Shelf Life %",
-                             "Open PO Qty","Open Orders","Total Available","Diff"] +
+                             "Fill Rate %","Open PO Qty","Open Orders","Total Available","Diff"] +
                             (["Open PO Value (₹)"] if "Open PO Value (₹)" in merged.columns else [])].copy()
         buf2 = io.BytesIO()
         with pd.ExcelWriter(buf2, engine="openpyxl") as w:
@@ -684,45 +580,36 @@ with tab2:
         def colour_row(row):
             d = row.get("Diff", 0)
             if pd.isna(d): return [""] * len(row)
-            if d < 0:    return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
+            if d < 0:      return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
             tot = row.get("Total Available", 1)
             if tot > 0 and d / tot < 0.15:
                 return ["background-color:#2d1f00; color:#fde68a"] * len(row)
             return ["background-color:#061410; color:#d1fae5"] * len(row)
 
         col_cfg = {
-            "FG Stock":        st.column_config.NumberColumn("FG Stock",          format="%.0f"),
-            "STN In-Transit":  st.column_config.NumberColumn("STN In-Transit 🚚",  format="%.0f"),
-            "STN Transfers":   st.column_config.NumberColumn("# STNs",            format="%d"),
-            "Shelf Life":      st.column_config.TextColumn("Shelf Life 📦",        help="avg % · N batches — click row to expand"),
-            "Fill Rate %":     st.column_config.ProgressColumn("Fill Rate % 🎯",   min_value=0, max_value=100, format="%.1f%%"),
-            "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",       format="%.0f"),
-            "Open Orders":     st.column_config.NumberColumn("# Orders",          format="%d"),
-            "Total Available": st.column_config.NumberColumn("Total Available",   format="%.0f"),
-            "Diff":            st.column_config.NumberColumn("Diff ✅",            format="%.0f"),
+            "FG Stock":        st.column_config.NumberColumn("FG Stock",           format="%.0f"),
+            "STN In-Transit":  st.column_config.NumberColumn("STN In-Transit 🚚",   format="%.0f"),
+            "STN Transfers":   st.column_config.NumberColumn("# STNs",             format="%d"),
+            "Shelf Life":      st.column_config.TextColumn("Shelf Life 📦",         help="avg · N batches — click row to expand"),
+            "Fill Rate %":     st.column_config.ProgressColumn("Fill Rate % 🎯",    min_value=0, max_value=100, format="%.1f%%"),
+            "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",        format="%.0f"),
+            "Open Orders":     st.column_config.NumberColumn("# Orders",           format="%d"),
+            "Total Available": st.column_config.NumberColumn("Total Available",    format="%.0f"),
+            "Diff":            st.column_config.NumberColumn("Diff ✅",             format="%.0f"),
         }
         if "Open PO Value (₹)" in df_disp.columns:
             col_cfg["Open PO Value (₹)"] = st.column_config.NumberColumn("PO Value (₹)", format="%.0f")
 
-        # ── SKU selector for batch panel (shown ABOVE the table) ──────────────
-        sku_wh_options = [f"{r['Item Name']}  ·  {r['Item SKU']}  ·  {r['CFA Warehouse']}"
-                          for _, r in df_disp.iterrows()]
-
-        # Preserve last selection in session state
+        # ── Batch panel (above table, session state) ──────────────────────────
         if "batch_sel_tab2" not in st.session_state:
             st.session_state["batch_sel_tab2"] = None
 
-        # Batch panel card — always visible above the table
-        sel_key = st.session_state.get("batch_sel_tab2")  # (sku, name, wh)
-        # batch_lookup key is (sku, wh)
-        lookup_key = (sel_key[0], sel_key[2]) if sel_key and len(sel_key) == 3 else None
-        batches_to_show = batch_lookup.get(lookup_key, []) if lookup_key else []
+        sel_key       = st.session_state.get("batch_sel_tab2")
+        lookup_key    = (sel_key[0], sel_key[2]) if sel_key and len(sel_key)==3 else None
+        batches_show  = batch_lookup.get(lookup_key, []) if lookup_key else []
 
-        # Build the panel HTML
-        if sel_key and batches_to_show:
-            sel_name_disp = sel_key[0] if isinstance(sel_key, tuple) else str(sel_key)
-            sel_sku_disp  = sel_key[0] if isinstance(sel_key, tuple) else ""
-            batch_df = pd.DataFrame(batches_to_show).sort_values("Shelf Life %", ascending=True)
+        if sel_key and batches_show:
+            batch_df       = pd.DataFrame(batches_show).sort_values("Shelf Life %", ascending=True)
             batch_rows_html = ""
             for _, b in batch_df.iterrows():
                 pct   = float(b["Shelf Life %"])
@@ -741,14 +628,12 @@ with tab2:
                   <span style="min-width:96px;color:#475569;font-size:11px;">Exp: {b['Expiry Date']}</span>
                 </div>"""
             st.markdown(f"""
-            <div style="background:#060d18;border:1.5px solid #5bc8c0;border-radius:14px;
-                        padding:16px 20px;margin-bottom:12px;">
+            <div style="background:#060d18;border:1.5px solid #5bc8c0;border-radius:14px;padding:16px 20px;margin-bottom:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                 <div>
-                  <div style="font-size:10px;color:#5bc8c0;font-weight:700;text-transform:uppercase;
-                              letter-spacing:1.2px;margin-bottom:3px;">📦 Batch Shelf Life Breakdown</div>
-                  <div style="font-size:13px;color:#f1f5f9;font-weight:700;">{sel_key[2] if isinstance(sel_key,tuple) and len(sel_key)>2 else ""}
-                    <span style="color:#818cf8;font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:8px;">{sel_key[0] if isinstance(sel_key,tuple) else ""}</span>
+                  <div style="font-size:10px;color:#5bc8c0;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:3px;">📦 Batch Shelf Life Breakdown</div>
+                  <div style="font-size:13px;color:#f1f5f9;font-weight:700;">{sel_key[2] if len(sel_key)>2 else ""}
+                    <span style="color:#818cf8;font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:8px;">{sel_key[0]}</span>
                   </div>
                 </div>
                 <div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:6px 14px;
@@ -757,8 +642,7 @@ with tab2:
                 </div>
               </div>
               {batch_rows_html}
-            </div>
-            """, unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
         else:
             st.markdown("""
             <div style="background:#060d18;border:1px dashed #1e2535;border-radius:14px;
@@ -767,61 +651,45 @@ with tab2:
               👆 Select a row below to see batch-level shelf life &amp; expiry breakdown
             </div>""", unsafe_allow_html=True)
 
-        # ── Table header + export ─────────────────────────────────────────────
-        hdr_c1, hdr_c2 = st.columns([3, 1])
-        with hdr_c1:
-            st.markdown(f"""
-            <div class="tbl-hdr">
-                <span class="tbl-lbl">📊 SKU · CFA · FG + STN vs Open PO</span>
-                <span class="tbl-badge">{len(df_disp):,} SKUs</span>
-            </div>""", unsafe_allow_html=True)
-        with hdr_c2:
+        # ── Table ─────────────────────────────────────────────────────────────
+        hc1, hc2 = st.columns([3, 1])
+        with hc1:
+            st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📊 SKU · CFA · FG + STN vs Open PO</span><span class="tbl-badge">{len(df_disp):,} SKUs</span></div>', unsafe_allow_html=True)
+        with hc2:
             st.download_button("⬇  Export", buf2.getvalue(), "CFA_Stock_Analysis.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True)
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 
-        # Render table with row selection
         event = st.dataframe(
             df_disp.style.apply(colour_row, axis=1),
             use_container_width=True, height=480, hide_index=False,
             column_config=col_cfg,
-            on_select="rerun",
-            selection_mode="single-row",
-            key="cfa_table"
+            on_select="rerun", selection_mode="single-row", key="cfa_table"
         )
 
-        # Update session state from selection → triggers rerun → panel updates above
         selected_rows = event.selection.get("rows", []) if hasattr(event, "selection") else []
         if selected_rows:
-            sel_idx = selected_rows[0]
-            sel_row = df_disp.iloc[sel_idx]
-            new_key = (str(sel_row["Item SKU"]).strip(),
-                       str(sel_row.get("Item Name", "")).strip(),
-                       str(sel_row["CFA Warehouse"]).strip())
+            r       = df_disp.iloc[selected_rows[0]]
+            new_key = (str(r["Item SKU"]).strip(), str(r.get("Item Name","")).strip(), str(r["CFA Warehouse"]).strip())
             if st.session_state.get("batch_sel_tab2") != new_key:
                 st.session_state["batch_sel_tab2"] = new_key
                 st.rerun()
 
-        # ── Per-CFA Warehouse breakdown ───────────────────────────────────────
+        # ── Per-CFA expanders ─────────────────────────────────────────────────
         st.markdown("<div style='margin-top:16px'></div>", unsafe_allow_html=True)
         st.markdown('<div class="sec-div">Breakdown by CFA Warehouse</div>', unsafe_allow_html=True)
-
         for cfa_wh in sorted(df_disp["CFA Warehouse"].dropna().astype(str).unique()):
-            cfa_data = df_disp[df_disp["CFA Warehouse"] == cfa_wh].copy()
+            cfa_data = df_disp[df_disp["CFA Warehouse"] == cfa_wh]
             c_fg    = cfa_data["FG Stock"].sum()
             c_stn   = cfa_data["STN In-Transit"].sum()
             c_po    = cfa_data["Open PO Qty"].sum()
             c_diff  = cfa_data["Diff"].sum()
             c_short = int((cfa_data["Diff"] < 0).sum())
-            label   = f"🏭  {cfa_wh}   |   FG: {c_fg:,.0f}   +   STN: {c_stn:,.0f}   −   PO: {c_po:,.0f}   =   Diff: {c_diff:,.0f}   {'⚠️ '+str(c_short)+' shortfall' if c_short else '✅ Healthy'}"
+            label   = f"🏭  {cfa_wh}   |   FG: {c_fg:,.0f}  +  STN: {c_stn:,.0f}  −  PO: {c_po:,.0f}  =  Diff: {c_diff:,.0f}   {'⚠️ '+str(c_short)+' shortfall' if c_short else '✅ Healthy'}"
             with st.expander(label, expanded=False):
-                st.dataframe(
-                    cfa_data.style.apply(colour_row, axis=1),
-                    use_container_width=True,
-                    height=min(60 + len(cfa_data) * 36, 420),
-                    hide_index=True,
-                    column_config=col_cfg
-                )
+                st.dataframe(cfa_data.style.apply(colour_row, axis=1),
+                             use_container_width=True,
+                             height=min(60 + len(cfa_data)*36, 420),
+                             hide_index=True, column_config=col_cfg)
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · CFA ANALYSIS</div>', unsafe_allow_html=True)
