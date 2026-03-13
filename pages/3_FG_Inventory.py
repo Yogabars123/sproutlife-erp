@@ -84,6 +84,24 @@ div[data-testid="stDataFrame"] { border-radius:10px !important; overflow:hidden 
 CLOSED_STATUSES   = {"cancelled", "closed"}
 STN_OPEN_STATUSES = {"raised", "approved", "in transit", "intransit", "in-transit", "pending"}
 
+# ── CFA WAREHOUSE LIST ────────────────────────────────────────────────────────
+# Explicit list: Mithra Associates added, Quarantine Delhi CFA & Quarantine Kerala CFA excluded
+CFA_WAREHOUSES = [
+    "Mumbai CFA",
+    "Chennai CFA",
+    "Kerala CFA",
+    "Delhi -CFA GHEVRA",
+    "Ahmedabad CFA",
+    "Kolkata CFA",
+    "Pune CFA",
+    "Mithra Associates",
+    "BENGALURU CFA",
+]
+
+def is_cfa(warehouse_name: str) -> bool:
+    """Returns True if the warehouse is in the approved CFA list."""
+    return str(warehouse_name).strip() in CFA_WAREHOUSES
+
 # ── DATA LOADING ──────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def load_fg():
@@ -132,9 +150,24 @@ def load_sos():
             df[col] = pd.to_datetime(df[col], errors="coerce")
     return df
 
-df_fg  = load_fg()
-df_stn = load_stn()
-df_sos = load_sos()
+@st.cache_data(ttl=300)
+def load_mapper():
+    df = load_sheet("Mapper")
+    if df.empty: return pd.DataFrame()
+    df.columns = df.columns.str.strip()
+    return df
+
+df_fg     = load_fg()
+df_stn    = load_stn()
+df_sos    = load_sos()
+df_mapper = load_mapper()
+
+# ── CHANNEL STOCK WAREHOUSES ──────────────────────────────────────────────────
+CHANNEL_STOCK_WAREHOUSES = [
+    "Tumkur New Warehouse",
+    "Central",
+    "YB FG Warehouse",
+]
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -158,9 +191,10 @@ if df_fg.empty:
     st.error("⚠️ No FG Inventory data found.")
     st.stop()
 
-# ── CFA WAREHOUSE LIST ────────────────────────────────────────────────────────
-all_fg_wh      = sorted(df_fg["Warehouse"].dropna().astype(str).unique().tolist()) if "Warehouse" in df_fg.columns else []
-cfa_warehouses = sorted([w for w in all_fg_wh if "cfa" in w.lower()])
+# ── WAREHOUSE LISTS FOR FILTERS ───────────────────────────────────────────────
+all_fg_wh = sorted(df_fg["Warehouse"].dropna().astype(str).unique().tolist()) if "Warehouse" in df_fg.columns else []
+# CFA dropdown uses the explicit list, filtered to what actually exists in data
+cfa_warehouses = sorted([w for w in CFA_WAREHOUSES if w in all_fg_wh])
 
 # ── FILTERS ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
@@ -188,12 +222,12 @@ if sel_shelf in shelf_map and "Shelf Life %" in df.columns:
 
 # ── GLOBAL KPIs ───────────────────────────────────────────────────────────────
 total_fg    = df["Qty Available"].sum() if "Qty Available" in df.columns else 0
-cfa_fg      = df[df["Warehouse"].astype(str).str.contains("cfa", case=False, na=False)]["Qty Available"].sum() \
+cfa_fg      = df[df["Warehouse"].astype(str).apply(is_cfa)]["Qty Available"].sum() \
               if "Warehouse" in df.columns else 0
 stn_cfa_qty = 0
 if not df_stn.empty and "To Warehouse" in df_stn.columns and "Status" in df_stn.columns and "Qty" in df_stn.columns:
     stn_cfa_qty = df_stn[
-        df_stn["To Warehouse"].astype(str).str.contains("cfa", case=False, na=False) &
+        df_stn["To Warehouse"].astype(str).apply(is_cfa) &
         df_stn["Status"].astype(str).str.strip().str.lower().isin(STN_OPEN_STATUSES)
     ]["Qty"].sum()
 open_so_qty = 0
@@ -224,7 +258,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ── TABS ──────────────────────────────────────────────────────────────────────
-tab1, tab2 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open Orders"])
+tab1, tab2, tab3 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open Orders", "🏪  Channel Analysis"])
 
 # ═══ TAB 1 ════════════════════════════════════════════════════════════════════
 with tab1:
@@ -271,7 +305,7 @@ with tab2:
     """, unsafe_allow_html=True)
 
     # ── STEP 1: FG — CFA only ─────────────────────────────────────────────────
-    df_cfa = df_fg[df_fg["Warehouse"].astype(str).str.contains("cfa", case=False, na=False)].copy() \
+    df_cfa = df_fg[df_fg["Warehouse"].astype(str).apply(is_cfa)].copy() \
              if "Warehouse" in df_fg.columns else pd.DataFrame()
     if sel_cfa != "All CFAs" and not df_cfa.empty:
         df_cfa = df_cfa[df_cfa["Warehouse"].astype(str) == sel_cfa]
@@ -301,7 +335,7 @@ with tab2:
 
         if fg_code_col and to_wh_col and stat_col and qty_col:
             stn_filt = df_stn[
-                df_stn[to_wh_col].astype(str).str.contains("cfa", case=False, na=False) &
+                df_stn[to_wh_col].astype(str).apply(is_cfa) &
                 df_stn[stat_col].astype(str).str.strip().str.lower().isin(STN_OPEN_STATUSES)
             ].copy()
             if sel_cfa != "All CFAs":
@@ -328,8 +362,8 @@ with tab2:
         if sku_col_so and wh_col_so and qty_col_so:
             open_mask = ~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)
             sos_open  = df_sos[open_mask].copy()
-            # ★ KEY FIX: only keep rows where Warehouse is a CFA
-            sos_open  = sos_open[sos_open[wh_col_so].astype(str).str.contains("cfa", case=False, na=False)]
+            # Use explicit CFA list instead of string match
+            sos_open  = sos_open[sos_open[wh_col_so].astype(str).apply(is_cfa)]
             if sel_cfa != "All CFAs":
                 sos_open = sos_open[sos_open[wh_col_so].astype(str) == sel_cfa]
             if search:
@@ -371,8 +405,8 @@ with tab2:
         if "Open PO Value (₹)" in merged.columns:
             merged["Open PO Value (₹)"] = merged["Open PO Value (₹)"].fillna(0)
 
-        # ★ Keep only CFA rows in merged (belt-and-suspenders)
-        merged = merged[merged["CFA Warehouse"].astype(str).str.contains("cfa", case=False, na=False)]
+        # Use explicit CFA list instead of string match
+        merged = merged[merged["CFA Warehouse"].astype(str).apply(is_cfa)]
 
         merged["Total Available"] = merged["FG Stock"] + merged["STN In-Transit"]
         merged["Diff"]            = merged["Total Available"] - merged["Open PO Qty"]
@@ -410,19 +444,16 @@ with tab2:
         # ══════════════════════════════════════════════════════════════════════
         today_ts = pd.Timestamp(datetime.today().date())
 
-        # ── Fill Rate (CFA only, from merged which is already CFA-filtered) ──
-        # Correct formula: sum of min(available, po_qty) per SKU / sum of po_qty
-        # This catches cases where some SKUs have surplus but others have zero stock
+        # ── Fill Rate ─────────────────────────────────────────────────────────
         fill_rows = []
         for cfa_wh in sorted(merged["CFA Warehouse"].dropna().astype(str).unique()):
             cfa_m       = merged[merged["CFA Warehouse"] == cfa_wh]
             total_po    = cfa_m["Open PO Qty"].sum()
-            # Per-SKU fulfillable = min(Total Available, Open PO Qty) for each SKU
             fulfillable = cfa_m.apply(
                 lambda r: min(r["Total Available"], r["Open PO Qty"]), axis=1
             ).sum()
             fill_pct    = (fulfillable / total_po * 100) if total_po > 0 else 100.0
-            fill_pct    = min(fill_pct, 100.0)  # cap at 100
+            fill_pct    = min(fill_pct, 100.0)
             short_skus  = int((cfa_m["Diff"] < 0).sum())
             fill_rows.append({"CFA": cfa_wh, "Fill Rate %": round(fill_pct, 1),
                                "Total Available": cfa_m["Total Available"].sum(),
@@ -431,7 +462,7 @@ with tab2:
         fill_df = pd.DataFrame(fill_rows).sort_values("Fill Rate %", ascending=True) \
                   if fill_rows else pd.DataFrame()
 
-        # ── Expiry buckets (CFA only — df_cfa is already CFA-filtered) ───────
+        # ── Expiry buckets ────────────────────────────────────────────────────
         expiry_rows = []
         if not df_cfa.empty and "Expiry Date" in df_cfa.columns:
             exp_data = df_cfa[["Warehouse","Qty Available","Expiry Date"]].copy()
@@ -474,7 +505,6 @@ with tab2:
                     avl_fmt  = f"{avl:,.0f}"
                     po_fmt   = f"{po:,.0f}"
                     pct_fmt  = f"{pct:.1f}%"
-                    # Build shortfall badge separately as plain string (no f-string HTML nesting)
                     short_html = ""
                     if short > 0:
                         s_label = f"&#9888;&#65039; {short} SKU{'s' if short!=1 else ''}"
@@ -512,7 +542,6 @@ with tab2:
                 bkt_bdr  = ["#450a0a","#7f1d1d","#78350f","#713f12","#14532d"]
                 max_vals = {b: max(expiry_df[b].max(), 1) for b in buckets}
 
-                # Header
                 hdr = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-bottom:6px;">'
                 hdr += '<div style="font-size:10px;color:#334155;font-weight:700;font-family:JetBrains Mono,monospace;">CFA</div>'
                 for b, bc in zip(buckets, bkt_cols):
@@ -539,7 +568,6 @@ with tab2:
                     row += '</div>'
                     st.markdown(row, unsafe_allow_html=True)
 
-                # Totals row
                 tot = '<div style="display:grid;grid-template-columns:150px repeat(5,1fr);gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid #1e2535;">'
                 tot += '<div style="font-size:10px;font-weight:700;color:#475569;font-family:JetBrains Mono,monospace;">TOTAL</div>'
                 for b, bc in zip(buckets, bkt_cols):
@@ -620,7 +648,7 @@ with tab2:
         if "Open PO Value (₹)" in df_disp.columns:
             col_cfg["Open PO Value (₹)"] = st.column_config.NumberColumn("PO Value (₹)", format="%.0f")
 
-        # ── Batch panel (above table, session state) ──────────────────────────
+        # ── Batch panel ───────────────────────────────────────────────────────
         if "batch_sel_tab2" not in st.session_state:
             st.session_state["batch_sel_tab2"] = None
 
@@ -718,5 +746,299 @@ with tab2:
                              use_container_width=True,
                              height=min(60 + len(cfa_data)*36, 420),
                              hide_index=True, column_config=col_cfg)
+
+# ═══ TAB 3 — CHANNEL ANALYSIS ════════════════════════════════════════════════
+with tab3:
+
+    st.markdown("""
+    <div class="formula-bar">
+        <span>📐 Formula:</span>
+        <b>Stock</b> <span>= Tumkur New Warehouse + Central + YB FG Warehouse</span> <span>−</span>
+        <b>Open PO Qty</b> <span>= per Channel (Mapper → Customer Name)</span> <span>=</span> <b>Diff</b>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Validate required data ────────────────────────────────────────────────
+    if df_mapper.empty:
+        st.error("⚠️ Mapper sheet not found or empty.")
+    elif df_sos.empty:
+        st.error("⚠️ SOS sheet not found or empty.")
+    elif df_fg.empty:
+        st.error("⚠️ FG Inventory sheet not found or empty.")
+    else:
+        # ── Step 1: Channel stock (3 warehouses only) ─────────────────────────
+        stock_base = df_fg[
+            df_fg["Warehouse"].astype(str).isin(CHANNEL_STOCK_WAREHOUSES)
+        ].copy() if "Warehouse" in df_fg.columns else pd.DataFrame()
+
+        # SKU-level stock totals
+        if not stock_base.empty and "Item SKU" in stock_base.columns:
+            sku_stock = stock_base.groupby("Item SKU").agg(
+                Item_Name   =("Item Name",     "first"),
+                Category    =("Category",      "first"),
+                Stock_Avail =("Qty Available", "sum"),
+            ).reset_index()
+            sku_stock.columns = ["Item SKU","Item Name","Category","Stock Available"]
+        else:
+            sku_stock = pd.DataFrame(columns=["Item SKU","Item Name","Category","Stock Available"])
+
+        # ── Step 2: Mapper — customer → channel ───────────────────────────────
+        # Detect column names defensively
+        cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
+        channel_col_m = next((c for c in df_mapper.columns if "channel" in c.lower()), None)
+
+        if not cust_col_m or not channel_col_m:
+            st.error(f"⚠️ Mapper sheet must have Customer Name and Channel columns. Found: {list(df_mapper.columns)}")
+            st.stop()
+
+        mapper_clean = df_mapper[[cust_col_m, channel_col_m]].copy()
+        mapper_clean.columns = ["Customer Name", "Channel"]
+        mapper_clean["Customer Name"] = mapper_clean["Customer Name"].astype(str).str.strip()
+        mapper_clean["Channel"]       = mapper_clean["Channel"].astype(str).str.strip()
+        customer_channel_map          = dict(zip(mapper_clean["Customer Name"], mapper_clean["Channel"]))
+
+        # ── Step 3: Open SOS — join channel from mapper ───────────────────────
+        sku_col_so  = next((c for c in df_sos.columns if "product sku" in c.lower()), None)
+        cust_col_so = next((c for c in df_sos.columns if "customer" in c.lower()), None)
+        qty_col_so  = next((c for c in df_sos.columns if "order qty" in c.lower()), None)
+        dsp_col_so  = next((c for c in df_sos.columns if "dispatch qty" in c.lower()), None)
+        nm_col_so   = next((c for c in df_sos.columns if "item name" in c.lower() or "product name" in c.lower()), None)
+
+        if not sku_col_so or not qty_col_so:
+            st.error(f"⚠️ SOS sheet missing Product SKU or Order Qty column. Found: {list(df_sos.columns)}")
+            st.stop()
+
+        open_sos = df_sos[
+            ~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)
+        ].copy() if "SO Status" in df_sos.columns else df_sos.copy()
+
+        open_sos["_sku"]      = open_sos[sku_col_so].astype(str).str.strip()
+        open_sos["_customer"] = open_sos[cust_col_so].astype(str).str.strip() if cust_col_so else ""
+        open_sos["_channel"]  = open_sos["_customer"].map(customer_channel_map).fillna("Unknown")
+        open_sos["_order_qty"]= pd.to_numeric(open_sos[qty_col_so], errors="coerce").fillna(0)
+        open_sos["_dispatch"] = pd.to_numeric(open_sos[dsp_col_so], errors="coerce").fillna(0) if dsp_col_so else 0
+
+        if nm_col_so:
+            open_sos["_item_name"] = open_sos[nm_col_so].astype(str).str.strip()
+        else:
+            open_sos["_item_name"] = open_sos["_sku"]
+
+        # ── Step 4: All channels present ──────────────────────────────────────
+        all_channels = sorted([c for c in open_sos["_channel"].unique() if c != "Unknown"])
+        if "Unknown" in open_sos["_channel"].values:
+            all_channels.append("Unknown")
+
+        if not all_channels:
+            st.warning("⚠️ No channel data found. Check Mapper customer names match SOS.")
+        else:
+            # ── Channel-level KPI bar ─────────────────────────────────────────
+            ch_kpi = open_sos.groupby("_channel").agg(
+                Total_PO =("_order_qty","sum"),
+                Orders   =("_order_qty","count"),
+            ).reset_index()
+
+            total_channel_po   = ch_kpi["Total_PO"].sum()
+            total_channel_stock= sku_stock["Stock Available"].sum() if not sku_stock.empty else 0
+            total_channel_diff = total_channel_stock - total_channel_po
+
+            st.markdown(f"""
+            <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
+              <div class="kpi-box teal"><div class="kpi-inner"><div>
+                <div class="kpi-label">Stock (3 Warehouses)</div>
+                <div class="kpi-value">{total_channel_stock:,.0f}</div>
+                <div class="kpi-sub">Tumkur New + Central + YB FG</div>
+              </div><div class="kpi-ico">📦</div></div></div>
+              <div class="kpi-box amber"><div class="kpi-inner"><div>
+                <div class="kpi-label">Total Open PO (All Channels)</div>
+                <div class="kpi-value">{total_channel_po:,.0f}</div>
+                <div class="kpi-sub">{len(all_channels)} channels · {int(ch_kpi["Orders"].sum()):,} orders</div>
+              </div><div class="kpi-ico">📋</div></div></div>
+              <div class="kpi-box {"green" if total_channel_diff>=0 else "red"}"><div class="kpi-inner"><div>
+                <div class="kpi-label">Net Diff (Stock − PO)</div>
+                <div class="kpi-value">{total_channel_diff:,.0f}</div>
+                <div class="kpi-sub">{"Surplus ✅" if total_channel_diff>=0 else "Shortfall ⚠️"}</div>
+              </div><div class="kpi-ico">{"✅" if total_channel_diff>=0 else "⚠️"}</div></div></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ── Shortfall toggle ──────────────────────────────────────────────
+            show_shortfall_only = st.toggle("⚠️ Show shortfall SKUs only", value=False, key="ch_shortfall_toggle")
+
+            # ── Channel sub-tabs ──────────────────────────────────────────────
+            ch_tab_labels = [f"{'🔴' if open_sos[open_sos['_channel']==ch]['_order_qty'].sum() > 0 else '⚪'}  {ch}" for ch in all_channels]
+            ch_tabs = st.tabs(ch_tab_labels)
+
+            for ch_tab, channel in zip(ch_tabs, all_channels):
+                with ch_tab:
+                    ch_sos = open_sos[open_sos["_channel"] == channel].copy()
+
+                    if ch_sos.empty:
+                        st.info(f"No open orders found for channel: {channel}")
+                        continue
+
+                    # SKU summary for this channel
+                    ch_sku_summary = ch_sos.groupby("_sku").agg(
+                        Item_Name   =("_item_name",  "first"),
+                        Open_PO     =("_order_qty",  "sum"),
+                        Dispatched  =("_dispatch",   "sum"),
+                        Orders      =("_order_qty",  "count"),
+                        Customers   =("_customer",   "nunique"),
+                    ).reset_index()
+                    ch_sku_summary.columns = ["Item SKU","Item Name","Open PO Qty","Dispatch Qty","# Orders","# Customers"]
+
+                    # Merge with stock
+                    ch_merged = ch_sku_summary.merge(
+                        sku_stock[["Item SKU","Category","Stock Available"]],
+                        on="Item SKU", how="left"
+                    )
+                    ch_merged["Stock Available"] = ch_merged["Stock Available"].fillna(0)
+                    ch_merged["Shortfall Qty"]   = ch_merged["Stock Available"] - ch_merged["Open PO Qty"]
+
+                    # Forecast for Days of Stock
+                    forecast_col = None
+                    if not df_sos.empty:
+                        # Use monthly forecast from Forecast sheet if available
+                        pass
+
+                    # Days of stock = Stock / (Open PO as proxy for demand)
+                    ch_merged["Days of Stock"] = ch_merged.apply(
+                        lambda r: round(r["Stock Available"] / (r["Open PO Qty"] / 26), 1)
+                        if r["Open PO Qty"] > 0 else 0.0, axis=1
+                    )
+
+                    ch_merged = ch_merged.sort_values("Shortfall Qty", ascending=True)
+
+                    if show_shortfall_only:
+                        ch_merged = ch_merged[ch_merged["Shortfall Qty"] < 0]
+
+                    # ── Channel KPIs ──────────────────────────────────────────
+                    c_stock   = ch_merged["Stock Available"].sum()
+                    c_po      = ch_merged["Open PO Qty"].sum()
+                    c_diff    = ch_merged["Shortfall Qty"].sum()
+                    c_short_n = int((ch_merged["Shortfall Qty"] < 0).sum())
+                    c_cust_n  = ch_sos["_customer"].nunique()
+
+                    k1,k2,k3,k4,k5 = st.columns(5)
+                    k1.metric("Stock Available",  f"{c_stock:,.0f}")
+                    k2.metric("Open PO Qty",       f"{c_po:,.0f}")
+                    k3.metric("Net Diff",           f"{c_diff:,.0f}",
+                              delta=f"{'Surplus' if c_diff>=0 else 'Shortfall'}: {abs(c_diff):,.0f}",
+                              delta_color="normal" if c_diff>=0 else "inverse")
+                    k4.metric("Shortfall SKUs",    f"{c_short_n}")
+                    k5.metric("Customers",         f"{c_cust_n}")
+
+                    st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+
+                    if ch_merged.empty:
+                        st.info("No shortfall SKUs for this channel." if show_shortfall_only else "No SKUs found.")
+                        continue
+
+                    # ── Row colouring ─────────────────────────────────────────
+                    def colour_ch(row):
+                        d = row.get("Shortfall Qty", 0)
+                        if pd.isna(d): return [""] * len(row)
+                        if d < 0:     return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
+                        tot = row.get("Stock Available", 1)
+                        if tot > 0 and d / max(tot, 1) < 0.15:
+                            return ["background-color:#2d1f00; color:#fde68a"] * len(row)
+                        return ["background-color:#061410; color:#d1fae5"] * len(row)
+
+                    ch_col_cfg = {
+                        "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",    format="%.0f"),
+                        "Dispatch Qty":    st.column_config.NumberColumn("Dispatch Qty",   format="%.0f"),
+                        "Stock Available": st.column_config.NumberColumn("Stock Available", format="%.0f"),
+                        "Shortfall Qty":   st.column_config.NumberColumn("Diff (Stock−PO)", format="%.0f"),
+                        "Days of Stock":   st.column_config.NumberColumn("Days of Stock",  format="%.1f"),
+                        "# Orders":        st.column_config.NumberColumn("# Orders",       format="%d"),
+                        "# Customers":     st.column_config.NumberColumn("# Customers",    format="%d"),
+                    }
+
+                    # ── Summary table ─────────────────────────────────────────
+                    disp_ch = ch_merged[["Item Name","Item SKU","Category",
+                                         "Open PO Qty","Dispatch Qty","Stock Available",
+                                         "Shortfall Qty","Days of Stock","# Orders","# Customers"]].copy()
+
+                    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span><span class="tbl-badge">{len(disp_ch):,} SKUs</span></div>', unsafe_allow_html=True)
+
+                    # Export
+                    buf_ch = io.BytesIO()
+                    # Build customer drill for export
+                    cust_detail = ch_sos.groupby(["_sku","_customer"]).agg(
+                        Open_PO   =("_order_qty","sum"),
+                        Dispatched=("_dispatch", "sum"),
+                        Orders    =("_order_qty","count"),
+                    ).reset_index()
+                    cust_detail.columns = ["Item SKU","Customer Name","Open PO Qty","Dispatch Qty","# Orders"]
+                    cust_detail = cust_detail.merge(
+                        sku_stock[["Item SKU","Stock Available"]], on="Item SKU", how="left"
+                    )
+                    cust_detail["Stock Available"] = cust_detail["Stock Available"].fillna(0)
+                    cust_detail["Channel"] = channel
+
+                    with pd.ExcelWriter(buf_ch, engine="openpyxl") as wx:
+                        disp_ch.to_excel(wx, index=False, sheet_name="SKU Summary")
+                        cust_detail.to_excel(wx, index=False, sheet_name="Customer Drill")
+
+                    hch1, hch2 = st.columns([4,1])
+                    with hch2:
+                        st.download_button(f"⬇ Export {channel}", buf_ch.getvalue(),
+                            f"Channel_{channel}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True)
+
+                    st.dataframe(
+                        disp_ch.style.apply(colour_ch, axis=1),
+                        use_container_width=True, height=420, hide_index=True,
+                        column_config=ch_col_cfg
+                    )
+
+                    # ── Drill-down: per-SKU customer breakdown ─────────────────
+                    st.markdown("<div style='margin-top:14px'></div>", unsafe_allow_html=True)
+                    st.markdown('<div class="sec-div">👤 Customer Drill-Down by SKU</div>', unsafe_allow_html=True)
+
+                    for _, sku_row in ch_merged.iterrows():
+                        sku      = sku_row["Item SKU"]
+                        sku_name = sku_row["Item Name"]
+                        s_diff   = sku_row["Shortfall Qty"]
+                        s_stock  = sku_row["Stock Available"]
+                        s_po     = sku_row["Open PO Qty"]
+                        status   = "⚠️ Shortfall" if s_diff < 0 else "✅ OK"
+
+                        exp_label = (
+                            f"{status}  ·  {sku} — {sku_name}  "
+                            f"|  Stock: {s_stock:,.0f}  ·  PO: {s_po:,.0f}  ·  Diff: {s_diff:,.0f}"
+                        )
+
+                        with st.expander(exp_label, expanded=(s_diff < 0)):
+                            sku_cust = ch_sos[ch_sos["_sku"] == sku].groupby("_customer").agg(
+                                Open_PO   =("_order_qty","sum"),
+                                Dispatched=("_dispatch", "sum"),
+                                Orders    =("_order_qty","count"),
+                            ).reset_index()
+                            sku_cust.columns = ["Customer Name","Open PO Qty","Dispatch Qty","# Orders"]
+                            sku_cust["Channel"]         = channel
+                            sku_cust["Stock Available"] = s_stock
+                            sku_cust["Shortfall Qty"]   = s_stock - sku_cust["Open PO Qty"]
+                            sku_cust = sku_cust.sort_values("Shortfall Qty", ascending=True)
+
+                            def colour_cust(row):
+                                d = row.get("Shortfall Qty", 0)
+                                if pd.isna(d): return [""] * len(row)
+                                if d < 0:     return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
+                                return ["background-color:#061410; color:#d1fae5"] * len(row)
+
+                            st.dataframe(
+                                sku_cust.style.apply(colour_cust, axis=1),
+                                use_container_width=True,
+                                height=min(60 + len(sku_cust)*36, 380),
+                                hide_index=True,
+                                column_config={
+                                    "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",    format="%.0f"),
+                                    "Dispatch Qty":    st.column_config.NumberColumn("Dispatch Qty",   format="%.0f"),
+                                    "Stock Available": st.column_config.NumberColumn("Stock Available", format="%.0f"),
+                                    "Shortfall Qty":   st.column_config.NumberColumn("Diff",           format="%.0f"),
+                                    "# Orders":        st.column_config.NumberColumn("# Orders",       format="%d"),
+                                }
+                            )
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · CFA ANALYSIS</div>', unsafe_allow_html=True)
