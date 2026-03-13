@@ -197,9 +197,17 @@ all_fg_wh = sorted(df_fg["Warehouse"].dropna().astype(str).unique().tolist()) if
 cfa_warehouses = sorted([w for w in CFA_WAREHOUSES if w in all_fg_wh])
 
 # ── FILTERS ───────────────────────────────────────────────────────────────────
+# Build channel list from mapper
+_all_channels_filt = []
+if not df_mapper.empty:
+    _cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
+    _channel_col_m = next((c for c in df_mapper.columns if "channel" in c.lower()), None)
+    if _cust_col_m and _channel_col_m:
+        _all_channels_filt = sorted(df_mapper[_channel_col_m].dropna().astype(str).str.strip().unique().tolist())
+
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
 st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=True)
-c1, c2, c3, c4 = st.columns([2.5, 2, 2, 2])
+c1, c2, c3, c4, c5 = st.columns([2, 1.8, 1.8, 1.8, 1.8])
 with c1:
     search = st.text_input("s", placeholder="🔍 Search SKU / product name…", label_visibility="collapsed")
 with c2:
@@ -207,6 +215,8 @@ with c2:
 with c3:
     sel_cfa   = st.selectbox("cfa",   ["All CFAs"] + cfa_warehouses,  label_visibility="collapsed")
 with c4:
+    sel_channel = st.selectbox("ch_filt", ["All Channels"] + _all_channels_filt, label_visibility="collapsed")
+with c5:
     sel_shelf = st.selectbox("sh",    ["All Shelf Life","Below 90%","Below 80%","Below 70%","Below 50%"], label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -262,35 +272,123 @@ tab1, tab2, tab3 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open Order
 
 # ═══ TAB 1 ════════════════════════════════════════════════════════════════════
 with tab1:
-    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📋 Finished Goods Inventory</span><span class="tbl-badge">{len(df):,} rows</span></div>', unsafe_allow_html=True)
+    # ── Build the flat merged view ─────────────────────────────────────────────
+    # Step A: FG stock from 3 warehouses, grouped by SKU
+    _fg3 = df_fg[df_fg["Warehouse"].astype(str).isin(CHANNEL_STOCK_WAREHOUSES)].copy()            if "Warehouse" in df_fg.columns else pd.DataFrame()
+    if not _fg3.empty and "Item SKU" in _fg3.columns:
+        _fg3_agg = _fg3.groupby("Item SKU").agg(
+            Item_Name   =("Item Name",     "first"),
+            Category    =("Category",      "first"),
+            FG_Stock    =("Qty Available", "sum"),
+        ).reset_index()
+        _fg3_agg.columns = ["Item SKU","Item Name","Category","FG Stock"]
+    else:
+        _fg3_agg = pd.DataFrame(columns=["Item SKU","Item Name","Category","FG Stock"])
+
+    # Step B: Open SOS with customer + channel
+    _t1_sos = pd.DataFrame()
+    if not df_sos.empty:
+        _sku_c  = next((c for c in df_sos.columns if "product sku"  in c.lower()), None)
+        _cust_c = next((c for c in df_sos.columns if "customer"     in c.lower()), None)
+        _qty_c  = next((c for c in df_sos.columns if "order qty"    in c.lower()), None)
+        _nm_c   = next((c for c in df_sos.columns if "item name"    in c.lower() or "product name" in c.lower()), None)
+        if _sku_c and _qty_c:
+            _t1_open = df_sos[
+                ~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)
+            ].copy() if "SO Status" in df_sos.columns else df_sos.copy()
+            _t1_open["_sku"]      = _t1_open[_sku_c].astype(str).str.strip()
+            _t1_open["_customer"] = _t1_open[_cust_c].astype(str).str.strip() if _cust_c else "Unknown"
+            _t1_open["_po_qty"]   = pd.to_numeric(_t1_open[_qty_c], errors="coerce").fillna(0)
+            # Map channel from mapper
+            _t1_cust_map = {}
+            if not df_mapper.empty:
+                _mc = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
+                _ch = next((c for c in df_mapper.columns if "channel"  in c.lower()), None)
+                if _mc and _ch:
+                    _t1_cust_map = dict(zip(
+                        df_mapper[_mc].astype(str).str.strip(),
+                        df_mapper[_ch].astype(str).str.strip()
+                    ))
+            _t1_open["_channel"] = _t1_open["_customer"].map(_t1_cust_map).fillna("Unknown")
+            # Group by SKU + Customer + Channel
+            _t1_sos = _t1_open.groupby(["_sku","_customer","_channel"]).agg(
+                PO_Qty=("_po_qty","sum"),
+                Orders=("_po_qty","count"),
+            ).reset_index()
+            _t1_sos.columns = ["Item SKU","Customer Name","Channel","PO Quantity","# Orders"]
+
+    # Step C: Merge FG stock + SOS
+    if not _t1_sos.empty and not _fg3_agg.empty:
+        _t1_merged = _t1_sos.merge(_fg3_agg, on="Item SKU", how="left")
+    elif not _fg3_agg.empty:
+        _t1_merged = _fg3_agg.copy()
+        _t1_merged["Customer Name"] = ""
+        _t1_merged["Channel"]       = ""
+        _t1_merged["PO Quantity"]   = 0
+        _t1_merged["# Orders"]      = 0
+    else:
+        _t1_merged = pd.DataFrame(columns=["Item Name","Item SKU","Category",
+                                            "FG Stock","Customer Name","PO Quantity","Diff","Channel"])
+
+    if not _t1_merged.empty:
+        _t1_merged["Item Name"]   = _t1_merged["Item Name"].fillna(_t1_merged["Item SKU"])
+        _t1_merged["Category"]    = _t1_merged.get("Category", pd.Series("")).fillna("")
+        _t1_merged["FG Stock"]    = _t1_merged.get("FG Stock", pd.Series(0)).fillna(0)
+        _t1_merged["PO Quantity"] = _t1_merged.get("PO Quantity", pd.Series(0)).fillna(0)
+        _t1_merged["Diff"]        = _t1_merged["FG Stock"] - _t1_merged["PO Quantity"]
+
+    # Step D: Apply global filters
+    _t1_view = _t1_merged.copy() if not _t1_merged.empty else pd.DataFrame()
+    if not _t1_view.empty:
+        if search:
+            _t1_view = _t1_view[_t1_view.astype(str).apply(
+                lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
+        if sel_channel != "All Channels" and "Channel" in _t1_view.columns:
+            _t1_view = _t1_view[_t1_view["Channel"].astype(str) == sel_channel]
+
+    # Display columns in required order
+    _t1_cols = ["Item Name","Item SKU","Category","FG Stock","Customer Name","PO Quantity","Diff","Channel"]
+    _t1_cols = [c for c in _t1_cols if c in (_t1_view.columns if not _t1_view.empty else [])]
+
+    # Row colouring
+    def _colour_t1(row):
+        d = row.get("Diff", 0)
+        if pd.isna(d): return [""] * len(row)
+        if d < 0:      return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
+        tot = row.get("FG Stock", 1)
+        if tot > 0 and d / max(tot,1) < 0.15:
+            return ["background-color:#2d1f00;color:#fde68a"] * len(row)
+        return ["background-color:#061410;color:#d1fae5"] * len(row)
+
+    # Export
     buf1 = io.BytesIO()
     with pd.ExcelWriter(buf1, engine="openpyxl") as w:
-        df.to_excel(w, index=False, sheet_name="FG Inventory")
-    st.download_button("⬇  Export FG to Excel", buf1.getvalue(), "FG_Inventory.xlsx",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        (_t1_view[_t1_cols] if not _t1_view.empty else pd.DataFrame(columns=_t1_cols)).to_excel(
+            w, index=False, sheet_name="FG Inventory")
+
+    hdr1, hdr2 = st.columns([4,1])
+    with hdr1:
+        st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📋 FG Inventory vs Open Orders</span><span class="tbl-badge">{len(_t1_view):,} rows</span></div>', unsafe_allow_html=True)
+    with hdr2:
+        st.download_button("⬇  Export", buf1.getvalue(), "FG_Inventory.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+
     st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
-    if df.empty:
-        st.warning("⚠️ No FG records match the current filters.")
+
+    if _t1_view.empty or not _t1_cols:
+        st.warning("⚠️ No records match the current filters.")
     else:
-        fg_priority = ["Item Name","Item SKU","Category","Primary Category","Warehouse","UoM",
-                       "Qty Available","Shelf Life %","Batch No","MFG Date","Expiry Date",
-                       "Inventory Date","Item Type","Current Aging (Days)",
-                       "Qty Inward","Qty (Issue / Hold)","Value (Inc Tax)","Value (Ex Tax)"]
-        fg_cols  = [c for c in fg_priority if c in df.columns]
-        fg_cols += [c for c in df.columns if c not in fg_cols]
-        df_show  = df[fg_cols].copy()
-        for c in ["MFG Date","Expiry Date","Inventory Date"]:
-            if c in df_show.columns:
-                df_show[c] = pd.to_datetime(df_show[c], errors="coerce").dt.strftime("%d-%b-%Y").fillna("-")
-        st.dataframe(df_show, use_container_width=True, height=540, hide_index=True,
+        st.dataframe(
+            _t1_view[_t1_cols].style.apply(_colour_t1, axis=1),
+            use_container_width=True, height=560, hide_index=True,
             column_config={
-                "Qty Available":      st.column_config.NumberColumn("Qty Available", format="%.0f"),
-                "Shelf Life %":       st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
-                "Qty Inward":         st.column_config.NumberColumn("Qty Inward",    format="%.0f"),
-                "Qty (Issue / Hold)": st.column_config.NumberColumn("Issue / Hold",  format="%.0f"),
-                "Value (Inc Tax)":    st.column_config.NumberColumn("Val (Inc)",     format="%.0f"),
-                "Value (Ex Tax)":     st.column_config.NumberColumn("Val (Ex)",      format="%.0f"),
-            })
+                "FG Stock":    st.column_config.NumberColumn("FG Stock",    format="%.0f",
+                               help="Sum of Central + Tumkur New Warehouse + YB FG Warehouse"),
+                "PO Quantity": st.column_config.NumberColumn("PO Quantity", format="%.0f"),
+                "Diff":        st.column_config.NumberColumn("Diff",        format="%.0f"),
+                "# Orders":    st.column_config.NumberColumn("# Orders",    format="%d"),
+            }
+        )
 
 # ═══ TAB 2 ════════════════════════════════════════════════════════════════════
 with tab2:
