@@ -758,7 +758,6 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Validate required data ────────────────────────────────────────────────
     if df_mapper.empty:
         st.error("⚠️ Mapper sheet not found or empty.")
     elif df_sos.empty:
@@ -766,12 +765,11 @@ with tab3:
     elif df_fg.empty:
         st.error("⚠️ FG Inventory sheet not found or empty.")
     else:
-        # ── Step 1: Channel stock (3 warehouses only) ─────────────────────────
+        # ── Step 1: Stock from 3 warehouses ──────────────────────────────────
         stock_base = df_fg[
             df_fg["Warehouse"].astype(str).isin(CHANNEL_STOCK_WAREHOUSES)
         ].copy() if "Warehouse" in df_fg.columns else pd.DataFrame()
 
-        # SKU-level stock totals
         if not stock_base.empty and "Item SKU" in stock_base.columns:
             sku_stock = stock_base.groupby("Item SKU").agg(
                 Item_Name   =("Item Name",     "first"),
@@ -782,22 +780,21 @@ with tab3:
         else:
             sku_stock = pd.DataFrame(columns=["Item SKU","Item Name","Category","Stock Available"])
 
-        # ── Step 2: Mapper — customer → channel ───────────────────────────────
-        # Detect column names defensively
+        # ── Step 2: Mapper ────────────────────────────────────────────────────
         cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
         channel_col_m = next((c for c in df_mapper.columns if "channel" in c.lower()), None)
 
         if not cust_col_m or not channel_col_m:
-            st.error(f"⚠️ Mapper sheet must have Customer Name and Channel columns. Found: {list(df_mapper.columns)}")
+            st.error(f"⚠️ Mapper must have Customer Name + Channel columns. Found: {list(df_mapper.columns)}")
             st.stop()
 
         mapper_clean = df_mapper[[cust_col_m, channel_col_m]].copy()
-        mapper_clean.columns = ["Customer Name", "Channel"]
+        mapper_clean.columns = ["Customer Name","Channel"]
         mapper_clean["Customer Name"] = mapper_clean["Customer Name"].astype(str).str.strip()
         mapper_clean["Channel"]       = mapper_clean["Channel"].astype(str).str.strip()
         customer_channel_map          = dict(zip(mapper_clean["Customer Name"], mapper_clean["Channel"]))
 
-        # ── Step 3: Open SOS — join channel from mapper ───────────────────────
+        # ── Step 3: Open SOS ─────────────────────────────────────────────────
         sku_col_so  = next((c for c in df_sos.columns if "product sku" in c.lower()), None)
         cust_col_so = next((c for c in df_sos.columns if "customer" in c.lower()), None)
         qty_col_so  = next((c for c in df_sos.columns if "order qty" in c.lower()), None)
@@ -805,25 +802,21 @@ with tab3:
         nm_col_so   = next((c for c in df_sos.columns if "item name" in c.lower() or "product name" in c.lower()), None)
 
         if not sku_col_so or not qty_col_so:
-            st.error(f"⚠️ SOS sheet missing Product SKU or Order Qty column. Found: {list(df_sos.columns)}")
+            st.error(f"⚠️ SOS missing Product SKU / Order Qty. Found: {list(df_sos.columns)}")
             st.stop()
 
         open_sos = df_sos[
             ~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)
         ].copy() if "SO Status" in df_sos.columns else df_sos.copy()
 
-        open_sos["_sku"]      = open_sos[sku_col_so].astype(str).str.strip()
-        open_sos["_customer"] = open_sos[cust_col_so].astype(str).str.strip() if cust_col_so else ""
-        open_sos["_channel"]  = open_sos["_customer"].map(customer_channel_map).fillna("Unknown")
-        open_sos["_order_qty"]= pd.to_numeric(open_sos[qty_col_so], errors="coerce").fillna(0)
-        open_sos["_dispatch"] = pd.to_numeric(open_sos[dsp_col_so], errors="coerce").fillna(0) if dsp_col_so else 0
+        open_sos["_sku"]       = open_sos[sku_col_so].astype(str).str.strip()
+        open_sos["_customer"]  = open_sos[cust_col_so].astype(str).str.strip() if cust_col_so else ""
+        open_sos["_channel"]   = open_sos["_customer"].map(customer_channel_map).fillna("Unknown")
+        open_sos["_order_qty"] = pd.to_numeric(open_sos[qty_col_so], errors="coerce").fillna(0)
+        open_sos["_dispatch"]  = pd.to_numeric(open_sos[dsp_col_so], errors="coerce").fillna(0) if dsp_col_so else 0
+        open_sos["_item_name"] = open_sos[nm_col_so].astype(str).str.strip() if nm_col_so else open_sos["_sku"]
 
-        if nm_col_so:
-            open_sos["_item_name"] = open_sos[nm_col_so].astype(str).str.strip()
-        else:
-            open_sos["_item_name"] = open_sos["_sku"]
-
-        # ── Step 4: All channels present ──────────────────────────────────────
+        # ── Step 4: Channels ──────────────────────────────────────────────────
         all_channels = sorted([c for c in open_sos["_channel"].unique() if c != "Unknown"])
         if "Unknown" in open_sos["_channel"].values:
             all_channels.append("Unknown")
@@ -831,15 +824,10 @@ with tab3:
         if not all_channels:
             st.warning("⚠️ No channel data found. Check Mapper customer names match SOS.")
         else:
-            # ── Channel-level KPI bar ─────────────────────────────────────────
-            ch_kpi = open_sos.groupby("_channel").agg(
-                Total_PO =("_order_qty","sum"),
-                Orders   =("_order_qty","count"),
-            ).reset_index()
-
-            total_channel_po   = ch_kpi["Total_PO"].sum()
-            total_channel_stock= sku_stock["Stock Available"].sum() if not sku_stock.empty else 0
-            total_channel_diff = total_channel_stock - total_channel_po
+            # Top-level KPIs
+            total_channel_po    = open_sos["_order_qty"].sum()
+            total_channel_stock = sku_stock["Stock Available"].sum() if not sku_stock.empty else 0
+            total_channel_diff  = total_channel_stock - total_channel_po
 
             st.markdown(f"""
             <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
@@ -851,7 +839,7 @@ with tab3:
               <div class="kpi-box amber"><div class="kpi-inner"><div>
                 <div class="kpi-label">Total Open PO (All Channels)</div>
                 <div class="kpi-value">{total_channel_po:,.0f}</div>
-                <div class="kpi-sub">{len(all_channels)} channels · {int(ch_kpi["Orders"].sum()):,} orders</div>
+                <div class="kpi-sub">{len(all_channels)} channels</div>
               </div><div class="kpi-ico">📋</div></div></div>
               <div class="kpi-box {"green" if total_channel_diff>=0 else "red"}"><div class="kpi-inner"><div>
                 <div class="kpi-label">Net Diff (Stock − PO)</div>
@@ -861,11 +849,11 @@ with tab3:
             </div>
             """, unsafe_allow_html=True)
 
-            # ── Shortfall toggle ──────────────────────────────────────────────
+            # Shortfall toggle — outside channel tabs so it persists
             show_shortfall_only = st.toggle("⚠️ Show shortfall SKUs only", value=False, key="ch_shortfall_toggle")
 
             # ── Channel sub-tabs ──────────────────────────────────────────────
-            ch_tab_labels = [f"{'🔴' if open_sos[open_sos['_channel']==ch]['_order_qty'].sum() > 0 else '⚪'}  {ch}" for ch in all_channels]
+            ch_tab_labels = [f"{'🔴' if open_sos[open_sos['_channel']==ch]['_order_qty'].sum()>0 else '⚪'}  {ch}" for ch in all_channels]
             ch_tabs = st.tabs(ch_tab_labels)
 
             for ch_tab, channel in zip(ch_tabs, all_channels):
@@ -876,110 +864,128 @@ with tab3:
                         st.info(f"No open orders found for channel: {channel}")
                         continue
 
-                    # SKU summary for this channel
-                    ch_sku_summary = ch_sos.groupby("_sku").agg(
-                        Item_Name   =("_item_name",  "first"),
-                        Open_PO     =("_order_qty",  "sum"),
-                        Dispatched  =("_dispatch",   "sum"),
-                        Orders      =("_order_qty",  "count"),
-                        Customers   =("_customer",   "nunique"),
+                    # ── SKU SUMMARY (top table) ───────────────────────────────
+                    ch_sku_agg = ch_sos.groupby("_sku").agg(
+                        Item_Name  =("_item_name", "first"),
+                        Open_PO    =("_order_qty", "sum"),
+                        Dispatched =("_dispatch",  "sum"),
+                        Num_Orders =("_order_qty", "count"),
+                        Num_Custs  =("_customer",  "nunique"),
+                        Customers  =("_customer",  lambda x: ", ".join(sorted(x.unique()))),
                     ).reset_index()
-                    ch_sku_summary.columns = ["Item SKU","Item Name","Open PO Qty","Dispatch Qty","# Orders","# Customers"]
+                    ch_sku_agg.columns = ["Item SKU","Item Name","Open PO Qty","Dispatch Qty",
+                                          "# Orders","# Customers","Customer Names"]
 
-                    # Merge with stock
-                    ch_merged = ch_sku_summary.merge(
-                        sku_stock[["Item SKU","Category","Stock Available"]],
-                        on="Item SKU", how="left"
+                    ch_sku_agg = ch_sku_agg.merge(
+                        sku_stock[["Item SKU","Category","Stock Available"]], on="Item SKU", how="left"
                     )
-                    ch_merged["Stock Available"] = ch_merged["Stock Available"].fillna(0)
-                    ch_merged["Shortfall Qty"]   = ch_merged["Stock Available"] - ch_merged["Open PO Qty"]
-
-                    # Forecast for Days of Stock
-                    forecast_col = None
-                    if not df_sos.empty:
-                        # Use monthly forecast from Forecast sheet if available
-                        pass
-
-                    # Days of stock = Stock / (Open PO as proxy for demand)
-                    ch_merged["Days of Stock"] = ch_merged.apply(
+                    ch_sku_agg["Stock Available"] = ch_sku_agg["Stock Available"].fillna(0)
+                    ch_sku_agg["Diff (Stock−PO)"] = ch_sku_agg["Stock Available"] - ch_sku_agg["Open PO Qty"]
+                    ch_sku_agg["Days of Stock"]   = ch_sku_agg.apply(
                         lambda r: round(r["Stock Available"] / (r["Open PO Qty"] / 26), 1)
                         if r["Open PO Qty"] > 0 else 0.0, axis=1
                     )
-
-                    ch_merged = ch_merged.sort_values("Shortfall Qty", ascending=True)
+                    ch_sku_agg = ch_sku_agg.sort_values("Diff (Stock−PO)", ascending=True)
 
                     if show_shortfall_only:
-                        ch_merged = ch_merged[ch_merged["Shortfall Qty"] < 0]
+                        ch_sku_agg = ch_sku_agg[ch_sku_agg["Diff (Stock−PO)"] < 0]
 
-                    # ── Channel KPIs ──────────────────────────────────────────
-                    c_stock   = ch_merged["Stock Available"].sum()
-                    c_po      = ch_merged["Open PO Qty"].sum()
-                    c_diff    = ch_merged["Shortfall Qty"].sum()
-                    c_short_n = int((ch_merged["Shortfall Qty"] < 0).sum())
+                    # Channel KPIs
+                    c_stock   = ch_sku_agg["Stock Available"].sum()
+                    c_po      = ch_sku_agg["Open PO Qty"].sum()
+                    c_diff    = ch_sku_agg["Diff (Stock−PO)"].sum()
+                    c_short_n = int((ch_sku_agg["Diff (Stock−PO)"] < 0).sum())
                     c_cust_n  = ch_sos["_customer"].nunique()
 
                     k1,k2,k3,k4,k5 = st.columns(5)
-                    k1.metric("Stock Available",  f"{c_stock:,.0f}")
-                    k2.metric("Open PO Qty",       f"{c_po:,.0f}")
-                    k3.metric("Net Diff",           f"{c_diff:,.0f}",
+                    k1.metric("Stock Available", f"{c_stock:,.0f}")
+                    k2.metric("Open PO Qty",      f"{c_po:,.0f}")
+                    k3.metric("Net Diff",          f"{c_diff:,.0f}",
                               delta=f"{'Surplus' if c_diff>=0 else 'Shortfall'}: {abs(c_diff):,.0f}",
                               delta_color="normal" if c_diff>=0 else "inverse")
-                    k4.metric("Shortfall SKUs",    f"{c_short_n}")
-                    k5.metric("Customers",         f"{c_cust_n}")
+                    k4.metric("Shortfall SKUs",   f"{c_short_n}")
+                    k5.metric("Customers",        f"{c_cust_n}")
 
-                    st.markdown("<div style='margin-bottom:8px'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
 
-                    if ch_merged.empty:
-                        st.info("No shortfall SKUs for this channel." if show_shortfall_only else "No SKUs found.")
+                    if ch_sku_agg.empty:
+                        st.info("No shortfall SKUs." if show_shortfall_only else "No SKUs found.")
                         continue
 
-                    # ── Row colouring ─────────────────────────────────────────
-                    def colour_ch(row):
-                        d = row.get("Shortfall Qty", 0)
+                    # Row colouring helper
+                    def _colour(row, diff_col="Diff (Stock−PO)"):
+                        d = row.get(diff_col, 0)
                         if pd.isna(d): return [""] * len(row)
-                        if d < 0:     return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
+                        if d < 0:     return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
                         tot = row.get("Stock Available", 1)
-                        if tot > 0 and d / max(tot, 1) < 0.15:
-                            return ["background-color:#2d1f00; color:#fde68a"] * len(row)
-                        return ["background-color:#061410; color:#d1fae5"] * len(row)
+                        if tot > 0 and d / max(tot,1) < 0.15:
+                            return ["background-color:#2d1f00;color:#fde68a"] * len(row)
+                        return ["background-color:#061410;color:#d1fae5"] * len(row)
 
-                    ch_col_cfg = {
-                        "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",    format="%.0f"),
-                        "Dispatch Qty":    st.column_config.NumberColumn("Dispatch Qty",   format="%.0f"),
+                    sku_col_cfg = {
+                        "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",     format="%.0f"),
+                        "Dispatch Qty":    st.column_config.NumberColumn("Dispatch Qty",    format="%.0f"),
                         "Stock Available": st.column_config.NumberColumn("Stock Available", format="%.0f"),
-                        "Shortfall Qty":   st.column_config.NumberColumn("Diff (Stock−PO)", format="%.0f"),
-                        "Days of Stock":   st.column_config.NumberColumn("Days of Stock",  format="%.1f"),
-                        "# Orders":        st.column_config.NumberColumn("# Orders",       format="%d"),
-                        "# Customers":     st.column_config.NumberColumn("# Customers",    format="%d"),
+                        "Diff (Stock−PO)": st.column_config.NumberColumn("Diff (Stock−PO)", format="%.0f"),
+                        "Days of Stock":   st.column_config.NumberColumn("Days of Stock",   format="%.1f"),
+                        "# Orders":        st.column_config.NumberColumn("# Orders",        format="%d"),
+                        "# Customers":     st.column_config.NumberColumn("# Customers",     format="%d"),
+                        "Customer Names":  st.column_config.TextColumn("Customers"),
                     }
 
-                    # ── Summary table ─────────────────────────────────────────
-                    disp_ch = ch_merged[["Item Name","Item SKU","Category",
-                                         "Open PO Qty","Dispatch Qty","Stock Available",
-                                         "Shortfall Qty","Days of Stock","# Orders","# Customers"]].copy()
+                    # ── TOP TABLE: SKU Summary ────────────────────────────────
+                    disp_sku = ch_sku_agg[[
+                        "Item Name","Item SKU","Category",
+                        "Open PO Qty","Dispatch Qty","Stock Available",
+                        "Diff (Stock−PO)","Days of Stock",
+                        "# Orders","# Customers","Customer Names"
+                    ]].copy()
 
-                    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span><span class="tbl-badge">{len(disp_ch):,} SKUs</span></div>', unsafe_allow_html=True)
-
-                    # Export
+                    # Export buf
                     buf_ch = io.BytesIO()
-                    # Build customer drill for export
+
+                    # ── BOTTOM TABLE: Customer Detail ─────────────────────────
                     cust_detail = ch_sos.groupby(["_sku","_customer"]).agg(
-                        Open_PO   =("_order_qty","sum"),
-                        Dispatched=("_dispatch", "sum"),
-                        Orders    =("_order_qty","count"),
+                        Item_Name  =("_item_name", "first"),
+                        Open_PO    =("_order_qty", "sum"),
+                        Dispatched =("_dispatch",  "sum"),
+                        Num_Orders =("_order_qty", "count"),
                     ).reset_index()
-                    cust_detail.columns = ["Item SKU","Customer Name","Open PO Qty","Dispatch Qty","# Orders"]
+                    cust_detail.columns = ["Item SKU","Customer Name","Item Name",
+                                           "Open PO Qty","Dispatch Qty","# Orders"]
                     cust_detail = cust_detail.merge(
-                        sku_stock[["Item SKU","Stock Available"]], on="Item SKU", how="left"
+                        sku_stock[["Item SKU","Category","Stock Available"]], on="Item SKU", how="left"
                     )
                     cust_detail["Stock Available"] = cust_detail["Stock Available"].fillna(0)
-                    cust_detail["Channel"] = channel
+                    cust_detail["Diff (Stock−PO)"] = cust_detail["Stock Available"] - cust_detail["Open PO Qty"]
+                    cust_detail["Channel"]         = channel
+                    cust_detail = cust_detail.sort_values(["Item SKU","Diff (Stock−PO)"], ascending=[True,True])
 
+                    if show_shortfall_only:
+                        cust_detail = cust_detail[cust_detail["Diff (Stock−PO)"] < 0]
+
+                    cust_disp = cust_detail[[
+                        "Item Name","Item SKU","Category","Customer Name","Channel",
+                        "Open PO Qty","Dispatch Qty","Stock Available","Diff (Stock−PO)","# Orders"
+                    ]].copy()
+
+                    cust_col_cfg = {
+                        "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",     format="%.0f"),
+                        "Dispatch Qty":    st.column_config.NumberColumn("Dispatch Qty",    format="%.0f"),
+                        "Stock Available": st.column_config.NumberColumn("Stock Available", format="%.0f"),
+                        "Diff (Stock−PO)": st.column_config.NumberColumn("Diff (Stock−PO)", format="%.0f"),
+                        "# Orders":        st.column_config.NumberColumn("# Orders",        format="%d"),
+                    }
+
+                    # Export
                     with pd.ExcelWriter(buf_ch, engine="openpyxl") as wx:
-                        disp_ch.to_excel(wx, index=False, sheet_name="SKU Summary")
-                        cust_detail.to_excel(wx, index=False, sheet_name="Customer Drill")
+                        disp_sku.to_excel(wx, index=False, sheet_name="SKU Summary")
+                        cust_disp.to_excel(wx, index=False, sheet_name="Customer Detail")
 
+                    # ── Render top table ──────────────────────────────────────
                     hch1, hch2 = st.columns([4,1])
+                    with hch1:
+                        st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span><span class="tbl-badge">{len(disp_sku):,} SKUs</span></div>', unsafe_allow_html=True)
                     with hch2:
                         st.download_button(f"⬇ Export {channel}", buf_ch.getvalue(),
                             f"Channel_{channel}.xlsx",
@@ -987,58 +993,25 @@ with tab3:
                             use_container_width=True)
 
                     st.dataframe(
-                        disp_ch.style.apply(colour_ch, axis=1),
-                        use_container_width=True, height=420, hide_index=True,
-                        column_config=ch_col_cfg
+                        disp_sku.style.apply(_colour, axis=1),
+                        use_container_width=True, height=380, hide_index=True,
+                        column_config=sku_col_cfg
                     )
 
-                    # ── Drill-down: per-SKU customer breakdown ─────────────────
-                    st.markdown("<div style='margin-top:14px'></div>", unsafe_allow_html=True)
-                    st.markdown('<div class="sec-div">👤 Customer Drill-Down by SKU</div>', unsafe_allow_html=True)
+                    # ── Render bottom table ───────────────────────────────────
+                    st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+                    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">👤 {channel} — Customer Detail</span><span class="tbl-badge">{len(cust_disp):,} rows</span></div>', unsafe_allow_html=True)
+                    st.markdown("""<div style="font-size:10px;color:#475569;margin-bottom:8px;
+                        font-family:'JetBrains Mono',monospace;">
+                        One row per SKU × Customer · Stock Available is total across 3 warehouses (shared)</div>""",
+                        unsafe_allow_html=True)
 
-                    for _, sku_row in ch_merged.iterrows():
-                        sku      = sku_row["Item SKU"]
-                        sku_name = sku_row["Item Name"]
-                        s_diff   = sku_row["Shortfall Qty"]
-                        s_stock  = sku_row["Stock Available"]
-                        s_po     = sku_row["Open PO Qty"]
-                        status   = "⚠️ Shortfall" if s_diff < 0 else "✅ OK"
-
-                        exp_label = (
-                            f"{status}  ·  {sku} — {sku_name}  "
-                            f"|  Stock: {s_stock:,.0f}  ·  PO: {s_po:,.0f}  ·  Diff: {s_diff:,.0f}"
-                        )
-
-                        with st.expander(exp_label, expanded=(s_diff < 0)):
-                            sku_cust = ch_sos[ch_sos["_sku"] == sku].groupby("_customer").agg(
-                                Open_PO   =("_order_qty","sum"),
-                                Dispatched=("_dispatch", "sum"),
-                                Orders    =("_order_qty","count"),
-                            ).reset_index()
-                            sku_cust.columns = ["Customer Name","Open PO Qty","Dispatch Qty","# Orders"]
-                            sku_cust["Channel"]         = channel
-                            sku_cust["Stock Available"] = s_stock
-                            sku_cust["Shortfall Qty"]   = s_stock - sku_cust["Open PO Qty"]
-                            sku_cust = sku_cust.sort_values("Shortfall Qty", ascending=True)
-
-                            def colour_cust(row):
-                                d = row.get("Shortfall Qty", 0)
-                                if pd.isna(d): return [""] * len(row)
-                                if d < 0:     return ["background-color:#2d0a0a; color:#fca5a5"] * len(row)
-                                return ["background-color:#061410; color:#d1fae5"] * len(row)
-
-                            st.dataframe(
-                                sku_cust.style.apply(colour_cust, axis=1),
-                                use_container_width=True,
-                                height=min(60 + len(sku_cust)*36, 380),
-                                hide_index=True,
-                                column_config={
-                                    "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",    format="%.0f"),
-                                    "Dispatch Qty":    st.column_config.NumberColumn("Dispatch Qty",   format="%.0f"),
-                                    "Stock Available": st.column_config.NumberColumn("Stock Available", format="%.0f"),
-                                    "Shortfall Qty":   st.column_config.NumberColumn("Diff",           format="%.0f"),
-                                    "# Orders":        st.column_config.NumberColumn("# Orders",       format="%d"),
-                                }
-                            )
+                    st.dataframe(
+                        cust_disp.style.apply(_colour, axis=1),
+                        use_container_width=True,
+                        height=min(80 + len(cust_disp)*36, 520),
+                        hide_index=True,
+                        column_config=cust_col_cfg
+                    )
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · CFA ANALYSIS</div>', unsafe_allow_html=True)
