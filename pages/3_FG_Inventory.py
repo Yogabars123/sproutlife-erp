@@ -1009,6 +1009,18 @@ with tab3:
                         st.info("No shortfall SKUs." if show_shortfall_only else "No SKUs found.")
                         continue
 
+                    # ── Live search inside channel tab ────────────────────────
+                    ch_search = st.text_input(
+                        "sku_search", placeholder="🔍 Search SKU / item name…",
+                        label_visibility="collapsed",
+                        key=f"ch_search_{channel}"
+                    )
+                    if ch_search:
+                        ch_sku_agg = ch_sku_agg[
+                            ch_sku_agg["Item Name"].str.contains(ch_search, case=False, na=False) |
+                            ch_sku_agg["Item SKU"].str.contains(ch_search, case=False, na=False)
+                        ]
+
                     # Row colouring helper
                     def _colour(row, diff_col="Diff (Stock−PO)"):
                         d = row.get(diff_col, 0)
@@ -1125,19 +1137,51 @@ with tab3:
                     else:
                         stn_disp = pd.DataFrame()
 
-                    # ── Single export: 4 sheets ───────────────────────────────
-                    buf_ch = io.BytesIO()
-                    with pd.ExcelWriter(buf_ch, engine="openpyxl") as wx:
-                        disp_sku.to_excel(wx, index=False, sheet_name="SKU Summary")
-                        cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall Detail")
-                        (stn_disp if not stn_disp.empty else pd.DataFrame()).to_excel(wx, index=False, sheet_name="STN Feasibility")
-                        cust_disp_all.to_excel(wx, index=False, sheet_name="All Customer Detail")
-
-                    # Shortfall-only export buf
+                    # ── Export buffers ────────────────────────────────────────
+                    buf_ch    = io.BytesIO()
                     buf_short = io.BytesIO()
-                    with pd.ExcelWriter(buf_short, engine="openpyxl") as wx:
-                        cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall SKUs")
-                        (stn_disp if not stn_disp.empty else pd.DataFrame()).to_excel(wx, index=False, sheet_name="STN Feasibility")
+
+                    # ── Charts: bar + donut side by side ─────────────────────
+                    try:
+                        import plotly.graph_objects as go
+                        import plotly.express as px
+
+                        # Bar chart — top 15 shortfall SKUs
+                        bar_data = ch_sku_agg[ch_sku_agg["Diff (Stock−PO)"] < 0].nsmallest(15, "Diff (Stock−PO)")
+                        if not bar_data.empty:
+                            vc1, vc2 = st.columns([2, 1])
+                            with vc1:
+                                bar_labels = bar_data["Item SKU"].tolist()
+                                fig_bar = go.Figure()
+                                fig_bar.add_bar(
+                                    x=bar_labels, y=bar_data["Stock Available"],
+                                    name="Stock", marker_color="#2dd4bf", opacity=0.85
+                                )
+                                fig_bar.add_bar(
+                                    x=bar_labels, y=bar_data["Open PO Qty"],
+                                    name="Open PO", marker_color="#f87171", opacity=0.85
+                                )
+                                fig_bar.update_layout(
+                                    barmode="group", height=260,
+                                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                    font=dict(color="#94a3b8", size=10),
+                                    legend=dict(orientation="h", y=1.1, font=dict(size=10)),
+                                    margin=dict(l=10,r=10,t=30,b=60),
+                                    title=dict(text="📊 Top Shortfall SKUs — Stock vs Open PO",
+                                               font=dict(size=11, color="#e2e8f0"), x=0),
+                                    xaxis=dict(tickangle=-35, gridcolor="#1e2535"),
+                                    yaxis=dict(gridcolor="#1e2535"),
+                                )
+                                st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar":False})
+
+                            with vc2:
+                                # STN donut — computed from _short_sku_agg after STN calc below
+                                # placeholder — will be filled after stn_disp is built
+                                stn_donut_placeholder = st.empty()
+                        else:
+                            stn_donut_placeholder = None
+                    except Exception:
+                        stn_donut_placeholder = None
 
                     # ── Header row: title + full export ──────────────────────
                     hch1, hch2 = st.columns([4, 1])
@@ -1147,22 +1191,130 @@ with tab3:
                             f'<span class="tbl-badge">{len(disp_sku):,} SKUs</span></div>',
                             unsafe_allow_html=True)
                     with hch2:
-                        st.download_button(
-                            f"⬇ Full Export",
-                            buf_ch.getvalue(),
-                            f"Channel_{channel}_Full.xlsx",
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            help="4 sheets: SKU Summary · Shortfall Detail · STN Feasibility · All Customer Detail",
-                            key=f"full_dl_{channel}"
-                        )
+                        # export built later — placeholder
+                        full_dl_placeholder = st.empty()
 
-                    # ── SKU Summary table ─────────────────────────────────────
-                    st.dataframe(
+                    # ── SKU Summary table — clickable row ─────────────────────
+                    sku_event = st.dataframe(
                         disp_sku.style.apply(_colour, axis=1),
-                        use_container_width=True, height=360, hide_index=True,
-                        column_config=sku_col_cfg
+                        use_container_width=True, height=360, hide_index=False,
+                        column_config=sku_col_cfg,
+                        on_select="rerun", selection_mode="single-row",
+                        key=f"sku_tbl_{channel}"
                     )
+
+                    # ── Click-to-expand: SKU detail panel ─────────────────────
+                    sel_sku_rows = sku_event.selection.get("rows", []) if hasattr(sku_event,"selection") else []
+                    if sel_sku_rows:
+                        sel_sku_row   = disp_sku.iloc[sel_sku_rows[0]]
+                        sel_sku_code  = sel_sku_row["Item SKU"]
+                        sel_sku_name  = sel_sku_row["Item Name"]
+                        sel_sku_stock = float(sel_sku_row["Stock Available"])
+                        sel_sku_po    = float(sel_sku_row["Open PO Qty"])
+                        sel_sku_diff  = float(sel_sku_row["Diff (Stock−PO)"])
+
+                        # Customer rows for this SKU
+                        sku_cust_rows = cust_disp_all[cust_disp_all["Item SKU"] == sel_sku_code].copy()
+
+                        # Central stock for this SKU
+                        _central_wh_names_sel = ["Central"]
+                        _cen_sel = df_fg[
+                            df_fg["Warehouse"].astype(str).isin(_central_wh_names_sel) &
+                            (df_fg["Item SKU"].astype(str) == sel_sku_code)
+                        ]["Qty Available"].sum() if "Warehouse" in df_fg.columns else 0
+
+                        stn_txt = "✅ STN Possible" if _cen_sel >= abs(sel_sku_diff) else                                   f"⚠️ Partial ({_cen_sel:,.0f} available)" if _cen_sel > 0 else "❌ Not Possible"
+                        stn_color = "#22c55e" if _cen_sel >= abs(sel_sku_diff) else                                     "#f59e0b" if _cen_sel > 0 else "#ef4444"
+
+                        status_icon = "🔴" if sel_sku_diff < 0 else "🟡" if sel_sku_diff / max(sel_sku_stock,1) < 0.15 else "🟢"
+
+                        st.markdown(f"""
+                        <div style="background:#060d18;border:1.5px solid #5bc8c0;border-radius:14px;
+                            padding:16px 20px;margin:12px 0;">
+                          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <div>
+                              <div style="font-size:10px;color:#5bc8c0;font-weight:700;text-transform:uppercase;
+                                letter-spacing:1.2px;margin-bottom:3px;">{status_icon} Selected SKU</div>
+                              <div style="font-size:14px;color:#f1f5f9;font-weight:800;">{sel_sku_name}</div>
+                              <div style="font-size:11px;color:#818cf8;font-family:'JetBrains Mono',monospace;
+                                margin-top:2px;">{sel_sku_code}</div>
+                            </div>
+                            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                              <div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:10px;
+                                padding:8px 14px;text-align:center;">
+                                <div style="font-size:9px;color:#60a5fa;font-weight:700;text-transform:uppercase;">
+                                  Stock</div>
+                                <div style="font-size:16px;font-weight:800;color:#bfdbfe;
+                                  font-family:'JetBrains Mono',monospace;">{sel_sku_stock:,.0f}</div>
+                              </div>
+                              <div style="background:#1a0a00;border:1px solid #78350f;border-radius:10px;
+                                padding:8px 14px;text-align:center;">
+                                <div style="font-size:9px;color:#fbbf24;font-weight:700;text-transform:uppercase;">
+                                  Open PO</div>
+                                <div style="font-size:16px;font-weight:800;color:#fde68a;
+                                  font-family:'JetBrains Mono',monospace;">{sel_sku_po:,.0f}</div>
+                              </div>
+                              <div style="background:{"#2d0a0a" if sel_sku_diff<0 else "#061a0a"};
+                                border:1px solid {"#7f1d1d" if sel_sku_diff<0 else "#14532d"};
+                                border-radius:10px;padding:8px 14px;text-align:center;">
+                                <div style="font-size:9px;color:{"#f87171" if sel_sku_diff<0 else "#4ade80"};
+                                  font-weight:700;text-transform:uppercase;">Diff</div>
+                                <div style="font-size:16px;font-weight:800;
+                                  color:{"#fca5a5" if sel_sku_diff<0 else "#bbf7d0"};
+                                  font-family:'JetBrains Mono',monospace;">{sel_sku_diff:,.0f}</div>
+                              </div>
+                              <div style="background:#060d18;border:1px solid #1e3a5f;border-radius:10px;
+                                padding:8px 14px;text-align:center;">
+                                <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;">
+                                  Central WH</div>
+                                <div style="font-size:14px;font-weight:800;color:#e2e8f0;
+                                  font-family:'JetBrains Mono',monospace;">{_cen_sel:,.0f}</div>
+                                <div style="font-size:10px;font-weight:700;color:{stn_color};margin-top:2px;">
+                                  {stn_txt}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        # Customer breakdown for selected SKU
+                        p1, p2 = st.columns([1,1])
+                        with p1:
+                            st.markdown('<div class="sec-div">👤 Customers for this SKU</div>', unsafe_allow_html=True)
+                            st.dataframe(
+                                sku_cust_rows[[
+                                    "Customer Name","Open PO Qty","Dispatch Qty","Stock Available","Diff (Stock−PO)","# Orders"
+                                ]].style.apply(_colour, axis=1),
+                                use_container_width=True,
+                                height=min(60+len(sku_cust_rows)*36,280),
+                                hide_index=True,
+                                column_config=cust_col_cfg
+                            )
+                        with p2:
+                            try:
+                                import plotly.graph_objects as go
+                                fig_cust = go.Figure(go.Bar(
+                                    x=sku_cust_rows["Customer Name"].tolist(),
+                                    y=sku_cust_rows["Open PO Qty"].tolist(),
+                                    marker_color=["#f87171" if d<0 else "#2dd4bf"
+                                                  for d in sku_cust_rows["Diff (Stock−PO)"]],
+                                    text=sku_cust_rows["Open PO Qty"].apply(lambda v: f"{v:,.0f}"),
+                                    textposition="outside"
+                                ))
+                                fig_cust.update_layout(
+                                    height=250, paper_bgcolor="rgba(0,0,0,0)",
+                                    plot_bgcolor="rgba(0,0,0,0)",
+                                    font=dict(color="#94a3b8",size=10),
+                                    margin=dict(l=10,r=10,t=30,b=60),
+                                    title=dict(text="Open PO by Customer",
+                                               font=dict(size=11,color="#e2e8f0"),x=0),
+                                    xaxis=dict(tickangle=-30,gridcolor="#1e2535"),
+                                    yaxis=dict(gridcolor="#1e2535"),
+                                )
+                                st.plotly_chart(fig_cust, use_container_width=True,
+                                                config={"displayModeBar":False})
+                            except Exception:
+                                pass
 
                     # ── Shortfall SKUs — Customer Detail ─────────────────────
                     st.markdown("<div style='margin-top:22px'></div>", unsafe_allow_html=True)
@@ -1185,15 +1337,7 @@ with tab3:
                               </span>
                             </div>''', unsafe_allow_html=True)
                     with sh2:
-                        st.download_button(
-                            "⬇ Shortfall",
-                            buf_short.getvalue(),
-                            f"Shortfall_{channel}.xlsx",
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            help="Shortfall SKUs + STN Feasibility",
-                            key=f"short_dl_{channel}"
-                        )
+                        short_dl_placeholder = st.empty()
 
                     if cust_disp_short.empty:
                         st.markdown(
@@ -1273,6 +1417,69 @@ with tab3:
                                 "STN Status":      st.column_config.TextColumn("STN Status"),
                                 "Customers":       st.column_config.TextColumn("Customers"),
                             }
+                        )
+
+                    # ── Fill donut placeholder ────────────────────────────────
+                    if stn_donut_placeholder is not None and not stn_disp.empty:
+                        try:
+                            import plotly.graph_objects as go
+                            _n_pos  = int((stn_disp["STN Status"].str.startswith("✅")).sum())
+                            _n_part = int((stn_disp["STN Status"].str.startswith("⚠️")).sum())
+                            _n_no   = int((stn_disp["STN Status"].str.startswith("❌")).sum())
+                            fig_donut = go.Figure(go.Pie(
+                                labels=["✅ Possible","⚠️ Partial","❌ Not Possible"],
+                                values=[_n_pos, _n_part, _n_no],
+                                hole=0.6,
+                                marker_colors=["#22c55e","#f59e0b","#ef4444"],
+                                textinfo="label+value",
+                                textfont=dict(size=10, color="#e2e8f0"),
+                            ))
+                            fig_donut.update_layout(
+                                height=260, paper_bgcolor="rgba(0,0,0,0)",
+                                showlegend=False,
+                                margin=dict(l=10,r=10,t=30,b=10),
+                                title=dict(text="🚚 STN Coverage",
+                                           font=dict(size=11,color="#e2e8f0"),x=0.5,xanchor="center"),
+                                annotations=[dict(
+                                    text=f"{_n_pos+_n_part+_n_no}<br>SKUs",
+                                    x=0.5, y=0.5, font_size=13,
+                                    font_color="#e2e8f0", showarrow=False
+                                )]
+                            )
+                            with stn_donut_placeholder:
+                                st.plotly_chart(fig_donut, use_container_width=True,
+                                                config={"displayModeBar":False})
+                        except Exception:
+                            pass
+
+                    # ── Build exports now that stn_disp is ready ─────────────
+                    with pd.ExcelWriter(buf_ch, engine="openpyxl") as wx:
+                        disp_sku.to_excel(wx, index=False, sheet_name="SKU Summary")
+                        cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall Detail")
+                        (stn_disp if not stn_disp.empty else pd.DataFrame()).to_excel(wx, index=False, sheet_name="STN Feasibility")
+                        cust_disp_all.to_excel(wx, index=False, sheet_name="All Customer Detail")
+
+                    with pd.ExcelWriter(buf_short, engine="openpyxl") as wx:
+                        cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall SKUs")
+                        (stn_disp if not stn_disp.empty else pd.DataFrame()).to_excel(wx, index=False, sheet_name="STN Feasibility")
+
+                    with full_dl_placeholder:
+                        st.download_button(
+                            "⬇ Full Export", buf_ch.getvalue(),
+                            f"Channel_{channel}_Full.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            help="4 sheets: SKU Summary · Shortfall · STN · All Customers",
+                            key=f"full_dl_{channel}"
+                        )
+                    with short_dl_placeholder:
+                        st.download_button(
+                            "⬇ Shortfall", buf_short.getvalue(),
+                            f"Shortfall_{channel}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            help="Shortfall SKUs + STN Feasibility",
+                            key=f"short_dl_{channel}"
                         )
 
                     # ── Full Customer Detail (collapsed) ──────────────────────
