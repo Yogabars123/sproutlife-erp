@@ -914,7 +914,7 @@ with tab3:
         open_sos["_item_name"] = open_sos[nm_col_so].astype(str).str.strip() if nm_col_so else open_sos["_sku"]
 
         # ── Step 4: Channels ──────────────────────────────────────────────────
-        all_channels = sorted([c for c in open_sos["_channel"].unique() if c != "Unknown"])
+        all_channels = sorted([c for c in open_sos["_channel"].unique() if c not in ("Unknown", "Offline")])
         if "Unknown" in open_sos["_channel"].values:
             all_channels.append("Unknown")
 
