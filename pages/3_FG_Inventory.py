@@ -921,30 +921,64 @@ with tab3:
         if not all_channels:
             st.warning("⚠️ No channel data found. Check Mapper customer names match SOS.")
         else:
-            # Top-level KPIs
-            total_channel_po    = open_sos["_order_qty"].sum()
-            total_channel_stock = sku_stock["Stock Available"].sum() if not sku_stock.empty else 0
-            total_channel_diff  = total_channel_stock - total_channel_po
+            # ── Per-channel KPI cards (one card per channel) ──────────────────
+            _ch_cards_html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px;margin-bottom:16px;">'
+            for _ch in all_channels:
+                _ch_d = open_sos[open_sos["_channel"] == _ch]
+                _ch_skus = _ch_d.groupby("_sku").agg(po=("_order_qty","sum")).reset_index()
+                _ch_skus = _ch_skus.merge(
+                    sku_stock[["Item SKU","Stock Available"]].rename(columns={"Item SKU":"_sku"}),
+                    on="_sku", how="left"
+                )
+                _ch_skus["Stock Available"] = _ch_skus["Stock Available"].fillna(0)
+                _ch_skus["diff"] = _ch_skus["Stock Available"] - _ch_skus["po"]
+                _ch_po      = float(_ch_skus["po"].sum())
+                _ch_stock   = float(_ch_skus["Stock Available"].sum())
+                _ch_diff    = _ch_stock - _ch_po
+                _ch_short_n = int((_ch_skus["diff"] < 0).sum())
+                _ch_cust_n  = int(_ch_d["_customer"].nunique())
 
-            st.markdown(f"""
-            <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);">
-              <div class="kpi-box teal"><div class="kpi-inner"><div>
-                <div class="kpi-label">Stock (3 Warehouses)</div>
-                <div class="kpi-value">{total_channel_stock:,.0f}</div>
-                <div class="kpi-sub">Tumkur New + YB FG Warehouse</div>
-              </div><div class="kpi-ico">📦</div></div></div>
-              <div class="kpi-box amber"><div class="kpi-inner"><div>
-                <div class="kpi-label">Total Open PO (All Channels)</div>
-                <div class="kpi-value">{total_channel_po:,.0f}</div>
-                <div class="kpi-sub">{len(all_channels)} channels</div>
-              </div><div class="kpi-ico">📋</div></div></div>
-              <div class="kpi-box {"green" if total_channel_diff>=0 else "red"}"><div class="kpi-inner"><div>
-                <div class="kpi-label">Net Diff (Stock − PO)</div>
-                <div class="kpi-value">{total_channel_diff:,.0f}</div>
-                <div class="kpi-sub">{"Surplus ✅" if total_channel_diff>=0 else "Shortfall ⚠️"}</div>
-              </div><div class="kpi-ico">{"✅" if total_channel_diff>=0 else "⚠️"}</div></div></div>
-            </div>
-            """, unsafe_allow_html=True)
+                if _ch_short_n > 0:
+                    _dot="🔴"; _border="#7f1d1d"; _bg="linear-gradient(135deg,#1a0000,#2a0808)"; _dcolor="#fca5a5"; _dlabel="color:#f87171"
+                elif _ch_diff / max(_ch_stock,1) < 0.15:
+                    _dot="🟡"; _border="#78350f"; _bg="linear-gradient(135deg,#1a1000,#2a1800)"; _dcolor="#fde68a"; _dlabel="color:#f59e0b"
+                else:
+                    _dot="🟢"; _border="#14532d"; _bg="linear-gradient(135deg,#061a0a,#0a2e12)"; _dcolor="#bbf7d0"; _dlabel="color:#22c55e"
+
+                _ch_cards_html += f'''
+                <div style="background:{_bg};border:1px solid {_border};border-radius:14px;
+                    padding:14px 16px;position:relative;overflow:hidden;">
+                  <div style="position:absolute;top:0;left:0;right:0;height:3px;
+                    background:{"linear-gradient(90deg,#ef4444,#f87171)" if _ch_short_n>0 else
+                    "linear-gradient(90deg,#f59e0b,#fbbf24)" if _ch_diff/max(_ch_stock,1)<0.15 else
+                    "linear-gradient(90deg,#22c55e,#4ade80)"};border-radius:14px 14px 0 0;"></div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-size:11px;font-weight:800;color:#f1f5f9;">{_dot} {_ch}</span>
+                    <span style="font-size:10px;{_dlabel};font-weight:700;font-family:'JetBrains Mono',monospace;">
+                      {_ch_short_n} short
+                    </span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div>
+                      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Stock</div>
+                      <div style="font-size:15px;font-weight:800;color:#e2e8f0;font-family:'JetBrains Mono',monospace;line-height:1.2;">{_ch_stock:,.0f}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Open PO</div>
+                      <div style="font-size:15px;font-weight:800;color:#e2e8f0;font-family:'JetBrains Mono',monospace;line-height:1.2;">{_ch_po:,.0f}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Diff</div>
+                      <div style="font-size:14px;font-weight:800;color:{_dcolor};font-family:'JetBrains Mono',monospace;line-height:1.2;">{_ch_diff:+,.0f}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Customers</div>
+                      <div style="font-size:14px;font-weight:800;color:#94a3b8;font-family:'JetBrains Mono',monospace;line-height:1.2;">{_ch_cust_n}</div>
+                    </div>
+                  </div>
+                </div>'''
+            _ch_cards_html += '</div>'
+            st.markdown(_ch_cards_html, unsafe_allow_html=True)
 
             # Shortfall toggle — outside channel tabs so it persists
             show_shortfall_only = st.toggle("⚠️ Show shortfall SKUs only", value=False, key="ch_shortfall_toggle")
