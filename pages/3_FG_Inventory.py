@@ -1071,30 +1071,93 @@ with tab3:
                         "# Orders":        st.column_config.NumberColumn("# Orders",        format="%d"),
                     }
 
-                    # ── Single export: 3 sheets ───────────────────────────────
+                    # ── Central WH stock for STN feasibility ─────────────────
+                    _central_wh_names = ["Central"]
+                    _central_stock = df_fg[
+                        df_fg["Warehouse"].astype(str).isin(_central_wh_names)
+                    ].copy() if "Warehouse" in df_fg.columns else pd.DataFrame()
+
+                    if not _central_stock.empty and "Item SKU" in _central_stock.columns:
+                        _central_agg = _central_stock.groupby("Item SKU")["Qty Available"].sum().reset_index()
+                        _central_agg.columns = ["Item SKU","Central Stock"]
+                    else:
+                        _central_agg = pd.DataFrame(columns=["Item SKU","Central Stock"])
+
+                    # ── STN feasibility for shortfall SKUs ───────────────────
+                    # Work at SKU level (shortfall per SKU across all customers)
+                    _short_sku_agg = cust_disp_short.groupby(["Item SKU","Item Name","Category"]).agg(
+                        Total_PO      =("Open PO Qty",     "sum"),
+                        Total_Stock   =("Stock Available", "first"),
+                        Total_Short   =("Diff (Stock−PO)", "sum"),
+                        Customers     =("Customer Name",   lambda x: ", ".join(sorted(x.unique()))),
+                    ).reset_index() if not cust_disp_short.empty else pd.DataFrame()
+
+                    if not _short_sku_agg.empty:
+                        _short_sku_agg["Shortfall Qty"] = _short_sku_agg["Total_Short"].abs()
+                        _short_sku_agg = _short_sku_agg.merge(_central_agg, on="Item SKU", how="left")
+                        _short_sku_agg["Central Stock"] = _short_sku_agg["Central Stock"].fillna(0)
+
+                        def _stn_status(row):
+                            c = row["Central Stock"]
+                            s = row["Shortfall Qty"]
+                            if c <= 0:            return "❌ Not Possible"
+                            if c >= s:            return "✅ STN Possible"
+                            return f"⚠️ Partial ({c:,.0f} of {s:,.0f})"
+
+                        def _stn_qty(row):
+                            return min(row["Central Stock"], row["Shortfall Qty"])
+
+                        _short_sku_agg["STN Status"]    = _short_sku_agg.apply(_stn_status, axis=1)
+                        _short_sku_agg["STN Qty"]       = _short_sku_agg.apply(_stn_qty,    axis=1)
+                        _short_sku_agg["Remaining Gap"] = (_short_sku_agg["Shortfall Qty"] - _short_sku_agg["STN Qty"]).clip(lower=0)
+
+                        stn_disp = _short_sku_agg[[
+                            "Item Name","Item SKU","Category",
+                            "Total_Stock","Total_PO","Shortfall Qty",
+                            "Central Stock","STN Qty","Remaining Gap","STN Status","Customers"
+                        ]].copy()
+                        stn_disp.columns = [
+                            "Item Name","Item SKU","Category",
+                            "Tumkur+YB Stock","Open PO Qty","Shortfall Qty",
+                            "Central Stock","STN Qty","Remaining Gap","STN Status","Customers"
+                        ]
+                        stn_disp = stn_disp.sort_values("STN Status", ascending=True)
+                    else:
+                        stn_disp = pd.DataFrame()
+
+                    # ── Single export: 4 sheets ───────────────────────────────
                     buf_ch = io.BytesIO()
                     with pd.ExcelWriter(buf_ch, engine="openpyxl") as wx:
                         disp_sku.to_excel(wx, index=False, sheet_name="SKU Summary")
                         cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall Detail")
+                        (stn_disp if not stn_disp.empty else pd.DataFrame()).to_excel(wx, index=False, sheet_name="STN Feasibility")
                         cust_disp_all.to_excel(wx, index=False, sheet_name="All Customer Detail")
 
-                    # ── Header row: title + single download ───────────────────
+                    # Shortfall-only export buf
+                    buf_short = io.BytesIO()
+                    with pd.ExcelWriter(buf_short, engine="openpyxl") as wx:
+                        cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall SKUs")
+                        (stn_disp if not stn_disp.empty else pd.DataFrame()).to_excel(wx, index=False, sheet_name="STN Feasibility")
+
+                    # ── Header row: title + full export ──────────────────────
                     hch1, hch2 = st.columns([4, 1])
                     with hch1:
                         st.markdown(
-                            f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span>'                            f'<span class="tbl-badge">{len(disp_sku):,} SKUs</span></div>',
+                            f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span>'
+                            f'<span class="tbl-badge">{len(disp_sku):,} SKUs</span></div>',
                             unsafe_allow_html=True)
                     with hch2:
                         st.download_button(
-                            f"⬇ Export {channel}",
+                            f"⬇ Full Export",
                             buf_ch.getvalue(),
-                            f"Channel_{channel}.xlsx",
+                            f"Channel_{channel}_Full.xlsx",
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True,
-                            help="Downloads 3 sheets: SKU Summary · Shortfall Detail · All Customer Detail"
+                            help="4 sheets: SKU Summary · Shortfall Detail · STN Feasibility · All Customer Detail",
+                            key=f"full_dl_{channel}"
                         )
 
-                    # ── SKU Summary table (all SKUs, toggle applies) ──────────
+                    # ── SKU Summary table ─────────────────────────────────────
                     st.dataframe(
                         disp_sku.style.apply(_colour, axis=1),
                         use_container_width=True, height=360, hide_index=True,
@@ -1106,38 +1169,110 @@ with tab3:
                     n_short_rows = len(cust_disp_short)
                     short_badge_color = "#7f1d1d" if n_short_rows > 0 else "#14532d"
                     short_badge_text  = "#fca5a5" if n_short_rows > 0 else "#bbf7d0"
-                    st.markdown(
-                        f'''<div style="display:flex;align-items:center;justify-content:space-between;
-                            padding:8px 0 6px;">
-                          <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:10px;font-weight:700;color:#ef4444;
-                              text-transform:uppercase;letter-spacing:1.2px;">
-                              ⚠️ Shortfall SKUs — Customer Detail
-                            </span>
-                            <span style="background:{short_badge_color};border:1px solid {short_badge_text}33;
-                              border-radius:20px;padding:2px 10px;font-size:11px;font-weight:800;
-                              color:{short_badge_text};font-family:'JetBrains Mono',monospace;">
-                              {n_short_rows} rows
-                            </span>
-                          </div>
-                          <span style="font-size:10px;color:#334155;font-family:'JetBrains Mono',monospace;">
-                            Only SKUs where Stock &lt; Open PO
-                          </span>
-                        </div>''',
-                        unsafe_allow_html=True
-                    )
+
+                    sh1, sh2 = st.columns([4, 1])
+                    with sh1:
+                        st.markdown(
+                            f'''<div style="display:flex;align-items:center;gap:8px;padding:8px 0 6px;">
+                              <span style="font-size:10px;font-weight:700;color:#ef4444;
+                                text-transform:uppercase;letter-spacing:1.2px;">
+                                ⚠️ Shortfall SKUs — Customer Detail
+                              </span>
+                              <span style="background:{short_badge_color};border:1px solid {short_badge_text}33;
+                                border-radius:20px;padding:2px 10px;font-size:11px;font-weight:800;
+                                color:{short_badge_text};font-family:'JetBrains Mono',monospace;">
+                                {n_short_rows} rows
+                              </span>
+                            </div>''', unsafe_allow_html=True)
+                    with sh2:
+                        st.download_button(
+                            "⬇ Shortfall",
+                            buf_short.getvalue(),
+                            f"Shortfall_{channel}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            help="Shortfall SKUs + STN Feasibility",
+                            key=f"short_dl_{channel}"
+                        )
 
                     if cust_disp_short.empty:
                         st.markdown(
-                            '<div style="background:#061a0a;border:1px solid #14532d;border-radius:10px;'                            'padding:14px 18px;text-align:center;color:#4ade80;font-size:12px;font-weight:700;">'                            '✅ No shortfall SKUs for this channel</div>',
+                            '<div style="background:#061a0a;border:1px solid #14532d;border-radius:10px;'
+                            'padding:14px 18px;text-align:center;color:#4ade80;font-size:12px;font-weight:700;">'
+                            '✅ No shortfall SKUs for this channel</div>',
                             unsafe_allow_html=True)
                     else:
                         st.dataframe(
                             cust_disp_short.style.apply(_colour, axis=1),
                             use_container_width=True,
-                            height=min(80 + len(cust_disp_short) * 36, 480),
+                            height=min(80 + len(cust_disp_short) * 36, 420),
                             hide_index=True,
                             column_config=cust_col_cfg
+                        )
+
+                    # ── STN Feasibility section ───────────────────────────────
+                    st.markdown("<div style='margin-top:22px'></div>", unsafe_allow_html=True)
+
+                    def _stn_colour(row):
+                        s = str(row.get("STN Status",""))
+                        if s.startswith("✅"):  return ["background-color:#061a0a;color:#d1fae5"] * len(row)
+                        if s.startswith("⚠️"): return ["background-color:#2d1f00;color:#fde68a"] * len(row)
+                        return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
+
+                    if stn_disp.empty:
+                        st.markdown(
+                            '<div style="background:#061a0a;border:1px solid #14532d;border-radius:10px;'
+                            'padding:14px 18px;text-align:center;color:#4ade80;font-size:12px;font-weight:700;">'
+                            '✅ No shortfall — STN check not required</div>',
+                            unsafe_allow_html=True)
+                    else:
+                        n_possible  = int((stn_disp["STN Status"].str.startswith("✅")).sum())
+                        n_partial   = int((stn_disp["STN Status"].str.startswith("⚠️")).sum())
+                        n_not       = int((stn_disp["STN Status"].str.startswith("❌")).sum())
+
+                        st.markdown(f'''
+                        <div style="background:#060d18;border:1.5px solid #1e3a5f;border-radius:14px;
+                            padding:14px 18px;margin-bottom:12px;">
+                          <div style="font-size:10px;font-weight:700;color:#60a5fa;text-transform:uppercase;
+                            letter-spacing:1.2px;margin-bottom:10px;">
+                            🚚 STN Feasibility — Can Central WH cover the shortfall?
+                          </div>
+                          <div style="display:flex;gap:18px;flex-wrap:wrap;">
+                            <span style="background:#061a0a;border:1px solid #14532d;border-radius:8px;
+                              padding:6px 14px;font-size:12px;font-weight:800;color:#4ade80;">
+                              ✅ Possible: {n_possible}
+                            </span>
+                            <span style="background:#2d1f00;border:1px solid #78350f;border-radius:8px;
+                              padding:6px 14px;font-size:12px;font-weight:800;color:#fde68a;">
+                              ⚠️ Partial: {n_partial}
+                            </span>
+                            <span style="background:#2d0a0a;border:1px solid #7f1d1d;border-radius:8px;
+                              padding:6px 14px;font-size:12px;font-weight:800;color:#fca5a5;">
+                              ❌ Not Possible: {n_not}
+                            </span>
+                          </div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+
+                        st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">🏭 Central WH → STN Feasibility</span><span class="tbl-badge">{len(stn_disp):,} SKUs</span></div>', unsafe_allow_html=True)
+                        st.dataframe(
+                            stn_disp.style.apply(_stn_colour, axis=1),
+                            use_container_width=True,
+                            height=min(80 + len(stn_disp) * 36, 460),
+                            hide_index=True,
+                            column_config={
+                                "Tumkur+YB Stock": st.column_config.NumberColumn("Tumkur+YB Stock", format="%.0f"),
+                                "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",    format="%.0f"),
+                                "Shortfall Qty":   st.column_config.NumberColumn("Shortfall Qty",  format="%.0f"),
+                                "Central Stock":   st.column_config.NumberColumn("Central Stock",  format="%.0f",
+                                                   help="Stock in Central Warehouse"),
+                                "STN Qty":         st.column_config.NumberColumn("STN Qty",        format="%.0f",
+                                                   help="Qty that can be transferred via STN"),
+                                "Remaining Gap":   st.column_config.NumberColumn("Remaining Gap",  format="%.0f",
+                                                   help="Shortfall still uncovered after STN"),
+                                "STN Status":      st.column_config.TextColumn("STN Status"),
+                                "Customers":       st.column_config.TextColumn("Customers"),
+                            }
                         )
 
                     # ── Full Customer Detail (collapsed) ──────────────────────
