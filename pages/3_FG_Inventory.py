@@ -950,7 +950,23 @@ with tab3:
             show_shortfall_only = st.toggle("⚠️ Show shortfall SKUs only", value=False, key="ch_shortfall_toggle")
 
             # ── Channel sub-tabs ──────────────────────────────────────────────
-            ch_tab_labels = [f"{'🔴' if open_sos[open_sos['_channel']==ch]['_order_qty'].sum()>0 else '⚪'}  {ch}" for ch in all_channels]
+            # Compute per-channel status for tab labels
+            def _ch_status_dot(ch):
+                _ch_d = open_sos[open_sos['_channel'] == ch].copy()
+                _ch_skus = _ch_d.groupby('_sku').agg(
+                    po=('_order_qty','sum'), cust=('_customer','first')
+                ).reset_index()
+                _ch_skus = _ch_skus.merge(sku_stock[['Item SKU','Stock Available']].rename(
+                    columns={'Item SKU':'_sku'}), on='_sku', how='left')
+                _ch_skus['Stock Available'] = _ch_skus['Stock Available'].fillna(0)
+                _ch_skus['diff'] = _ch_skus['Stock Available'] - _ch_skus['po']
+                n_short  = (_ch_skus['diff'] < 0).sum()
+                n_tight  = ((_ch_skus['diff'] >= 0) & (_ch_skus['diff'] / _ch_skus['Stock Available'].clip(lower=1) < 0.15)).sum()
+                if n_short > 0:   return f'🔴  {ch}  ({n_short} short)'
+                if n_tight > 0:   return f'🟡  {ch}  ({n_tight} tight)'
+                return f'🟢  {ch}'
+
+            ch_tab_labels = [_ch_status_dot(ch) for ch in all_channels]
             ch_tabs = st.tabs(ch_tab_labels)
 
             for ch_tab, channel in zip(ch_tabs, all_channels):
