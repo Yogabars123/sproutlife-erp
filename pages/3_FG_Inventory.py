@@ -165,7 +165,6 @@ df_mapper = load_mapper()
 # ── CHANNEL STOCK WAREHOUSES ──────────────────────────────────────────────────
 CHANNEL_STOCK_WAREHOUSES = [
     "Tumkur New Warehouse",
-    "Central",
     "YB FG Warehouse",
 ]
 
@@ -383,7 +382,7 @@ with tab1:
             use_container_width=True, height=560, hide_index=True,
             column_config={
                 "FG Stock":    st.column_config.NumberColumn("FG Stock",    format="%.0f",
-                               help="Sum of Central + Tumkur New Warehouse + YB FG Warehouse"),
+                               help="Sum of Tumkur New Warehouse + YB FG Warehouse"),
                 "PO Quantity": st.column_config.NumberColumn("PO Quantity", format="%.0f"),
                 "Diff":        st.column_config.NumberColumn("Diff",        format="%.0f"),
                 "# Orders":    st.column_config.NumberColumn("# Orders",    format="%d"),
@@ -851,7 +850,7 @@ with tab3:
     st.markdown("""
     <div class="formula-bar">
         <span>📐 Formula:</span>
-        <b>Stock</b> <span>= Tumkur New Warehouse + Central + YB FG Warehouse</span> <span>−</span>
+        <b>Stock</b> <span>= Tumkur New Warehouse + YB FG Warehouse</span> <span>−</span>
         <b>Open PO Qty</b> <span>= per Channel (Mapper → Customer Name)</span> <span>=</span> <b>Diff</b>
     </div>
     """, unsafe_allow_html=True)
@@ -932,7 +931,7 @@ with tab3:
               <div class="kpi-box teal"><div class="kpi-inner"><div>
                 <div class="kpi-label">Stock (3 Warehouses)</div>
                 <div class="kpi-value">{total_channel_stock:,.0f}</div>
-                <div class="kpi-sub">Tumkur New + Central + YB FG</div>
+                <div class="kpi-sub">Tumkur New + YB FG Warehouse</div>
               </div><div class="kpi-ico">📦</div></div></div>
               <div class="kpi-box amber"><div class="kpi-inner"><div>
                 <div class="kpi-label">Total Open PO (All Channels)</div>
