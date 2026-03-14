@@ -199,7 +199,7 @@ cfa_warehouses = sorted([w for w in CFA_WAREHOUSES if w in all_fg_wh])
 # Build channel list from mapper
 _all_channels_filt = []
 if not df_mapper.empty:
-    _cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
+    _cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower() or "party" in c.lower()), None)
     _channel_col_m = next((c for c in df_mapper.columns if "channel" in c.lower()), None)
     if _cust_col_m and _channel_col_m:
         _all_channels_filt = sorted(df_mapper[_channel_col_m].dropna().astype(str).str.strip().unique().tolist())
@@ -288,7 +288,7 @@ with tab1:
     _t1_sos = pd.DataFrame()
     if not df_sos.empty:
         _sku_c  = next((c for c in df_sos.columns if "product sku"  in c.lower()), None)
-        _cust_c = next((c for c in df_sos.columns if "customer"     in c.lower()), None)
+        _cust_c = next((c for c in df_sos.columns if "customer" in c.lower() or "party" in c.lower()), None)
         _qty_c  = next((c for c in df_sos.columns if "order qty"    in c.lower()), None)
         _nm_c   = next((c for c in df_sos.columns if "item name"    in c.lower() or "product name" in c.lower()), None)
         if _sku_c and _qty_c:
@@ -301,7 +301,7 @@ with tab1:
             # Map channel from mapper
             _t1_cust_map = {}
             if not df_mapper.empty:
-                _mc = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
+                _mc = next((c for c in df_mapper.columns if "customer" in c.lower() or "party" in c.lower()), None)
                 _ch = next((c for c in df_mapper.columns if "channel"  in c.lower()), None)
                 if _mc and _ch:
                     _t1_cust_map = dict(zip(
@@ -878,7 +878,7 @@ with tab3:
             sku_stock = pd.DataFrame(columns=["Item SKU","Item Name","Category","Stock Available"])
 
         # ── Step 2: Mapper ────────────────────────────────────────────────────
-        cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower()), None)
+        cust_col_m    = next((c for c in df_mapper.columns if "customer" in c.lower() or "party" in c.lower()), None)
         channel_col_m = next((c for c in df_mapper.columns if "channel" in c.lower()), None)
 
         if not cust_col_m or not channel_col_m:
@@ -893,7 +893,7 @@ with tab3:
 
         # ── Step 3: Open SOS ─────────────────────────────────────────────────
         sku_col_so  = next((c for c in df_sos.columns if "product sku" in c.lower()), None)
-        cust_col_so = next((c for c in df_sos.columns if "customer" in c.lower()), None)
+        cust_col_so = next((c for c in df_sos.columns if "customer" in c.lower() or "party" in c.lower()), None)
         qty_col_so  = next((c for c in df_sos.columns if "order qty" in c.lower()), None)
         dsp_col_so  = next((c for c in df_sos.columns if "dispatch qty" in c.lower()), None)
         nm_col_so   = next((c for c in df_sos.columns if "item name" in c.lower() or "product name" in c.lower()), None)
