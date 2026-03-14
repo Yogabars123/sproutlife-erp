@@ -1038,9 +1038,6 @@ with tab3:
                         "# Orders","# Customers","Customer Names"
                     ]].copy()
 
-                    # Export buf
-                    buf_ch = io.BytesIO()
-
                     # ── BOTTOM TABLE: Customer Detail ─────────────────────────
                     cust_detail = ch_sos.groupby(["_sku","_customer"]).agg(
                         Item_Name  =("_item_name", "first"),
@@ -1056,15 +1053,15 @@ with tab3:
                     cust_detail["Stock Available"] = cust_detail["Stock Available"].fillna(0)
                     cust_detail["Diff (Stock−PO)"] = cust_detail["Stock Available"] - cust_detail["Open PO Qty"]
                     cust_detail["Channel"]         = channel
-                    cust_detail = cust_detail.sort_values(["Item SKU","Diff (Stock−PO)"], ascending=[True,True])
+                    cust_detail = cust_detail.sort_values(["Diff (Stock−PO)","Item SKU"], ascending=[True,True])
 
-                    if show_shortfall_only:
-                        cust_detail = cust_detail[cust_detail["Diff (Stock−PO)"] < 0]
-
-                    cust_disp = cust_detail[[
+                    cust_disp_all = cust_detail[[
                         "Item Name","Item SKU","Category","Customer Name","Channel",
                         "Open PO Qty","Dispatch Qty","Stock Available","Diff (Stock−PO)","# Orders"
                     ]].copy()
+
+                    # Shortfall-only customer detail (Diff < 0)
+                    cust_disp_short = cust_disp_all[cust_disp_all["Diff (Stock−PO)"] < 0].copy()
 
                     cust_col_cfg = {
                         "Open PO Qty":     st.column_config.NumberColumn("Open PO Qty",     format="%.0f"),
@@ -1074,41 +1071,84 @@ with tab3:
                         "# Orders":        st.column_config.NumberColumn("# Orders",        format="%d"),
                     }
 
-                    # Export
+                    # ── Single export: 3 sheets ───────────────────────────────
+                    buf_ch = io.BytesIO()
                     with pd.ExcelWriter(buf_ch, engine="openpyxl") as wx:
                         disp_sku.to_excel(wx, index=False, sheet_name="SKU Summary")
-                        cust_disp.to_excel(wx, index=False, sheet_name="Customer Detail")
+                        cust_disp_short.to_excel(wx, index=False, sheet_name="Shortfall Detail")
+                        cust_disp_all.to_excel(wx, index=False, sheet_name="All Customer Detail")
 
-                    # ── Render top table ──────────────────────────────────────
-                    hch1, hch2 = st.columns([4,1])
+                    # ── Header row: title + single download ───────────────────
+                    hch1, hch2 = st.columns([4, 1])
                     with hch1:
-                        st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span><span class="tbl-badge">{len(disp_sku):,} SKUs</span></div>', unsafe_allow_html=True)
+                        st.markdown(
+                            f'<div class="tbl-hdr"><span class="tbl-lbl">📊 {channel} — SKU Summary</span>'                            f'<span class="tbl-badge">{len(disp_sku):,} SKUs</span></div>',
+                            unsafe_allow_html=True)
                     with hch2:
-                        st.download_button(f"⬇ Export {channel}", buf_ch.getvalue(),
+                        st.download_button(
+                            f"⬇ Export {channel}",
+                            buf_ch.getvalue(),
                             f"Channel_{channel}.xlsx",
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True)
+                            use_container_width=True,
+                            help="Downloads 3 sheets: SKU Summary · Shortfall Detail · All Customer Detail"
+                        )
 
+                    # ── SKU Summary table (all SKUs, toggle applies) ──────────
                     st.dataframe(
                         disp_sku.style.apply(_colour, axis=1),
-                        use_container_width=True, height=380, hide_index=True,
+                        use_container_width=True, height=360, hide_index=True,
                         column_config=sku_col_cfg
                     )
 
-                    # ── Render bottom table ───────────────────────────────────
-                    st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
-                    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">👤 {channel} — Customer Detail</span><span class="tbl-badge">{len(cust_disp):,} rows</span></div>', unsafe_allow_html=True)
-                    st.markdown("""<div style="font-size:10px;color:#475569;margin-bottom:8px;
-                        font-family:'JetBrains Mono',monospace;">
-                        One row per SKU × Customer · Stock Available is total across 3 warehouses (shared)</div>""",
-                        unsafe_allow_html=True)
-
-                    st.dataframe(
-                        cust_disp.style.apply(_colour, axis=1),
-                        use_container_width=True,
-                        height=min(80 + len(cust_disp)*36, 520),
-                        hide_index=True,
-                        column_config=cust_col_cfg
+                    # ── Shortfall SKUs — Customer Detail ─────────────────────
+                    st.markdown("<div style='margin-top:22px'></div>", unsafe_allow_html=True)
+                    n_short_rows = len(cust_disp_short)
+                    short_badge_color = "#7f1d1d" if n_short_rows > 0 else "#14532d"
+                    short_badge_text  = "#fca5a5" if n_short_rows > 0 else "#bbf7d0"
+                    st.markdown(
+                        f'''<div style="display:flex;align-items:center;justify-content:space-between;
+                            padding:8px 0 6px;">
+                          <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:10px;font-weight:700;color:#ef4444;
+                              text-transform:uppercase;letter-spacing:1.2px;">
+                              ⚠️ Shortfall SKUs — Customer Detail
+                            </span>
+                            <span style="background:{short_badge_color};border:1px solid {short_badge_text}33;
+                              border-radius:20px;padding:2px 10px;font-size:11px;font-weight:800;
+                              color:{short_badge_text};font-family:'JetBrains Mono',monospace;">
+                              {n_short_rows} rows
+                            </span>
+                          </div>
+                          <span style="font-size:10px;color:#334155;font-family:'JetBrains Mono',monospace;">
+                            Only SKUs where Stock &lt; Open PO
+                          </span>
+                        </div>''',
+                        unsafe_allow_html=True
                     )
+
+                    if cust_disp_short.empty:
+                        st.markdown(
+                            '<div style="background:#061a0a;border:1px solid #14532d;border-radius:10px;'                            'padding:14px 18px;text-align:center;color:#4ade80;font-size:12px;font-weight:700;">'                            '✅ No shortfall SKUs for this channel</div>',
+                            unsafe_allow_html=True)
+                    else:
+                        st.dataframe(
+                            cust_disp_short.style.apply(_colour, axis=1),
+                            use_container_width=True,
+                            height=min(80 + len(cust_disp_short) * 36, 480),
+                            hide_index=True,
+                            column_config=cust_col_cfg
+                        )
+
+                    # ── Full Customer Detail (collapsed) ──────────────────────
+                    st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
+                    with st.expander(f"📋 View all {len(cust_disp_all):,} customer rows ({channel})", expanded=False):
+                        st.dataframe(
+                            cust_disp_all.style.apply(_colour, axis=1),
+                            use_container_width=True,
+                            height=min(80 + len(cust_disp_all) * 36, 520),
+                            hide_index=True,
+                            column_config=cust_col_cfg
+                        )
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · CFA ANALYSIS</div>', unsafe_allow_html=True)
