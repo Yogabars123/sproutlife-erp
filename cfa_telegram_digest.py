@@ -10,7 +10,7 @@ SETUP:
 1. Install dependencies:
        pip install pandas openpyxl schedule pytz requests
 
-2. Fill in CONFIG section below (8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ, 5667118823, https://sproutlife01-my.sharepoint.com/:x:/g/personal/abinaya_m_yogabars_in/IQBLtIoDsWtwQZiImCHkW6BeARmYhaC5YPlnyqVbJa5gOF0?download=1)
+2. Fill in CONFIG section below (8490183803:AAEAVocEO1dkUBb8fSigU1eT3KSMkYv8NgY, 5667118823, https://sproutlife01-my.sharepoint.com/:x:/g/personal/abinaya_m_yogabars_in/IQBLtIoDsWtwQZiImCHkW6BeARmYhaC5YPlnyqVbJa5gOF0?download=1)
 
 3. GitHub Actions mode (recommended):
    - Add secrets TG_BOT_TOKEN, TG_CHAT_ID, ONEDRIVE_URL to your repo
