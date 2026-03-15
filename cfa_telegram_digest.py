@@ -1,26 +1,12 @@
 """
 YogaBar · Inventory Digest
 ══════════════════════════
-Sends a combined daily digest of:
-  1. CFA FG Shortfall SKUs (which SKU is short at which CFA)
-  2. RM Critical SKUs (< 7 days of stock)
-at 10:00 AM and 3:00 PM IST.
+Reads from the same GitHub-hosted Excel file as the dashboard.
+Sends CFA shortfall + RM critical stock digest at 10 AM and 3 PM IST.
 
-SETUP:
-1. Install dependencies:
-       pip install pandas openpyxl schedule pytz requests
-
-2. Fill in CONFIG section below (8490183803:AAEAVocEO1dkUBb8fSigU1eT3KSMkYv8NgY, 5667118823, https://sproutlife01-my.sharepoint.com/:x:/g/personal/abinaya_m_yogabars_in/IQBLtIoDsWtwQZiImCHkW6BeARmYhaC5YPlnyqVbJa5gOF0?download=1)
-
-3. GitHub Actions mode (recommended):
-   - Add secrets TG_BOT_TOKEN, TG_CHAT_ID, ONEDRIVE_URL to your repo
-   - Upload telegram_digest.yml to .github/workflows/
-   - Run workflow manually to test
-
-4. Local / server mode:
-       python cfa_telegram_digest.py
-   Or background:
-       nohup python cfa_telegram_digest.py > digest.log 2>&1 &
+Run modes:
+  python cfa_telegram_digest.py          # scheduler (local/server)
+  python cfa_telegram_digest.py --once   # GitHub Actions (run once)
 """
 
 import os
@@ -35,22 +21,19 @@ import pytz
 from datetime import datetime
 
 # ══════════════════════════════════════════════════════════════════
-#  CONFIG  ← Fill these in OR set as GitHub / environment secrets
+#  CONFIG
 # ══════════════════════════════════════════════════════════════════
 
-BOT_TOKEN    = os.environ.get("TG_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CHAT_ID      = os.environ.get("TG_CHAT_ID",   "YOUR_CHAT_ID_HERE")
+BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+CHAT_ID   = os.environ.get("TG_CHAT_ID",   "YOUR_CHAT_ID_HERE")
 
-# For GitHub Actions: set ONEDRIVE_URL secret as your OneDrive share link
-# For local use: FILE_PATH is used automatically
-ONEDRIVE_URL = os.environ.get("ONEDRIVE_URL", "")
-FILE_PATH    = r"C:\Users\YOGA BAR\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
+# Same Excel source as dashboard and bot.py
+FILE_URL  = "https://raw.githubusercontent.com/Yogabars123/sproutlife-erp/main/Sproutlife%20Inventory.xlsx"
 
-# Send times IST (24h) — used in scheduler / local mode
 SEND_TIMES_IST = ["10:00", "15:00"]
 
 # ══════════════════════════════════════════════════════════════════
-#  CONSTANTS  (must match fg_inventory.py and rm_inventory.py)
+#  CONSTANTS — must match dashboard exactly
 # ══════════════════════════════════════════════════════════════════
 
 CFA_WAREHOUSES = [
@@ -65,6 +48,13 @@ CFA_WAREHOUSES = [
     "BENGALURU CFA",
 ]
 
+# Channel stock warehouses (same as dashboard CHANNEL_STOCK_WAREHOUSES)
+CHANNEL_STOCK_WH = ["Tumkur New Warehouse", "YB FG Warehouse"]
+
+# Central warehouse for STN feasibility check
+CENTRAL_WH = "Central"
+
+# RM SOH warehouses
 RM_SOH_WH = [
     "Central",
     "RM Warehouse Tumkur",
@@ -95,31 +85,21 @@ log = logging.getLogger(__name__)
 IST = pytz.timezone("Asia/Kolkata")
 
 # ══════════════════════════════════════════════════════════════════
-#  DATA LOADING
+#  DATA LOADING — same GitHub URL as bot.py and dashboard
 # ══════════════════════════════════════════════════════════════════
 
-_excel_bytes_cache = None
+_excel_cache = None
 
 def _get_excel_bytes() -> bytes:
-    global _excel_bytes_cache
-    if _excel_bytes_cache is not None:
-        return _excel_bytes_cache
-
-    if ONEDRIVE_URL:
-        log.info("Downloading Excel from OneDrive...")
-        direct = ONEDRIVE_URL.rstrip("/")
-        if "1drv.ms" in direct or "sharepoint.com" in direct:
-            direct = direct + ("&download=1" if "?" in direct else "?download=1")
-        resp = requests.get(direct, timeout=60)
-        resp.raise_for_status()
-        _excel_bytes_cache = resp.content
-        log.info(f"Downloaded {len(_excel_bytes_cache):,} bytes from OneDrive")
-    else:
-        log.info(f"Reading Excel from: {FILE_PATH}")
-        with open(FILE_PATH, "rb") as f:
-            _excel_bytes_cache = f.read()
-
-    return _excel_bytes_cache
+    global _excel_cache
+    if _excel_cache is not None:
+        return _excel_cache
+    log.info(f"Downloading Excel from GitHub: {FILE_URL}")
+    resp = requests.get(FILE_URL, timeout=60)
+    resp.raise_for_status()
+    _excel_cache = resp.content
+    log.info(f"Downloaded {len(_excel_cache):,} bytes")
+    return _excel_cache
 
 
 def load_sheet(sheet_name: str) -> pd.DataFrame:
@@ -135,7 +115,8 @@ def load_sheet(sheet_name: str) -> pd.DataFrame:
 
 
 # ══════════════════════════════════════════════════════════════════
-#  SECTION 1: CFA FG SHORTFALL
+#  SECTION 1 — CFA FG SHORTFALL
+#  Same logic as Tab 2 (CFA Stock vs Open Orders) in fg_inventory.py
 # ══════════════════════════════════════════════════════════════════
 
 def get_cfa_shortfall() -> dict:
@@ -154,16 +135,16 @@ def get_cfa_shortfall() -> dict:
         return result
 
     if "Warehouse" not in df_fg.columns or "Item SKU" not in df_fg.columns:
-        log.error("FG-Inventory missing Warehouse or Item SKU")
+        log.error("FG-Inventory missing required columns")
         return result
 
     if "Qty Available" in df_fg.columns:
         df_fg["Qty Available"] = pd.to_numeric(df_fg["Qty Available"], errors="coerce").fillna(0)
 
-    # FG at CFA warehouses
+    # ── FG stock at CFA warehouses ────────────────────────────────
     df_cfa = df_fg[df_fg["Warehouse"].astype(str).str.strip().isin(CFA_WAREHOUSES)].copy()
     if df_cfa.empty:
-        log.warning("No FG rows for CFA warehouses")
+        log.warning("No FG rows found for CFA warehouses")
         return result
 
     item_name_col = "Item Name" if "Item Name" in df_cfa.columns else "Item SKU"
@@ -173,10 +154,11 @@ def get_cfa_shortfall() -> dict:
     ).reset_index()
     fg_agg.columns = ["Item SKU", "CFA Warehouse", "Item Name", "FG Stock"]
 
-    # STN in-transit
+    # ── STN in-transit to CFA ─────────────────────────────────────
     stn_agg = pd.DataFrame(columns=["Item SKU", "CFA Warehouse", "STN In-Transit"])
     if not df_stn.empty:
-        fg_code_col = next((c for c in df_stn.columns if "fg code" in c.lower() or "sku" in c.lower() or "code" in c.lower()), None)
+        fg_code_col = next((c for c in df_stn.columns
+                            if "fg code" in c.lower() or "sku" in c.lower() or "code" in c.lower()), None)
         to_wh_col   = next((c for c in df_stn.columns if "to warehouse" in c.lower()), None)
         stat_col    = next((c for c in df_stn.columns if c.lower() == "status"), None)
         qty_col     = next((c for c in df_stn.columns if c.lower() == "qty"), None)
@@ -192,12 +174,12 @@ def get_cfa_shortfall() -> dict:
                 stn_agg = stn_f.groupby(["_sku", "_wh"])[qty_col].sum().reset_index()
                 stn_agg.columns = ["Item SKU", "CFA Warehouse", "STN In-Transit"]
 
-    # Open SOS
+    # ── Open SOS at CFA warehouses ────────────────────────────────
     sku_col_so = next((c for c in df_sos.columns if "product sku" in c.lower()), None)
     wh_col_so  = next((c for c in df_sos.columns if c.lower() == "warehouse"), None)
     qty_col_so = next((c for c in df_sos.columns if "order qty" in c.lower()), None)
     if not sku_col_so or not wh_col_so or not qty_col_so:
-        log.error(f"SOS missing columns. Found: {list(df_sos.columns)}")
+        log.error(f"SOS missing required columns. Found: {list(df_sos.columns)}")
         return result
 
     df_sos[qty_col_so] = pd.to_numeric(df_sos[qty_col_so], errors="coerce").fillna(0)
@@ -214,7 +196,7 @@ def get_cfa_shortfall() -> dict:
     so_agg = sos_open.groupby(["_sku", "_wh"])[qty_col_so].sum().reset_index()
     so_agg.columns = ["Item SKU", "CFA Warehouse", "Open PO Qty"]
 
-    # Merge
+    # ── Merge FG + STN + SOS ─────────────────────────────────────
     merged = fg_agg.merge(stn_agg, on=["Item SKU", "CFA Warehouse"], how="outer")
     merged = merged.merge(so_agg,  on=["Item SKU", "CFA Warehouse"], how="outer")
     merged["FG Stock"]        = merged["FG Stock"].fillna(0)
@@ -235,13 +217,13 @@ def get_cfa_shortfall() -> dict:
     else:
         merged["Item Name"] = merged["Item SKU"]
 
-    # Central stock for STN check
+    # Central stock for STN feasibility
     central_stock = {}
-    central_rows = df_fg[df_fg["Warehouse"].astype(str).str.strip() == "Central"].copy()
+    central_rows = df_fg[df_fg["Warehouse"].astype(str).str.strip() == CENTRAL_WH].copy()
     if not central_rows.empty:
         central_stock = central_rows.groupby("Item SKU")["Qty Available"].sum().to_dict()
 
-    # Build per-CFA output
+    # Build shortfall list
     shortfall = merged[merged["Diff"] < 0].copy().sort_values("Diff")
     result["total_shortfall_skus"] = len(shortfall)
 
@@ -275,7 +257,9 @@ def get_cfa_shortfall() -> dict:
 
 
 # ══════════════════════════════════════════════════════════════════
-#  SECTION 2: RM CRITICAL STOCK
+#  SECTION 2 — RM CRITICAL STOCK
+#  Same logic as RM Inventory dashboard (Days of Stock calculation)
+#  Per Day Req = Monthly Forecast / 26 working days
 # ══════════════════════════════════════════════════════════════════
 
 def get_rm_critical() -> dict:
@@ -288,11 +272,13 @@ def get_rm_critical() -> dict:
         log.warning("RM-Inventory sheet empty/missing")
         return result
 
+    # Filter to SOH warehouses (same as dashboard)
     if "Warehouse" in df_rm.columns:
         df_rm = df_rm[df_rm["Warehouse"].astype(str).str.strip().isin(RM_SOH_WH)].copy()
     if "Qty Available" in df_rm.columns:
         df_rm["Qty Available"] = pd.to_numeric(df_rm["Qty Available"], errors="coerce").fillna(0)
 
+    # SOH per SKU
     soh = df_rm.groupby("Item SKU")["Qty Available"].sum().reset_index()
     soh.columns = ["Item SKU", "SOH"]
 
@@ -300,16 +286,18 @@ def get_rm_critical() -> dict:
     if "Item Name" in df_rm.columns:
         name_map = df_rm.drop_duplicates("Item SKU").set_index("Item SKU")["Item Name"].to_dict()
 
+    # Forecast → Per Day = Monthly Forecast / 26
     per_day = {}
     if not df_fc.empty:
         df_fc.columns = df_fc.columns.str.strip()
+        # Filter to Plant location (same as dashboard)
         if "Location" in df_fc.columns:
             df_fc = df_fc[df_fc["Location"].astype(str).str.strip().str.lower() == "plant"].copy()
         ic = next((c for c in df_fc.columns if "item code" in c.lower()), None)
         if ic and "Forecast" in df_fc.columns:
             df_fc["Forecast"] = pd.to_numeric(df_fc["Forecast"], errors="coerce").fillna(0)
             fc_agg = df_fc[df_fc["Forecast"] > 0].groupby(ic)["Forecast"].sum()
-            per_day = {str(k).strip().upper(): float(v) / 24 for k, v in fc_agg.items()}
+            per_day = {str(k).strip().upper(): float(v) / 26 for k, v in fc_agg.items()}
 
     soh["_k"]          = soh["Item SKU"].astype(str).str.upper()
     soh["Per Day Req"] = soh["_k"].map(per_day).fillna(0)
@@ -319,6 +307,7 @@ def get_rm_critical() -> dict:
 
     has_fc = soh[soh["Per Day Req"] > 0].copy()
 
+    # Bucket same thresholds as RM dashboard
     for _, r in has_fc[has_fc["Days of Stock"].fillna(999) <= 1].sort_values("Days of Stock").iterrows():
         result["stockout"].append({
             "sku": str(r["Item SKU"]), "name": str(r["Item Name"])[:35],
@@ -350,18 +339,17 @@ def get_rm_critical() -> dict:
 # ══════════════════════════════════════════════════════════════════
 
 def build_message(cfa_data: dict, rm_data: dict) -> str:
-    NL      = chr(10)
-    now_str = cfa_data["as_of"]
-    total   = cfa_data["total_shortfall_skus"]
-    cfas    = cfa_data["cfas"]
+    NL    = chr(10)
+    total = cfa_data["total_shortfall_skus"]
+    cfas  = cfa_data["cfas"]
 
     lines = [
         "📊 <b>YogaBar · Inventory Digest</b>",
-        "🕐 " + now_str,
+        "🕐 " + cfa_data["as_of"],
         "━━━━━━━━━━━━━━━━━━━━━━━━",
     ]
 
-    # Section 1: FG CFA Shortfall
+    # ── Section 1: CFA FG Shortfall ──────────────────────────────
     lines.append("📦 <b>FG · CFA Shortfall</b>")
     if total == 0:
         lines.append("✅ All CFAs fully stocked — no shortfall today!")
@@ -369,19 +357,16 @@ def build_message(cfa_data: dict, rm_data: dict) -> str:
         lines.append("⚠️ <b>" + str(total) + " shortfall SKU(s) across " + str(len(cfas)) + " CFA(s)</b>")
         lines.append("")
         for cd in cfas:
-            cfa_name = cd["name"]
-            cfa_diff = cd["total_diff"]
-            sku_list = cd["shortfall_skus"]
-            n_skus   = len(sku_list)
-            n_stn_ok = sum(1 for s in sku_list if s["stn_status"] == "✅")
-            n_stn_pt = sum(1 for s in sku_list if s["stn_status"] == "⚠️")
-            n_stn_no = sum(1 for s in sku_list if s["stn_status"] == "❌")
+            n_skus   = len(cd["shortfall_skus"])
+            n_ok     = sum(1 for s in cd["shortfall_skus"] if s["stn_status"] == "✅")
+            n_pt     = sum(1 for s in cd["shortfall_skus"] if s["stn_status"] == "⚠️")
+            n_no     = sum(1 for s in cd["shortfall_skus"] if s["stn_status"] == "❌")
             lines.append(
-                "🏭 <b>" + cfa_name + "</b>  [" + str(n_skus) +
-                " SKU" + ("s" if n_skus > 1 else "") +
-                "  |  Net: " + f"{cfa_diff:+,.0f}" + "]"
+                "🏭 <b>" + cd["name"] + "</b>  [" +
+                str(n_skus) + " SKU" + ("s" if n_skus > 1 else "") +
+                "  |  Net: " + f"{cd['total_diff']:+,.0f}" + "]"
             )
-            for s in sku_list:
+            for s in cd["shortfall_skus"]:
                 lines.append(
                     "  • <code>" + s["sku"] + "</code>  " + s["name"] + NL +
                     "    Stock: <b>" + f"{s['fg_stock']:,.0f}" + "</b>" +
@@ -390,14 +375,14 @@ def build_message(cfa_data: dict, rm_data: dict) -> str:
                     "  " + s["stn_status"] + " STN"
                 )
             stn_parts = []
-            if n_stn_ok: stn_parts.append("✅ " + str(n_stn_ok) + " possible")
-            if n_stn_pt: stn_parts.append("⚠️ " + str(n_stn_pt) + " partial")
-            if n_stn_no: stn_parts.append("❌ " + str(n_stn_no) + " no stock")
+            if n_ok: stn_parts.append("✅ " + str(n_ok) + " possible")
+            if n_pt: stn_parts.append("⚠️ " + str(n_pt) + " partial")
+            if n_no: stn_parts.append("❌ " + str(n_no) + " no stock")
             if stn_parts:
                 lines.append("  └ " + " · ".join(stn_parts))
             lines.append("")
 
-    # Section 2: RM Critical
+    # ── Section 2: RM Critical Stock ─────────────────────────────
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("🌾 <b>RM · Critical Stock Alert</b>")
 
@@ -476,10 +461,10 @@ def send_telegram(text: str) -> bool:
 # ══════════════════════════════════════════════════════════════════
 
 def run_digest():
-    global _excel_bytes_cache
-    _excel_bytes_cache = None  # Fresh data each run
+    global _excel_cache
+    _excel_cache = None  # clear cache so fresh data is fetched each run
 
-    log.info("⏰ Running combined inventory digest...")
+    log.info("⏰ Running inventory digest...")
     try:
         cfa_data = get_cfa_shortfall()
         rm_data  = get_rm_critical()
@@ -504,26 +489,26 @@ def run_digest():
 # ══════════════════════════════════════════════════════════════════
 
 def main():
-    log.info("🚀 YogaBar Inventory Digest Scheduler starting...")
-    log.info(f"   File  : {FILE_PATH if not ONEDRIVE_URL else 'OneDrive URL'}")
-    log.info(f"   Times : {', '.join(SEND_TIMES_IST)} IST")
-    log.info(f"   Chat  : {CHAT_ID}")
+    log.info("🚀 YogaBar Inventory Digest starting...")
+    log.info(f"   Source : {FILE_URL}")
+    log.info(f"   Times  : {', '.join(SEND_TIMES_IST)} IST")
+    log.info(f"   Chat   : {CHAT_ID}")
 
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or CHAT_ID == "YOUR_CHAT_ID_HERE":
         log.error("❌ Fill in BOT_TOKEN and CHAT_ID in CONFIG section!")
         return
 
     for t in SEND_TIMES_IST:
-        h, m   = int(t.split(":")[0]), int(t.split(":")[1])
-        ist_dt = IST.localize(datetime.now().replace(hour=h, minute=m, second=0, microsecond=0))
-        utc_t  = ist_dt.astimezone(pytz.utc).strftime("%H:%M")
-        schedule.every().day.at(utc_t).do(run_digest)
-        log.info(f"   Scheduled: {t} IST  →  {utc_t} UTC")
+        # IMPORTANT: The `schedule` library uses the SYSTEM CLOCK, not UTC.
+        # On your IST machine, schedule.at("10:00") fires at 10:00 IST.
+        # Do NOT convert to UTC — that was causing wrong send times (e.g. 1 PM instead of 10 AM).
+        schedule.every().day.at(t).do(run_digest)
+        log.info(f"   Scheduled: {t} IST (system clock)")
 
-    log.info("📤 Sending startup verification message...")
+    log.info("📤 Sending startup test message...")
     run_digest()
 
-    log.info("✅ Scheduler running. Press Ctrl+C to stop.")
+    log.info("✅ Scheduler running. Ctrl+C to stop.")
     while True:
         schedule.run_pending()
         time.sleep(30)
