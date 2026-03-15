@@ -24,11 +24,15 @@ from datetime import datetime
 #  CONFIG
 # ══════════════════════════════════════════════════════════════════
 
-BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CHAT_ID   = os.environ.get("TG_CHAT_ID",   "YOUR_CHAT_ID_HERE")
+# ── Hardcoded to match dashboard (same bot, same credentials) ──────────────
+BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ")
+CHAT_ID   = os.environ.get("TG_CHAT_ID",   "5667118823")
 
-# Same Excel source as dashboard and bot.py
-FILE_URL  = "https://raw.githubusercontent.com/Yogabars123/sproutlife-erp/main/Sproutlife%20Inventory.xlsx"
+# ── Data source: local OneDrive file (same live file the dashboard reads) ───
+# This is why dashboard button shows correct data — it reads this file directly.
+# The old FILE_URL pointed to GitHub (stale) — that caused "no material at risk".
+FILE_PATH    = r"C:\Users\YOGA BAR\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
+ONEDRIVE_URL = os.environ.get("ONEDRIVE_URL", "")  # GitHub Actions only
 
 SEND_TIMES_IST = ["10:00", "15:00"]
 
@@ -94,11 +98,24 @@ def _get_excel_bytes() -> bytes:
     global _excel_cache
     if _excel_cache is not None:
         return _excel_cache
-    log.info(f"Downloading Excel from GitHub: {FILE_URL}")
-    resp = requests.get(FILE_URL, timeout=60)
-    resp.raise_for_status()
-    _excel_cache = resp.content
-    log.info(f"Downloaded {len(_excel_cache):,} bytes")
+
+    if ONEDRIVE_URL:
+        # GitHub Actions: download from OneDrive
+        log.info("Downloading Excel from OneDrive...")
+        direct = ONEDRIVE_URL.rstrip("/")
+        if "sharepoint.com" in direct or "1drv.ms" in direct:
+            direct = direct + ("&download=1" if "?" in direct else "?download=1")
+        resp = requests.get(direct, timeout=60)
+        resp.raise_for_status()
+        _excel_cache = resp.content
+        log.info(f"Downloaded {len(_excel_cache):,} bytes from OneDrive")
+    else:
+        # Local: read live OneDrive-synced file directly (same as dashboard)
+        log.info(f"Reading local file: {FILE_PATH}")
+        with open(FILE_PATH, "rb") as fh:
+            _excel_cache = fh.read()
+        log.info(f"Read {len(_excel_cache):,} bytes")
+
     return _excel_cache
 
 
@@ -490,7 +507,7 @@ def run_digest():
 
 def main():
     log.info("🚀 YogaBar Inventory Digest starting...")
-    log.info(f"   Source : {FILE_URL}")
+    log.info(f"   Source : {FILE_PATH if not ONEDRIVE_URL else 'OneDrive URL'}")
     log.info(f"   Times  : {', '.join(SEND_TIMES_IST)} IST")
     log.info(f"   Chat   : {CHAT_ID}")
 
