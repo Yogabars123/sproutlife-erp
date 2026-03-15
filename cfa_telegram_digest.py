@@ -24,15 +24,17 @@ from datetime import datetime
 #  CONFIG
 # ══════════════════════════════════════════════════════════════════
 
-# ── Hardcoded to match dashboard (same bot, same credentials) ──────────────
-BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ")
-CHAT_ID   = os.environ.get("TG_CHAT_ID",   "5667118823")
+# ══════════════════════════════════════════════════════════════════
+#  ⚠️  HARDCODED — do NOT use os.environ here.
+#  Windows env var TG_BOT_TOKEN=8490183803 (old bot) was overriding this.
+#  These values are now fixed so the script always uses the correct bot.
+# ══════════════════════════════════════════════════════════════════
+BOT_TOKEN = "8490183803:AAEAVocEO1dkUBb8fSigU1eT3KSMkYv8NgY"   # Inventory Assistant bot
+CHAT_ID   = "5667118823"                                          # Abinaya personal chat
 
-# ── Data source: local OneDrive file (same live file the dashboard reads) ───
-# This is why dashboard button shows correct data — it reads this file directly.
-# The old FILE_URL pointed to GitHub (stale) — that caused "no material at risk".
+# ── Data source: reads the LIVE local file (same as dashboard) ──────────────
 FILE_PATH    = r"C:\Users\YOGA BAR\OneDrive - SPROUTLIFE FOODS PRIVATE LIMITED\Sproutlife Inventory.xlsx"
-ONEDRIVE_URL = os.environ.get("ONEDRIVE_URL", "")  # GitHub Actions only
+ONEDRIVE_URL = os.environ.get("ONEDRIVE_URL", "")  # only used if running via GitHub Actions
 
 SEND_TIMES_IST = ["10:00", "15:00"]
 
