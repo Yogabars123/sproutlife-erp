@@ -9,6 +9,88 @@ from pages.Sidebar_style import inject_sidebar
 from pages.data_loader import load_sheet
 inject_sidebar("FG Inventory")
 
+# ── Telegram helper ───────────────────────────────────────────────────────────
+def _tg_send(token: str, chat_id: str, text: str) -> tuple[bool, str]:
+    """Send a Telegram HTML message. Returns (success, error_msg)."""
+    import requests as _req
+    url    = f"https://api.telegram.org/bot{token}/sendMessage"
+    chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
+    for chunk in chunks:
+        try:
+            r = _req.post(url, json={"chat_id": chat_id, "text": chunk, "parse_mode": "HTML"}, timeout=15)
+            if r.status_code != 200:
+                return False, r.json().get("description", r.text)
+        except Exception as e:
+            return False, str(e)
+    return True, ""
+
+
+def build_cfa_telegram(merged: "pd.DataFrame", central_stock: dict) -> str:
+    """Build CFA shortfall Telegram message from the live merged dataframe."""
+    from datetime import datetime
+    import pytz
+    NL  = chr(10)
+    IST = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(IST).strftime("%d %b %Y %I:%M %p IST")
+
+    shortfall = merged[merged["Diff"] < 0].copy().sort_values("Diff")
+    total     = len(shortfall)
+
+    lines = [
+        "📦 <b>YogaBar · CFA FG Shortfall</b>",
+        "🕐 " + now,
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+
+    if total == 0:
+        lines.append("✅ All CFAs fully stocked — no shortfall!")
+    else:
+        lines.append("⚠️ <b>" + str(total) + " shortfall SKU(s) across " +
+                     str(shortfall["CFA Warehouse"].nunique()) + " CFA(s)</b>")
+        lines.append("")
+        for cfa in shortfall["CFA Warehouse"].unique():
+            rows   = shortfall[shortfall["CFA Warehouse"] == cfa]
+            n      = len(rows)
+            net    = float(rows["Diff"].sum())
+            lines.append("🏭 <b>" + cfa + "</b>  [" + str(n) +
+                         " SKU" + ("s" if n > 1 else "") +
+                         "  |  Net: " + f"{net:+,.0f}" + "]")
+            n_ok = n_pt = n_no = 0
+            for _, r in rows.iterrows():
+                sku      = str(r["Item SKU"]).strip()
+                cen      = float(central_stock.get(sku, 0))
+                diff_abs = abs(float(r["Diff"]))
+                if cen >= diff_abs:   icon = "✅"; n_ok += 1
+                elif cen > 0:         icon = "⚠️"; n_pt += 1
+                else:                 icon = "❌"; n_no += 1
+                name = str(r.get("Item Name", sku))[:38]
+                lines.append(
+                    "  • <code>" + sku + "</code>  " + name + NL +
+                    "    Stock: <b>" + f"{r['FG Stock']:,.0f}" + "</b>" +
+                    "  PO: " + f"{r['Open PO Qty']:,.0f}" +
+                    "  Diff: <b>" + f"{r['Diff']:+,.0f}" + "</b>" +
+                    "  " + icon + " STN"
+                )
+            parts = []
+            if n_ok: parts.append("✅ " + str(n_ok) + " possible")
+            if n_pt: parts.append("⚠️ " + str(n_pt) + " partial")
+            if n_no: parts.append("❌ " + str(n_no) + " no stock")
+            if parts: lines.append("  └ " + " · ".join(parts))
+            lines.append("")
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("🤖 <i>Sent from YogaBar ERP Dashboard</i>")
+    return NL.join(lines)
+
+# ── Telegram config — hardcoded, no sidebar entry needed ──────────────────────
+_DEFAULT_TG_TOKEN   = "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ"
+_DEFAULT_TG_CHAT_ID = "5667118823"
+
+if not st.session_state.get("tg_token"):
+    st.session_state["tg_token"]   = _DEFAULT_TG_TOKEN
+if not st.session_state.get("tg_chat_id"):
+    st.session_state["tg_chat_id"] = _DEFAULT_TG_CHAT_ID
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -157,10 +239,21 @@ def load_mapper():
     df.columns = df.columns.str.strip()
     return df
 
-df_fg     = load_fg()
-df_stn    = load_stn()
-df_sos    = load_sos()
-df_mapper = load_mapper()
+@st.cache_data(ttl=300)
+def load_reorder():
+    df = load_sheet("Reorder")
+    if df.empty: return pd.DataFrame()
+    df.columns = df.columns.str.strip()
+    for col in df.columns:
+        if any(k in col.lower() for k in ["qty","stock","min","max","reorder"]):
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    return df
+
+df_fg      = load_fg()
+df_stn     = load_stn()
+df_sos     = load_sos()
+df_mapper  = load_mapper()
+df_reorder = load_reorder()
 
 # ── CHANNEL STOCK WAREHOUSES ──────────────────────────────────────────────────
 CHANNEL_STOCK_WAREHOUSES = [
@@ -267,7 +360,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ── TABS ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open Orders", "🏪  Channel Analysis"])
+tab1, tab2, tab3, tab4 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open Orders", "🏪  Channel Analysis", "🔁  Reorder & Alerts"])
 
 # ═══ TAB 1 ════════════════════════════════════════════════════════════════════
 with tab1:
@@ -843,6 +936,27 @@ with tab2:
                              use_container_width=True,
                              height=min(60 + len(cfa_data)*36, 420),
                              hide_index=True, column_config=col_cfg)
+
+        # ── Send CFA Report to Telegram ──────────────────────────────────────
+        st.markdown("<div style='margin-top:20px'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="sec-div">📬 Send CFA Report to Telegram</div>', unsafe_allow_html=True)
+        _tok = st.session_state.get("tg_token", "")
+        _cid = st.session_state.get("tg_chat_id", "")
+        if not _tok or not _cid:
+            st.warning("⚠️ Enter Bot Token and Chat ID in the sidebar to enable Telegram sending.")
+        else:
+            if st.button("📬  Send CFA Shortfall Report to Telegram", use_container_width=True, key="tg_cfa_btn"):
+                _central = {}
+                if not df_fg.empty and "Warehouse" in df_fg.columns:
+                    _c_rows = df_fg[df_fg["Warehouse"].astype(str).str.strip() == "Central"].copy()
+                    if not _c_rows.empty:
+                        _central = _c_rows.groupby("Item SKU")["Qty Available"].sum().to_dict()
+                _msg = build_cfa_telegram(merged, _central)
+                _ok, _err = _tg_send(_tok, _cid, _msg)
+                if _ok:
+                    st.success("✅ CFA Shortfall report sent to Telegram!")
+                else:
+                    st.error(f"❌ Failed to send: {_err}")
 
 # ═══ TAB 3 — CHANNEL ANALYSIS ════════════════════════════════════════════════
 with tab3:
@@ -1542,5 +1656,297 @@ with tab3:
                             hide_index=True,
                             column_config=cust_col_cfg
                         )
+
+# ═══ TAB 4 — REORDER & ALERTS ═══════════════════════════════════════════════
+with tab4:
+    import urllib.request, urllib.parse, json as _json
+
+    st.markdown("""
+    <div class="formula-bar">
+        <span>📐 Logic:</span>
+        <b>Reorder Needed</b> <span>= Current Stock &lt; Min Stock (from Reorder sheet)</span>
+        <span> · </span>
+        <b>Suggest Qty</b> <span>= Reorder Qty − Current Stock</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Helper: send Telegram message ────────────────────────────────────────
+    def send_telegram(token, chat_id, text):
+        try:
+            url  = f"https://api.telegram.org/bot{token}/sendMessage"
+            data = urllib.parse.urlencode({
+                "chat_id":    chat_id,
+                "text":       text,
+                "parse_mode": "HTML"
+            }).encode()
+            req  = urllib.request.Request(url, data=data)
+            resp = urllib.request.urlopen(req, timeout=10)
+            return True, "✅ Sent!"
+        except Exception as e:
+            return False, f"❌ Failed: {e}"
+
+    # ── Step 1: Current stock (all warehouses for reorder check) ─────────────
+    if not df_fg.empty and "Item SKU" in df_fg.columns:
+        curr_stock = df_fg.groupby("Item SKU").agg(
+            Item_Name   =("Item Name",     "first"),
+            Category    =("Category",      "first"),
+            Curr_Stock  =("Qty Available", "sum"),
+        ).reset_index()
+        curr_stock.columns = ["Item SKU","Item Name","Category","Current Stock"]
+    else:
+        curr_stock = pd.DataFrame(columns=["Item SKU","Item Name","Category","Current Stock"])
+
+    # ── Step 2: Reorder sheet ────────────────────────────────────────────────
+    if df_reorder.empty:
+        st.warning("""⚠️ No **Reorder** sheet found in your Excel file.
+        
+Please create a sheet named **Reorder** with these columns:
+- **Item SKU** — SKU code (must match FG Inventory)
+- **Min Stock** — trigger reorder below this qty
+- **Reorder Qty** — suggested order/production qty
+- **Unit** (optional) — UoM""")
+
+    else:
+        # Detect columns
+        sku_col_r  = next((c for c in df_reorder.columns if "sku" in c.lower() or "item" in c.lower()), None)
+        min_col_r  = next((c for c in df_reorder.columns if "min" in c.lower()), None)
+        req_col_r  = next((c for c in df_reorder.columns if "reorder" in c.lower() or "suggest" in c.lower() or "qty" in c.lower()), None)
+
+        if not sku_col_r:
+            st.error(f"⚠️ Reorder sheet must have an Item SKU column. Found: {list(df_reorder.columns)}")
+        else:
+            reorder_clean = df_reorder.copy()
+            reorder_clean = reorder_clean.rename(columns={
+                sku_col_r: "Item SKU",
+                **({"Min Stock":  min_col_r} if min_col_r  else {}),
+                **({"Reorder Qty": req_col_r} if req_col_r else {}),
+            })
+            # Rename properly
+            if min_col_r and min_col_r != "Min Stock":
+                reorder_clean = reorder_clean.rename(columns={min_col_r: "Min Stock"})
+            if req_col_r and req_col_r != "Reorder Qty":
+                reorder_clean = reorder_clean.rename(columns={req_col_r: "Reorder Qty"})
+
+            reorder_clean["Item SKU"] = reorder_clean["Item SKU"].astype(str).str.strip()
+            if "Min Stock"  not in reorder_clean.columns: reorder_clean["Min Stock"]  = 0
+            if "Reorder Qty" not in reorder_clean.columns: reorder_clean["Reorder Qty"] = 0
+
+            # Merge with current stock
+            merged_ro = reorder_clean.merge(curr_stock[["Item SKU","Item Name","Category","Current Stock"]],
+                                             on="Item SKU", how="left")
+            merged_ro["Current Stock"] = merged_ro["Current Stock"].fillna(0)
+            merged_ro["Gap"]           = merged_ro["Current Stock"] - merged_ro["Min Stock"]
+            merged_ro["Suggest Qty"]   = (merged_ro["Reorder Qty"] - merged_ro["Current Stock"]).clip(lower=0)
+            merged_ro["Status"]        = merged_ro["Gap"].apply(
+                lambda g: "🔴 Reorder Now"   if g < 0
+                else      "🟡 Getting Low"   if g < merged_ro["Min Stock"].median() * 0.2
+                else      "🟢 OK"
+            )
+
+            # KPI summary
+            n_critical = int((merged_ro["Status"] == "🔴 Reorder Now").sum())
+            n_low      = int((merged_ro["Status"] == "🟡 Getting Low").sum())
+            n_ok       = int((merged_ro["Status"] == "🟢 OK").sum())
+            total_suggest = merged_ro["Suggest Qty"].sum()
+
+            st.markdown(f"""
+            <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+              <div class="kpi-box red"><div class="kpi-inner"><div>
+                <div class="kpi-label">Reorder Now</div>
+                <div class="kpi-value">{n_critical}</div>
+                <div class="kpi-sub">Below Min Stock</div>
+              </div><div class="kpi-ico">🔴</div></div></div>
+              <div class="kpi-box amber"><div class="kpi-inner"><div>
+                <div class="kpi-label">Getting Low</div>
+                <div class="kpi-value">{n_low}</div>
+                <div class="kpi-sub">Near threshold</div>
+              </div><div class="kpi-ico">🟡</div></div></div>
+              <div class="kpi-box green"><div class="kpi-inner"><div>
+                <div class="kpi-label">Stock OK</div>
+                <div class="kpi-value">{n_ok}</div>
+                <div class="kpi-sub">Above Min Stock</div>
+              </div><div class="kpi-ico">🟢</div></div></div>
+              <div class="kpi-box blue"><div class="kpi-inner"><div>
+                <div class="kpi-label">Total Suggest Qty</div>
+                <div class="kpi-value">{total_suggest:,.0f}</div>
+                <div class="kpi-sub">Units to produce/order</div>
+              </div><div class="kpi-ico">📋</div></div></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Filter toggle
+            ro_filter = st.radio("Show:", ["All SKUs","🔴 Reorder Now only","🔴+🟡 Needs attention"],
+                                 horizontal=True, key="ro_filter")
+            if ro_filter == "🔴 Reorder Now only":
+                merged_ro = merged_ro[merged_ro["Status"] == "🔴 Reorder Now"]
+            elif ro_filter == "🔴+🟡 Needs attention":
+                merged_ro = merged_ro[merged_ro["Status"].isin(["🔴 Reorder Now","🟡 Getting Low"])]
+
+            merged_ro = merged_ro.sort_values("Gap", ascending=True)
+
+            # Row colouring
+            def _ro_colour(row):
+                s = str(row.get("Status",""))
+                if "🔴" in s: return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
+                if "🟡" in s: return ["background-color:#2d1f00;color:#fde68a"] * len(row)
+                return ["background-color:#061410;color:#d1fae5"] * len(row)
+
+            ro_disp_cols = ["Item Name","Item SKU","Category","Current Stock",
+                            "Min Stock","Reorder Qty","Gap","Suggest Qty","Status"]
+            ro_disp_cols = [c for c in ro_disp_cols if c in merged_ro.columns]
+
+            # Export reorder sheet
+            buf_ro = io.BytesIO()
+            with pd.ExcelWriter(buf_ro, engine="openpyxl") as wx:
+                merged_ro[ro_disp_cols].to_excel(wx, index=False, sheet_name="Reorder Suggestions")
+
+            # STN template for shortfall items
+            # Build from channel shortfall data
+            stn_rows = []
+            if not df_sos.empty:
+                _sku_c2  = next((c for c in df_sos.columns if "product sku" in c.lower()), None)
+                _cust_c2 = next((c for c in df_sos.columns if "customer" in c.lower() or "party" in c.lower()), None)
+                _qty_c2  = next((c for c in df_sos.columns if "order qty" in c.lower()), None)
+                if _sku_c2 and _qty_c2:
+                    _open2 = df_sos[~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)].copy()                              if "SO Status" in df_sos.columns else df_sos.copy()
+                    _open2["_sku"] = _open2[_sku_c2].astype(str).str.strip()
+                    _open2["_po"]  = pd.to_numeric(_open2[_qty_c2], errors="coerce").fillna(0)
+                    _sku_po = _open2.groupby("_sku")["_po"].sum().reset_index()
+                    _sku_po.columns = ["Item SKU","Open PO Qty"]
+                    stn_base = curr_stock.merge(_sku_po, on="Item SKU", how="inner")
+                    stn_base["Shortfall"] = stn_base["Current Stock"] - stn_base["Open PO Qty"]
+                    stn_short = stn_base[stn_base["Shortfall"] < 0].copy()
+                    # Central stock
+                    _cen2 = df_fg[df_fg["Warehouse"].astype(str) == "Central"].groupby("Item SKU")["Qty Available"].sum().reset_index()
+                    _cen2.columns = ["Item SKU","Central Stock"]
+                    stn_short = stn_short.merge(_cen2, on="Item SKU", how="left")
+                    stn_short["Central Stock"]  = stn_short["Central Stock"].fillna(0)
+                    stn_short["STN Suggest Qty"]= stn_short[["Shortfall","Central Stock"]].apply(
+                        lambda r: min(abs(r["Shortfall"]), r["Central Stock"]), axis=1)
+                    stn_short["STN Feasible"]   = stn_short.apply(
+                        lambda r: "✅ Yes" if r["Central Stock"] >= abs(r["Shortfall"])
+                        else "⚠️ Partial" if r["Central Stock"] > 0 else "❌ No", axis=1)
+                    stn_short["From Warehouse"]  = "Central"
+                    stn_short["To Warehouse"]    = "Tumkur New Warehouse / YB FG Warehouse"
+                    stn_short["Date"]            = datetime.today().strftime("%d-%b-%Y")
+                    stn_short["Raised By"]       = ""
+                    stn_short["Remarks"]         = ""
+                    stn_rows = stn_short[[
+                        "Item Name","Item SKU","Category",
+                        "Current Stock","Open PO Qty","Shortfall",
+                        "Central Stock","STN Suggest Qty","STN Feasible",
+                        "From Warehouse","To Warehouse","Date","Raised By","Remarks"
+                    ]].sort_values("Shortfall", ascending=True)
+
+            buf_stn = io.BytesIO()
+            with pd.ExcelWriter(buf_stn, engine="openpyxl") as wx:
+                if len(stn_rows):
+                    stn_rows.to_excel(wx, index=False, sheet_name="STN Template")
+                else:
+                    pd.DataFrame(columns=["Item SKU","STN Suggest Qty"]).to_excel(wx, index=False, sheet_name="STN Template")
+
+            # ── Action buttons row ────────────────────────────────────────────
+            st.markdown("<div style='margin-bottom:10px'></div>", unsafe_allow_html=True)
+            ab1, ab2, ab3 = st.columns(3)
+
+            with ab1:
+                st.download_button(
+                    "⬇ Download Reorder Suggestions",
+                    buf_ro.getvalue(),
+                    "Reorder_Suggestions.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            with ab2:
+                st.download_button(
+                    "📋 Download STN Template",
+                    buf_stn.getvalue(),
+                    f"STN_Template_{datetime.today().strftime('%d%b%Y')}.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    help="Pre-filled STN template for all shortfall SKUs where Central WH has stock"
+                )
+            with ab3:
+                tg_tok = st.session_state.get("tg_token","")
+                tg_cid = st.session_state.get("tg_chat_id","")
+                if st.button("📬 Send Telegram Digest", use_container_width=True,
+                             disabled=(not tg_tok or not tg_cid)):
+                    # Build message
+                    _crit = merged_ro[merged_ro["Status"] == "🔴 Reorder Now"]
+                    lines = [f"<b>📦 YogaBar · Daily Reorder Digest</b>",
+                             f"<i>{datetime.today().strftime('%d %b %Y')}</i>",
+                             ""]
+                    if _crit.empty:
+                        lines.append("✅ No SKUs below Min Stock today!")
+                    else:
+                        lines.append(f"🔴 <b>{len(_crit)} SKUs need reorder:</b>")
+                        for _, r in _crit.iterrows():
+                            lines.append(
+                                f"• <code>{r['Item SKU']}</code> — Stock: <b>{r['Current Stock']:,.0f}</b>"
+                                f" | Min: {r['Min Stock']:,.0f} | Suggest: <b>{r['Suggest Qty']:,.0f}</b>"
+                            )
+                    # Also add channel shortfall
+                    if not df_sos.empty and len(stn_rows):
+                        _s_crit = stn_rows[stn_rows["STN Feasible"] == "❌ No"] if len(stn_rows) else pd.DataFrame()
+                        if len(_s_crit):
+                            lines += ["", f"❌ <b>{len(_s_crit)} SKUs — No Central stock for STN:</b>"]
+                            for _, r in _s_crit.head(10).iterrows():
+                                lines.append(f"• <code>{r['Item SKU']}</code> — Shortfall: <b>{abs(r['Shortfall']):,.0f}</b>")
+                    msg = chr(10).join(lines)
+                    ok, resp_msg = send_telegram(tg_tok, tg_cid, msg)
+                    if ok:
+                        st.success(resp_msg)
+                    else:
+                        st.error(resp_msg)
+                elif not tg_tok or not tg_cid:
+                    st.caption("⚙️ Add Bot Token + Chat ID in sidebar to enable")
+
+            # ── Reorder table ─────────────────────────────────────────────────
+            st.markdown("<div style='margin-top:14px'></div>", unsafe_allow_html=True)
+            st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">🔁 Reorder Suggestions</span><span class="tbl-badge">{len(merged_ro):,} SKUs</span></div>', unsafe_allow_html=True)
+            st.dataframe(
+                merged_ro[ro_disp_cols].style.apply(_ro_colour, axis=1),
+                use_container_width=True, height=460, hide_index=True,
+                column_config={
+                    "Current Stock": st.column_config.NumberColumn("Current Stock", format="%.0f"),
+                    "Min Stock":     st.column_config.NumberColumn("Min Stock",     format="%.0f"),
+                    "Reorder Qty":   st.column_config.NumberColumn("Reorder Qty",   format="%.0f"),
+                    "Gap":           st.column_config.NumberColumn("Gap",           format="%.0f",
+                                     help="Current Stock − Min Stock. Negative = must reorder"),
+                    "Suggest Qty":   st.column_config.NumberColumn("Suggest Qty",   format="%.0f",
+                                     help="Reorder Qty − Current Stock"),
+                    "Status":        st.column_config.TextColumn("Status"),
+                }
+            )
+
+            # ── STN Template preview ──────────────────────────────────────────
+            if len(stn_rows):
+                st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+                st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📋 STN Template Preview</span><span class="tbl-badge">{len(stn_rows):,} SKUs</span></div>', unsafe_allow_html=True)
+                st.markdown("""<div style="font-size:10px;color:#475569;margin-bottom:8px;
+                    font-family:'JetBrains Mono',monospace;">
+                    Pre-filled from Central WH → Tumkur New / YB FG · Fill in Raised By + Remarks before submitting
+                    </div>""", unsafe_allow_html=True)
+
+                def _stn_t_colour(row):
+                    s = str(row.get("STN Feasible",""))
+                    if "Yes"     in s: return ["background-color:#061410;color:#d1fae5"] * len(row)
+                    if "Partial" in s: return ["background-color:#2d1f00;color:#fde68a"] * len(row)
+                    return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
+
+                st.dataframe(
+                    stn_rows.style.apply(_stn_t_colour, axis=1),
+                    use_container_width=True,
+                    height=min(80 + len(stn_rows)*36, 440),
+                    hide_index=True,
+                    column_config={
+                        "Current Stock":   st.column_config.NumberColumn(format="%.0f"),
+                        "Open PO Qty":     st.column_config.NumberColumn(format="%.0f"),
+                        "Shortfall":       st.column_config.NumberColumn(format="%.0f"),
+                        "Central Stock":   st.column_config.NumberColumn(format="%.0f"),
+                        "STN Suggest Qty": st.column_config.NumberColumn("STN Qty", format="%.0f"),
+                        "STN Feasible":    st.column_config.TextColumn("Feasible"),
+                    }
+                )
 
 st.markdown('<div class="app-footer">YOGABAR · FG INVENTORY · CFA ANALYSIS</div>', unsafe_allow_html=True)
