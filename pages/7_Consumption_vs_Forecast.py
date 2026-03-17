@@ -38,18 +38,18 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"],
 .app-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:16px;}
 .hdr-left{display:flex;align-items:center;gap:10px;}
 .hdr-logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#0c1a10,#122418);border:1px solid #14532d;display:flex;align-items:center;justify-content:center;font-size:20px;}
-.hdr-title{font-size:17px;font-weight:800;color:#f1f5f9;}
-.hdr-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.hdr-title{font-size:17px;font-weight:800;color:#ffffff;}
+.hdr-sub{font-size:11px;color:#94a3b8;margin-top:1px;}
 .live-pill{display:inline-flex;align-items:center;gap:6px;background:#041208;border:1px solid #155e2e;border-radius:20px;padding:5px 13px;font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1.2px;font-family:'JetBrains Mono',monospace;}
 .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:blink 1.8s infinite;}
 @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px #22c55e}50%{opacity:.2;box-shadow:none}}
 
-.stButton>button{background:var(--bg1)!important;border:1px solid var(--border2)!important;border-radius:9px!important;color:var(--muted)!important;font-size:12px!important;font-weight:600!important;width:100%!important;padding:9px!important;margin-bottom:8px!important;transition:all .2s!important;}
+.stButton>button{background:var(--bg1)!important;border:1px solid var(--border2)!important;border-radius:9px!important;color:#94a3b8!important;font-size:12px!important;font-weight:600!important;width:100%!important;padding:9px!important;margin-bottom:8px!important;transition:all .2s!important;}
 .stButton>button:hover{border-color:var(--actual)!important;color:var(--actual)!important;}
 .stDownloadButton>button{background:linear-gradient(135deg,#0f172a,#1e1b4b)!important;border:1.5px solid #4338ca!important;border-radius:9px!important;color:#a5b4fc!important;font-size:13px!important;font-weight:700!important;width:100%!important;padding:10px!important;}
 
 .filter-wrap{background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:16px;}
-.filter-title{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1.3px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.filter-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .filter-title::after{content:'';flex:1;height:1px;background:var(--border);}
 [data-testid="stTextInput"]>div>div{background:var(--bg3)!important;border:1.5px solid var(--border2)!important;border-radius:9px!important;}
 [data-testid="stTextInput"]>div>div:focus-within{border-color:var(--actual)!important;}
@@ -69,15 +69,15 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"],
 .m0 .kpi-mth{color:#06b6d4;} .m1 .kpi-mth{color:#a855f7;}
 .m2 .kpi-mth{color:#f59e0b;} .m3 .kpi-mth{color:#ec4899;}
 .m4 .kpi-mth{color:#22c55e;}
-.kpi-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--text);line-height:1;letter-spacing:-1px;}
-.kpi-meta{font-size:10px;color:var(--muted);margin-top:5px;}
-.kpi-exp{font-size:10px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+.kpi-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#f1f5f9;line-height:1;letter-spacing:-1px;}
+.kpi-meta{font-size:10px;color:#94a3b8;margin-top:5px;}
+.kpi-exp{font-size:10px;color:#94a3b8;margin-top:3px;font-family:'JetBrains Mono',monospace;}
 .var-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:6px;font-family:'JetBrains Mono',monospace;}
 .var-badge.over{background:#2d0a0a;color:#f87171;border:1px solid #7f1d1d;}
 .var-badge.under{background:#061a0a;color:#4ade80;border:1px solid #14532d;}
 .var-badge.ok{background:#0a1628;color:#60a5fa;border:1px solid #1e3a5f;}
 
-.sec{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1.4px;padding:14px 0 10px;display:flex;align-items:center;gap:8px;}
+.sec{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1.4px;padding:14px 0 10px;display:flex;align-items:center;gap:8px;}
 .sec::after{content:'';flex:1;height:1px;background:var(--border);}
 
 .chart-wrap{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:20px;}
@@ -109,12 +109,12 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"],
   background:linear-gradient(90deg,#06b6d4,#a855f7);
 }
 .drill-sku{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#06b6d4;}
-.drill-name{font-size:11px;color:#475569;margin-top:3px;}
+.drill-name{font-size:11px;color:#94a3b8;margin-top:3px;}
 .drill-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px;}
 .drill-month{border-radius:10px;padding:12px;border:1px solid var(--border2);background:rgba(0,0,0,.3);text-align:center;}
 .drill-month-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
 .drill-actual{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;line-height:1;}
-.drill-exp{font-size:10px;color:var(--muted);margin-top:3px;}
+.drill-exp{font-size:10px;color:#94a3b8;margin-top:3px;}
 .drill-var{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-top:4px;}
 
 /* ── AI Summary panel ─────────────────────────────────────────────────────── */
@@ -125,9 +125,9 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"],
 }
 .ai-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .ai-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4c1d95,#5b21b6);display:flex;align-items:center;justify-content:center;font-size:14px;}
-.ai-title{font-size:12px;font-weight:700;color:#c084fc;text-transform:uppercase;letter-spacing:1.2px;}
-.ai-body{font-size:13px;line-height:1.8;color:#d1d5db;}
-.ai-body b{color:#e2e8f0;}
+.ai-title{font-size:12px;font-weight:700;color:#d8b4fe;text-transform:uppercase;letter-spacing:1.2px;}
+.ai-body{font-size:14px;line-height:1.9;color:#e2e8f0;}
+.ai-body b{color:#f8fafc;}
 
 /* ── Toggle buttons ───────────────────────────────────────────────────────── */
 .toggle-row{display:flex;gap:8px;margin-bottom:12px;}
@@ -135,12 +135,12 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"],
 .t-btn.active{background:#0a1628;border-color:#06b6d4;color:#06b6d4;}
 
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
-.chart-title{font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;}
-.info-box{background:#0a1628;border:1px solid #1e3a5f;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:#60a5fa;font-family:'JetBrains Mono',monospace;line-height:1.7;}
+.chart-title{font-size:12px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:1.2px;}
+.info-box{background:#0a1628;border:1px solid #1e3a5f;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:11px;color:#93c5fd;font-family:'JetBrains Mono',monospace;line-height:1.7;}
 .info-box b{color:#93c5fd;}
 div[data-testid="stDataFrame"]{border-radius:12px!important;overflow:hidden!important;border:1px solid var(--border)!important;}
 .tbl-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 0;}
-.tbl-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;}
+.tbl-lbl{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;}
 .tbl-badge{background:var(--bg2);border:1px solid var(--border2);color:#818cf8;font-size:11px;font-weight:700;padding:3px 11px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
 .footer{margin-top:3rem;padding-top:12px;border-top:1px solid var(--border);text-align:center;font-size:10px;font-weight:600;color:var(--dim);letter-spacing:2px;font-family:'JetBrains Mono',monospace;}
 
@@ -618,6 +618,20 @@ else:
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown('<div class="sec">🤖 AI Monthly Summary</div>', unsafe_allow_html=True)
 
+# ── API Key — read from secrets.toml OR let user paste it inline ──────────────
+_api_key = ""
+try:
+    _api_key = st.secrets["ANTHROPIC_API_KEY"]
+except Exception:
+    pass
+if not _api_key:
+    _api_key = st.text_input(
+        "api_key_input",
+        placeholder="🔑  Paste your Anthropic API key here to enable AI Summary…",
+        type="password",
+        label_visibility="collapsed"
+    )
+
 # Build context for AI
 def build_ai_context(df_data):
     latest_month = MONTHS[-1]["label"]
@@ -662,7 +676,18 @@ Be specific with numbers. Write in plain business English. No bullet points — 
 ai_col1, ai_col2 = st.columns([3, 1])
 with ai_col2:
     st.markdown('<div class="ai-btn">', unsafe_allow_html=True)
-    gen_ai = st.button("✨  Generate AI Summary", key="btn_ai", use_container_width=True)
+    gen_ai = st.button(
+        "✨  Generate AI Summary",
+        key="btn_ai",
+        use_container_width=True,
+        disabled=not bool(_api_key)
+    )
+    if not _api_key:
+        st.markdown(
+            '<div style="font-size:10px;color:#475569;text-align:center;margin-top:-4px;'
+            'font-family:JetBrains Mono,monospace;">Enter API key above to enable</div>',
+            unsafe_allow_html=True
+        )
     st.markdown('</div>', unsafe_allow_html=True)
     if st.session_state["ai_summary"]:
         if st.button("🗑  Clear", key="btn_clear_ai", use_container_width=True):
@@ -675,7 +700,11 @@ if gen_ai:
         try:
             resp = _requests.post(
                 "https://api.anthropic.com/v1/messages",
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": _api_key,
+                    "anthropic-version": "2023-06-01"
+                },
                 json={
                     "model": "claude-sonnet-4-20250514",
                     "max_tokens": 1000,
