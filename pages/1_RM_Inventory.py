@@ -1,6 +1,12 @@
 import streamlit as st
 import pandas as pd
 import io
+import requests
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text      import MIMEText
+from email.mime.base      import MIMEBase
+from email               import encoders
 
 st.set_page_config(page_title="RM Inventory · YogaBar", layout="wide", page_icon="📦", initial_sidebar_state="expanded")
 
@@ -65,6 +71,24 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
 .legend-bar { display:flex; gap:16px; align-items:center; background:#0d1117; border:1px solid #1e2535; border-radius:10px; padding:8px 14px; margin-bottom:8px; font-size:11px; }
 .ldot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:4px; }
 .app-footer { margin-top:2rem; padding-top:12px; border-top:1px solid #161d2e; text-align:center; font-size:10px; font-weight:600; color:#334155; letter-spacing:1.5px; font-family:JetBrains Mono,monospace; }
+
+/* ── Notification button styles ──────────────────────────────────────────── */
+.notif-btn-tg > button {
+    background: linear-gradient(135deg,#0a1628,#0d2040) !important;
+    border: 1.5px solid #2563eb !important; color: #93c5fd !important;
+    font-size: 13px !important; font-weight: 700 !important;
+    border-radius: 9px !important; padding: 9px !important;
+    width: 100% !important; transition: all .2s !important;
+}
+.notif-btn-tg > button:hover { border-color:#60a5fa !important; color:#bfdbfe !important; background:#0f2350 !important; }
+.notif-btn-email > button {
+    background: linear-gradient(135deg,#0a1a0a,#0d2d12) !important;
+    border: 1.5px solid #16a34a !important; color: #86efac !important;
+    font-size: 13px !important; font-weight: 700 !important;
+    border-radius: 9px !important; padding: 9px !important;
+    width: 100% !important; transition: all .2s !important;
+}
+.notif-btn-email > button:hover { border-color:#4ade80 !important; color:#bbf7d0 !important; background:#0d3518 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -79,6 +103,201 @@ ALLOWED_WH = SOH_WH + [
     "Central Production -Dry Fruits Line","Central Production -Packing",
 ]
 
+# ══════════════════════════════════════════════════════════════════════════════
+# NOTIFICATION CONFIGURATION
+# Add to .streamlit/secrets.toml:
+#
+# [telegram]
+# bot_token = "123456:ABC-DEF..."
+# chat_id   = "-1001234567890"   # group (negative) or personal user ID
+#
+# [email]
+# smtp_host  = "smtp.gmail.com"
+# smtp_port  = 587
+# sender     = "yourapp@gmail.com"
+# password   = "xxxx xxxx xxxx xxxx"   # Gmail App Password
+# recipients = ["ops@yogabar.com", "supply@yogabar.com"]
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _tg_cfg():
+    try:
+        return st.secrets["telegram"]["bot_token"], str(st.secrets["telegram"]["chat_id"])
+    except Exception:
+        return "", ""
+
+def _email_cfg():
+    try:
+        return {
+            "host":       st.secrets["email"]["smtp_host"],
+            "port":       int(st.secrets["email"]["smtp_port"]),
+            "sender":     st.secrets["email"]["sender"],
+            "password":   st.secrets["email"]["password"],
+            "recipients": st.secrets["email"]["recipients"],
+        }
+    except Exception:
+        return None
+
+
+# ── TELEGRAM: Critical SKUs only ─────────────────────────────────────────────
+def build_telegram_critical(n_crit, n_zero, critical_skus):
+    def esc(t):
+        for ch in r"_*[]()~`>#+-=|{}.!":
+            t = t.replace(ch, f"\\{ch}")
+        return t
+
+    lines = [
+        "🚨 *YogaBar · Critical RM Stock Alert*",
+        "",
+        f"⛔ Stockout Today: *{n_zero}* SKUs",
+        f"🟠 Critical \\(\\<7 days\\): *{n_crit}* SKUs",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "*SKU  ·  Days Left  ·  SOH  ·  Per Day*",
+        "",
+    ]
+    for _, r in critical_skus.iterrows():
+        sku  = esc(str(r["Item SKU"]))
+        dos  = float(r["Days of Stock"])
+        soh  = float(r["SOH"])
+        pdr  = float(r["Per Day Req"])
+        name = esc(str(r.get("Item Name", "")))[:28]
+        icon = "⛔" if dos <= 1 else ("🔴" if dos <= 3 else "🟠")
+        lines.append(f"{icon} `{sku}` — *{dos:.1f}d*")
+        if name:
+            lines.append(f"   _{name}_")
+        lines.append(f"   SOH `{soh:,.0f}` · Per day `{pdr:.1f}`")
+        lines.append("")
+    if len(critical_skus) > 15:
+        lines.append(f"_\\.\\.\\. and {len(critical_skus) - 15} more SKUs_")
+    lines += ["━━━━━━━━━━━━━━━━━━━━", "_YogaBar RM Inventory Dashboard_"]
+    return "\n".join(lines)
+
+
+def send_telegram(message: str) -> tuple[bool, str]:
+    bot_token, chat_id = _tg_cfg()
+    if not bot_token or not chat_id:
+        return False, "Telegram not configured — add [telegram] bot_token & chat_id to secrets.toml"
+    url     = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "MarkdownV2"}
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        if resp.status_code == 200:
+            return True, "✅ Telegram alert sent!"
+        return False, f"Telegram API error {resp.status_code}: {resp.text}"
+    except Exception as e:
+        return False, f"Telegram send failed: {e}"
+
+
+# ── EMAIL: Critical SKUs table only ──────────────────────────────────────────
+def build_email_critical_html(n_crit, n_zero, critical_skus):
+    if critical_skus.empty:
+        table_body = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#475569;">✅ No critical SKUs at this time.</td></tr>'
+    else:
+        table_body = ""
+        for _, r in critical_skus.iterrows():
+            sku  = str(r["Item SKU"])
+            name = str(r.get("Item Name", ""))[:35]
+            dos  = float(r["Days of Stock"])
+            soh  = float(r["SOH"])
+            pdr  = float(r["Per Day Req"])
+            cat  = str(r.get("Category", "—"))[:14]
+            if dos <= 1:
+                bb, bt, bl, rb = "#7f1d1d", "#fca5a5", "STOCKOUT", "#1f0406"
+            elif dos <= 3:
+                bb, bt, bl, rb = "#450a0a", "#fca5a5", f"{dos:.1f}d", "#1a0608"
+            else:
+                bb, bt, bl, rb = "#431407", "#fed7aa", f"{dos:.1f}d", "#180b02"
+            table_body += f"""
+            <tr style="border-bottom:1px solid #2d0a0a;background:{rb};">
+              <td style="padding:10px 12px;">
+                <div style="font-family:monospace;font-size:12px;font-weight:700;color:#fca5a5;">{sku}</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px;">{name}</div>
+              </td>
+              <td style="padding:10px 12px;text-align:center;">
+                <span style="background:{bb};border:1px solid #7f1d1d;border-radius:6px;padding:3px 10px;
+                             font-family:monospace;font-size:12px;font-weight:800;color:{bt};">{bl}</span>
+              </td>
+              <td style="padding:10px 12px;text-align:right;font-family:monospace;font-size:12px;color:#94a3b8;">{soh:,.0f}</td>
+              <td style="padding:10px 12px;text-align:right;font-family:monospace;font-size:12px;color:#94a3b8;">{pdr:.1f}</td>
+              <td style="padding:10px 12px;text-align:center;font-size:11px;color:#64748b;">{cat}</td>
+            </tr>"""
+
+    return f"""<!DOCTYPE html>
+<html><body style="background:#080b12;color:#e2e8f0;font-family:Inter,sans-serif;padding:0;margin:0;">
+<div style="max-width:680px;margin:0 auto;padding:28px 20px;">
+
+  <div style="background:linear-gradient(135deg,#1a0608,#2d0a0a);border:1px solid #7f1d1d;
+              border-radius:16px;padding:20px 28px;margin-bottom:22px;">
+    <div style="font-size:22px;font-weight:800;color:#f1f5f9;">🚨 Critical RM Stock Alert</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:4px;">YogaBar · Raw Material Inventory · Immediate Action Required</div>
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:22px;">
+    <tr>
+      <td width="50%" style="padding-right:8px;">
+        <div style="background:#1a0608;border:1.5px solid #7f1d1d;border-radius:12px;padding:14px 18px;text-align:center;">
+          <div style="font-size:9px;color:#ef4444;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">⛔ Stockout Today</div>
+          <div style="font-size:32px;font-weight:800;color:#fca5a5;font-family:monospace;line-height:1;">{n_zero}</div>
+          <div style="font-size:10px;color:#7f1d1d;margin-top:3px;">SKUs at ≤ 1 day</div>
+        </div>
+      </td>
+      <td width="50%" style="padding-left:8px;">
+        <div style="background:#160a00;border:1.5px solid #92400e;border-radius:12px;padding:14px 18px;text-align:center;">
+          <div style="font-size:9px;color:#f97316;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🟠 Critical &lt; 7d</div>
+          <div style="font-size:32px;font-weight:800;color:#fed7aa;font-family:monospace;line-height:1;">{n_crit}</div>
+          <div style="font-size:10px;color:#78350f;margin-top:3px;">SKUs need reorder</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="font-size:10px;font-weight:700;color:#ef4444;text-transform:uppercase;
+              letter-spacing:1.2px;margin-bottom:10px;">🚨 Critical SKUs — Runs Out in &lt; 7 Days</div>
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="border-collapse:collapse;background:#140608;border:1.5px solid #7f1d1d;border-radius:10px;overflow:hidden;">
+    <thead>
+      <tr style="background:#2d0a0a;">
+        <th style="padding:10px 12px;text-align:left;color:#ef4444;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;">SKU / Name</th>
+        <th style="padding:10px 12px;text-align:center;color:#ef4444;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;">Days Left</th>
+        <th style="padding:10px 12px;text-align:right;color:#ef4444;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;">SOH</th>
+        <th style="padding:10px 12px;text-align:right;color:#ef4444;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;">Per Day</th>
+        <th style="padding:10px 12px;text-align:center;color:#ef4444;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;">Category</th>
+      </tr>
+    </thead>
+    <tbody>{table_body}</tbody>
+  </table>
+
+  <div style="margin-top:28px;padding-top:12px;border-top:1px solid #161d2e;
+              text-align:center;font-size:10px;color:#334155;font-family:monospace;letter-spacing:1.5px;">
+    YOGABAR · RM INVENTORY DASHBOARD · AUTO-GENERATED ALERT
+  </div>
+</div>
+</body></html>"""
+
+
+def send_email(subject: str, html_body: str) -> tuple[bool, str]:
+    cfg = _email_cfg()
+    if not cfg:
+        return False, "Email not configured — add [email] block to secrets.toml"
+    try:
+        msg            = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = cfg["sender"]
+        recipients     = cfg["recipients"] if isinstance(cfg["recipients"], list) else [cfg["recipients"]]
+        msg["To"]      = ", ".join(recipients)
+        msg.attach(MIMEText(html_body, "html"))
+        with smtplib.SMTP(cfg["host"], cfg["port"]) as srv:
+            srv.starttls()
+            srv.login(cfg["sender"], cfg["password"])
+            srv.sendmail(cfg["sender"], recipients, msg.as_string())
+        return True, f"✅ Email sent to {', '.join(recipients)}"
+    except Exception as e:
+        return False, f"Email send failed: {e}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA LOADING (unchanged)
+# ══════════════════════════════════════════════════════════════════════════════
 @st.cache_data(ttl=300)
 def load_rm():
     df = load_sheet("RM-Inventory")
@@ -129,6 +348,9 @@ df_raw  = load_rm()
 fc_agg  = load_forecast_agg()
 soh_sku = build_soh_sku(df_raw, fc_agg) if not df_raw.empty else pd.DataFrame()
 
+# ══════════════════════════════════════════════════════════════════════════════
+# HEADER + REFRESH
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class="app-header">
     <div class="hdr-left">
@@ -148,7 +370,9 @@ if st.button("↺  Refresh Data", use_container_width=True):
 if df_raw.empty:
     st.error("⚠️ No RM Inventory data found."); st.stop()
 
-# ── FILTERS ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# FILTERS
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown('<div class="filter-wrap">', unsafe_allow_html=True)
 st.markdown('<div class="filter-title">🔽 Filters</div>', unsafe_allow_html=True)
 c1, c2, c3, c4, c5 = st.columns([2.5, 1.8, 1.8, 1.8, 1.8])
@@ -166,7 +390,9 @@ with c5:
     sel_dos  = st.selectbox("d", dos_opts, label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── APPLY FILTERS ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# APPLY FILTERS
+# ══════════════════════════════════════════════════════════════════════════════
 df = df_raw.copy()
 if search:    df = df[df.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
 if sel_wh  != "All Warehouses": df = df[df["Warehouse"] == sel_wh]
@@ -181,7 +407,9 @@ elif sel_dos == "🟡 Low (7–14d)":     df_m = df_m[(df_m["Days of Stock"] >= 
 elif sel_dos == "✅ Healthy (> 14d)":  df_m = df_m[df_m["Days of Stock"] > 14]
 elif sel_dos == "⚫ No Forecast":       df_m = df_m[df_m["Days of Stock"].isna()]
 
-# ── KPIs ──────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# KPIs
+# ══════════════════════════════════════════════════════════════════════════════
 df_m_soh  = df_m[df_m["Warehouse"].isin(SOH_WH)]
 sku_dedup = df_m_soh.groupby("Item SKU").agg(
     SOH_sum      =("Qty Available","sum"),
@@ -223,7 +451,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# INTELLIGENCE PANELS
+# BUILD CRITICAL / REORDER LISTS  (needed for buttons below KPIs)
 # ══════════════════════════════════════════════════════════════════════════════
 soh_full = soh_sku.copy() if not soh_sku.empty else pd.DataFrame()
 if not soh_full.empty and "Item SKU" in df_raw.columns and "Category" in df_raw.columns:
@@ -242,46 +470,89 @@ if not soh_full.empty and "Days of Stock" in soh_full.columns:
     critical_skus = has_fc[has_fc["Days of Stock"] < 7].sort_values("Days of Stock")
     reorder_skus  = has_fc[(has_fc["Days of Stock"] >= 7) & (has_fc["Days of Stock"] <= 14)].sort_values("Days of Stock")
 
-cat_dos = pd.DataFrame()
-wh_dist = pd.DataFrame()
+n_crit = len(critical_skus)
+n_low  = len(reorder_skus)
+n_zero = len(critical_skus[critical_skus["Days of Stock"] <= 1]) if not critical_skus.empty else 0
+n_ok   = int((soh_full["Days of Stock"].fillna(0) > 14).sum()) if not soh_full.empty else 0
 
+# ══════════════════════════════════════════════════════════════════════════════
+# 🔔 NOTIFICATION BUTTONS — placed immediately below KPI cards
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown(
+    '<div style="background:#0d1117;border:1px solid #1e2535;border-radius:12px;'
+    'padding:12px 16px;margin-bottom:16px;">'
+    '<div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;'
+    'letter-spacing:1.2px;margin-bottom:10px;">'
+    '🔔 Send Alerts'
+    '<span style="display:inline-block;flex:1;height:1px;background:#1e2535;'
+    'margin-left:8px;vertical-align:middle;width:calc(100% - 90px);"></span>'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+nb1, nb2 = st.columns(2)
+with nb1:
+    st.markdown('<div class="notif-btn-tg">', unsafe_allow_html=True)
+    send_tg_clicked = st.button(
+        f"✈️  Telegram  ·  {n_crit} Critical SKUs",
+        key="btn_tg", use_container_width=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+with nb2:
+    st.markdown('<div class="notif-btn-email">', unsafe_allow_html=True)
+    send_email_clicked = st.button(
+        f"📧  Email Critical Table  ·  {n_crit} SKUs",
+        key="btn_email", use_container_width=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)   # close alert bar
+
+# ── Handle clicks ─────────────────────────────────────────────────────────────
+if send_tg_clicked:
+    if n_crit == 0:
+        st.info("ℹ️ No critical SKUs right now — nothing to send.")
+    else:
+        msg = build_telegram_critical(n_crit, n_zero, critical_skus)
+        ok, info = send_telegram(msg)
+        st.success(info) if ok else st.error(info)
+
+if send_email_clicked:
+    if n_crit == 0:
+        st.info("ℹ️ No critical SKUs right now — nothing to send.")
+    else:
+        subject   = f"[🚨 YogaBar RM Alert] {n_crit} Critical SKUs · {n_zero} Stockout Today"
+        html_body = build_email_critical_html(n_crit, n_zero, critical_skus)
+        ok, info  = send_email(subject, html_body)
+        st.success(info) if ok else st.error(info)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INTELLIGENCE PANELS (unchanged)
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 st.markdown('<div class="sec-div">🔍 Inventory Intelligence</div>', unsafe_allow_html=True)
-
-# ── Summary strip: 3 urgency counts ──────────────────────────────────────────
-n_crit  = len(critical_skus)
-n_low   = len(reorder_skus)
-n_zero  = len(critical_skus[critical_skus["Days of Stock"] <= 1]) if not critical_skus.empty else 0
-if not soh_full.empty and "Days of Stock" in soh_full.columns:
-    n_ok = int((soh_full["Days of Stock"].fillna(0) > 14).sum())
-else:
-    n_ok = 0
 
 st.markdown(
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">'
 
-    # Stockout today
     f'<div style="background:#1a0608;border:1.5px solid #7f1d1d;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🔴 Stockout Today</div>'
     f'<div style="font-size:28px;font-weight:800;color:#fca5a5;font-family:JetBrains Mono,monospace;line-height:1;">{n_zero}</div>'
     f'<div style="font-size:10px;color:#7f1d1d;margin-top:3px;">SKUs at ≤ 1 day</div>'
     f'</div>'
 
-    # Critical < 7d
     f'<div style="background:#160a00;border:1.5px solid #92400e;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🟠 Critical &lt; 7d</div>'
     f'<div style="font-size:28px;font-weight:800;color:#fed7aa;font-family:JetBrains Mono,monospace;line-height:1;">{n_crit}</div>'
     f'<div style="font-size:10px;color:#78350f;margin-top:3px;">SKUs need reorder</div>'
     f'</div>'
 
-    # Low 7-14d
     f'<div style="background:#0f0d02;border:1.5px solid #78350f;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🟡 Low 7–14d</div>'
     f'<div style="font-size:28px;font-weight:800;color:#fde68a;font-family:JetBrains Mono,monospace;line-height:1;">{n_low}</div>'
     f'<div style="font-size:10px;color:#713f12;margin-top:3px;">SKUs watch closely</div>'
     f'</div>'
 
-    # Healthy
     f'<div style="background:#061a0a;border:1.5px solid #14532d;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">✅ Healthy &gt; 14d</div>'
     f'<div style="font-size:28px;font-weight:800;color:#bbf7d0;font-family:JetBrains Mono,monospace;line-height:1;">{n_ok}</div>'
@@ -292,7 +563,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ── Row 1: Critical Alerts + Reorder Watchlist ────────────────────────────────
 col_alert, col_reorder = st.columns(2, gap="medium")
 
 with col_alert:
@@ -308,58 +578,43 @@ with col_alert:
         st.markdown('<div style="color:#334155;font-size:12px;padding:8px 0;text-align:center;">✅ No critical SKUs right now</div>', unsafe_allow_html=True)
     else:
         for _, r in critical_skus.iterrows():
-            dos      = float(r["Days of Stock"])
-            soh_v    = float(r["SOH"])
-            pdr      = float(r["Per Day Req"])
-            sku      = str(r["Item SKU"])
-            name     = str(r.get("Item Name", ""))
-            cat      = str(r.get("Category", ""))
-            # Colour tiers: ≤1d = deep red, 1-3d = red, 3-7d = orange
+            dos   = float(r["Days of Stock"])
+            soh_v = float(r["SOH"])
+            pdr   = float(r["Per Day Req"])
+            sku   = str(r["Item SKU"])
+            name  = str(r.get("Item Name", ""))
+            cat   = str(r.get("Category", ""))
             if dos <= 1:
-                bar_c = "#dc2626"; txt_c = "#fca5a5"; bg_c = "#1f0406"; bdr_c = "#7f1d1d"
-                badge = "STOCKOUT"
+                bar_c,txt_c,bg_c,bdr_c,badge = "#dc2626","#fca5a5","#1f0406","#7f1d1d","STOCKOUT"
             elif dos <= 3:
-                bar_c = "#ef4444"; txt_c = "#fca5a5"; bg_c = "#1a0608"; bdr_c = "#450a0a"
-                badge = f"{dos:.1f}d left"
+                bar_c,txt_c,bg_c,bdr_c,badge = "#ef4444","#fca5a5","#1a0608","#450a0a",f"{dos:.1f}d left"
             else:
-                bar_c = "#f97316"; txt_c = "#fed7aa"; bg_c = "#180b02"; bdr_c = "#431407"
-                badge = f"{dos:.1f}d left"
-            bar_w    = min(int(dos / 7 * 100), 100)
-            soh_f    = f"{soh_v:,.0f}"
-            pdr_f    = f"{pdr:,.1f}"
-            # Days remaining as human label
-            if dos <= 1:   urgency = "⛔ Stocking out NOW"
-            elif dos <= 3: urgency = f"🔴 Gone in ~{int(dos)}d"
-            else:          urgency = f"🟠 ~{dos:.1f} days remaining"
+                bar_c,txt_c,bg_c,bdr_c,badge = "#f97316","#fed7aa","#180b02","#431407",f"{dos:.1f}d left"
+            bar_w = min(int(dos / 7 * 100), 100)
+            urgency = "⛔ Stocking out NOW" if dos <= 1 else (f"🔴 Gone in ~{int(dos)}d" if dos <= 3 else f"🟠 ~{dos:.1f} days remaining")
             st.markdown(
                 f'<div style="background:{bg_c};border:1px solid {bdr_c};border-radius:10px;padding:10px 14px;margin-bottom:7px;">'
-                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
+                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
                 f'<div style="flex:1;min-width:0;">'
                 f'<div style="font-size:11px;font-weight:700;color:{txt_c};font-family:JetBrains Mono,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{sku}</div>'
                 f'<div style="font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">{name}</div>'
-                f'</div>'
-                f'<div style="margin-left:10px;flex-shrink:0;">'
+                f'</div><div style="margin-left:10px;flex-shrink:0;">'
                 f'<div style="background:#2d0a0a;border:1px solid {bdr_c};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800;color:{txt_c};font-family:JetBrains Mono,monospace;text-align:center;">{badge}</div>'
-                f'</div>'
-                '</div>'
+                f'</div></div>'
                 f'<div style="font-size:10px;color:#f87171;margin-bottom:5px;font-weight:600;">{urgency}</div>'
                 f'<div style="background:#2d0a0a;border-radius:4px;height:5px;margin-bottom:6px;">'
-                f'<div style="width:{bar_w}%;background:{bar_c};height:5px;border-radius:4px;"></div>'
-                f'</div>'
-                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">'
+                f'<div style="width:{bar_w}%;background:{bar_c};height:5px;border-radius:4px;"></div></div>'
+                f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">'
                 f'<div style="background:#0d0204;border-radius:6px;padding:4px 8px;text-align:center;">'
                 f'<div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.8px;">SOH</div>'
-                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{soh_f}</div>'
-                f'</div>'
+                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{soh_v:,.0f}</div></div>'
                 f'<div style="background:#0d0204;border-radius:6px;padding:4px 8px;text-align:center;">'
                 f'<div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.8px;">Per Day</div>'
-                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{pdr_f}</div>'
-                f'</div>'
+                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{pdr:.1f}</div></div>'
                 f'<div style="background:#0d0204;border-radius:6px;padding:4px 8px;text-align:center;">'
                 f'<div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.8px;">Category</div>'
                 f'<div style="font-size:10px;font-weight:600;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{cat[:12] if cat else "—"}</div>'
-                f'</div>'
-                '</div></div>',
+                f'</div></div></div>',
                 unsafe_allow_html=True
             )
     st.markdown('</div>', unsafe_allow_html=True)
@@ -384,41 +639,35 @@ with col_reorder:
             name  = str(r.get("Item Name",""))
             cat   = str(r.get("Category",""))
             bar_w = min(int((dos - 7) / 7 * 100), 100)
-            soh_f = f"{soh_v:,.0f}"
-            pdr_f = f"{pdr:,.1f}"
-            dos_f = f"{dos:.1f}d"
             st.markdown(
-                '<div style="background:#120d00;border:1px solid #451a03;border-radius:10px;padding:10px 14px;margin-bottom:7px;">'
-                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
-                '<div style="flex:1;min-width:0;">'
+                f'<div style="background:#120d00;border:1px solid #451a03;border-radius:10px;padding:10px 14px;margin-bottom:7px;">'
+                f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
+                f'<div style="flex:1;min-width:0;">'
                 f'<div style="font-size:11px;font-weight:700;color:#fde68a;font-family:JetBrains Mono,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{sku}</div>'
                 f'<div style="font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;">{name}</div>'
-                '</div>'
-                '<div style="margin-left:10px;flex-shrink:0;">'
-                f'<div style="background:#2d1f00;border:1px solid #78350f;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800;color:#fde68a;font-family:JetBrains Mono,monospace;">{dos_f}</div>'
-                '</div></div>'
-                '<div style="background:#2d1f00;border-radius:4px;height:5px;margin-bottom:6px;">'
-                f'<div style="width:{bar_w}%;background:#f59e0b;height:5px;border-radius:4px;"></div>'
-                '</div>'
-                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">'
-                '<div style="background:#0a0800;border-radius:6px;padding:4px 8px;text-align:center;">'
+                f'</div><div style="margin-left:10px;flex-shrink:0;">'
+                f'<div style="background:#2d1f00;border:1px solid #78350f;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800;color:#fde68a;font-family:JetBrains Mono,monospace;">{dos:.1f}d</div>'
+                f'</div></div>'
+                f'<div style="background:#2d1f00;border-radius:4px;height:5px;margin-bottom:6px;">'
+                f'<div style="width:{bar_w}%;background:#f59e0b;height:5px;border-radius:4px;"></div></div>'
+                f'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">'
+                f'<div style="background:#0a0800;border-radius:6px;padding:4px 8px;text-align:center;">'
                 f'<div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.8px;">SOH</div>'
-                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{soh_f}</div>'
-                '</div>'
-                '<div style="background:#0a0800;border-radius:6px;padding:4px 8px;text-align:center;">'
+                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{soh_v:,.0f}</div></div>'
+                f'<div style="background:#0a0800;border-radius:6px;padding:4px 8px;text-align:center;">'
                 f'<div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.8px;">Per Day</div>'
-                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{pdr_f}</div>'
-                '</div>'
-                '<div style="background:#0a0800;border-radius:6px;padding:4px 8px;text-align:center;">'
+                f'<div style="font-size:11px;font-weight:700;color:#94a3b8;font-family:JetBrains Mono,monospace;">{pdr:.1f}</div></div>'
+                f'<div style="background:#0a0800;border-radius:6px;padding:4px 8px;text-align:center;">'
                 f'<div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.8px;">Category</div>'
                 f'<div style="font-size:10px;font-weight:600;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{cat[:12] if cat else "—"}</div>'
-                '</div>'
-                '</div></div>',
+                f'</div></div></div>',
                 unsafe_allow_html=True
             )
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ── TABLE ─────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# DETAILED TABLE (unchanged)
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown('<hr style="border:none;border-top:1px solid #161d2e;margin:14px 0;">', unsafe_allow_html=True)
 st.markdown('<div class="sec-div">Detailed Records</div>', unsafe_allow_html=True)
 st.markdown(
