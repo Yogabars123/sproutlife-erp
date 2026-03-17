@@ -104,20 +104,15 @@ ALLOWED_WH = SOH_WH + [
 ]
 
 # ══════════════════════════════════════════════════════════════════════════════
-# NOTIFICATION CREDENTIALS
-# ── Same bot token + chat ID used in FG_Inventory.py and cfa_telegram_digest.py
-# ── Hardcoded so no secrets.toml needed
+# CREDENTIALS — hardcoded, same as FG_Inventory.py
 # ══════════════════════════════════════════════════════════════════════════════
-
 def _tg_cfg():
-    """Return (bot_token, chat_id) — hardcoded, same as FG Inventory."""
     return (
         "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ",
         "5667118823"
     )
 
 def _email_cfg():
-    """Return email config dict from st.secrets or None."""
     try:
         return {
             "host":       st.secrets["email"]["smtp_host"],
@@ -130,55 +125,74 @@ def _email_cfg():
         return None
 
 
-# ── TELEGRAM: Critical SKUs only ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# TELEGRAM MESSAGE BUILDER
+# Uses HTML parse_mode (same as FG_Inventory) — NO escaping issues with
+# dots, dashes, brackets or any special characters in SKU codes
+# ══════════════════════════════════════════════════════════════════════════════
 def build_telegram_critical(n_crit, n_zero, critical_skus):
-    def esc(t):
-        for ch in r"_*[]()~`>#+-=|{}.!":
-            t = t.replace(ch, f"\\{ch}")
-        return t
+    NL = "\n"
 
     lines = [
-        "🚨 *YogaBar · Critical RM Stock Alert*",
+        "🚨 <b>YogaBar · Critical RM Stock Alert</b>",
         "",
-        f"⛔ Stockout Today: *{n_zero}* SKUs",
-        f"🟠 Critical \\(\\<7 days\\): *{n_crit}* SKUs",
+        f"⛔ Stockout Today: <b>{n_zero}</b> SKUs",
+        f"🟠 Critical (&lt;7 days): <b>{n_crit}</b> SKUs",
         "",
-        "━━━━━━━━━━━━━━━━━━━━",
-        "*SKU  ·  Days Left  ·  SOH  ·  Per Day*",
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+        "<b>SKU  ·  Days Left  ·  SOH  ·  Per Day</b>",
         "",
     ]
+
     for _, r in critical_skus.iterrows():
-        sku  = esc(str(r["Item SKU"]))
+        sku  = str(r["Item SKU"])
         dos  = float(r["Days of Stock"])
         soh  = float(r["SOH"])
         pdr  = float(r["Per Day Req"])
-        name = esc(str(r.get("Item Name", "")))[:28]
-        icon = "⛔" if dos <= 1 else ("🔴" if dos <= 3 else "🟠")
-        lines.append(f"{icon} `{sku}` — *{dos:.1f}d*")
+        name = str(r.get("Item Name", ""))[:35]
+
+        if dos <= 1:   icon = "⛔"
+        elif dos <= 3: icon = "🔴"
+        else:          icon = "🟠"
+
+        lines.append(f"{icon} <code>{sku}</code>  <b>{dos:.1f}d</b>")
         if name:
-            lines.append(f"   _{name}_")
-        lines.append(f"   SOH `{soh:,.0f}` · Per day `{pdr:.1f}`")
+            lines.append(f"   <i>{name}</i>")
+        lines.append(f"   SOH: <b>{soh:,.0f}</b>  Per day: {pdr:.1f}")
         lines.append("")
+
     if len(critical_skus) > 15:
-        lines.append(f"_\\.\\.\\. and {len(critical_skus) - 15} more SKUs_")
-    lines += ["━━━━━━━━━━━━━━━━━━━━", "_YogaBar RM Inventory Dashboard_"]
-    return "\n".join(lines)
+        lines.append(f"<i>... and {len(critical_skus) - 15} more SKUs</i>")
+
+    lines += [
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+        "<i>YogaBar RM Inventory Dashboard</i>"
+    ]
+    return NL.join(lines)
 
 
 def send_telegram(message: str) -> tuple[bool, str]:
     bot_token, chat_id = _tg_cfg()
-    url     = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "MarkdownV2"}
-    try:
-        resp = requests.post(url, json=payload, timeout=10)
-        if resp.status_code == 200:
-            return True, "✅ Telegram alert sent!"
-        return False, f"Telegram API error {resp.status_code}: {resp.text}"
-    except Exception as e:
-        return False, f"Telegram send failed: {e}"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    # Split into 4000-char chunks in case message is very long
+    chunks = [message[i:i+4000] for i in range(0, len(message), 4000)]
+    for chunk in chunks:
+        try:
+            resp = requests.post(
+                url,
+                json={"chat_id": chat_id, "text": chunk, "parse_mode": "HTML"},
+                timeout=10
+            )
+            if resp.status_code != 200:
+                return False, f"Telegram API error {resp.status_code}: {resp.text}"
+        except Exception as e:
+            return False, f"Telegram send failed: {e}"
+    return True, "✅ Telegram alert sent!"
 
 
-# ── EMAIL: Critical SKUs table only ──────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# EMAIL: Critical SKUs table only
+# ══════════════════════════════════════════════════════════════════════════════
 def build_email_critical_html(n_crit, n_zero, critical_skus):
     if critical_skus.empty:
         table_body = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#475569;">✅ No critical SKUs at this time.</td></tr>'
@@ -215,13 +229,11 @@ def build_email_critical_html(n_crit, n_zero, critical_skus):
     return f"""<!DOCTYPE html>
 <html><body style="background:#080b12;color:#e2e8f0;font-family:Inter,sans-serif;padding:0;margin:0;">
 <div style="max-width:680px;margin:0 auto;padding:28px 20px;">
-
   <div style="background:linear-gradient(135deg,#1a0608,#2d0a0a);border:1px solid #7f1d1d;
               border-radius:16px;padding:20px 28px;margin-bottom:22px;">
     <div style="font-size:22px;font-weight:800;color:#f1f5f9;">🚨 Critical RM Stock Alert</div>
     <div style="font-size:12px;color:#94a3b8;margin-top:4px;">YogaBar · Raw Material Inventory · Immediate Action Required</div>
   </div>
-
   <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:22px;">
     <tr>
       <td width="50%" style="padding-right:8px;">
@@ -240,7 +252,6 @@ def build_email_critical_html(n_crit, n_zero, critical_skus):
       </td>
     </tr>
   </table>
-
   <div style="font-size:10px;font-weight:700;color:#ef4444;text-transform:uppercase;
               letter-spacing:1.2px;margin-bottom:10px;">🚨 Critical SKUs — Runs Out in &lt; 7 Days</div>
   <table width="100%" cellpadding="0" cellspacing="0"
@@ -256,7 +267,6 @@ def build_email_critical_html(n_crit, n_zero, critical_skus):
     </thead>
     <tbody>{table_body}</tbody>
   </table>
-
   <div style="margin-top:28px;padding-top:12px;border-top:1px solid #161d2e;
               text-align:center;font-size:10px;color:#334155;font-family:monospace;letter-spacing:1.5px;">
     YOGABAR · RM INVENTORY DASHBOARD · AUTO-GENERATED ALERT
@@ -498,7 +508,7 @@ with nb2:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Handle clicks ─────────────────────────────────────────────────────────────
+# ── Handle clicks ──────────────────────────────────────────────────────────
 if send_tg_clicked:
     if n_crit == 0:
         st.info("ℹ️ No critical SKUs right now — nothing to send.")
@@ -524,31 +534,22 @@ st.markdown('<div class="sec-div">🔍 Inventory Intelligence</div>', unsafe_all
 
 st.markdown(
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">'
-
     f'<div style="background:#1a0608;border:1.5px solid #7f1d1d;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🔴 Stockout Today</div>'
     f'<div style="font-size:28px;font-weight:800;color:#fca5a5;font-family:JetBrains Mono,monospace;line-height:1;">{n_zero}</div>'
-    f'<div style="font-size:10px;color:#7f1d1d;margin-top:3px;">SKUs at ≤ 1 day</div>'
-    f'</div>'
-
+    f'<div style="font-size:10px;color:#7f1d1d;margin-top:3px;">SKUs at ≤ 1 day</div></div>'
     f'<div style="background:#160a00;border:1.5px solid #92400e;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🟠 Critical &lt; 7d</div>'
     f'<div style="font-size:28px;font-weight:800;color:#fed7aa;font-family:JetBrains Mono,monospace;line-height:1;">{n_crit}</div>'
-    f'<div style="font-size:10px;color:#78350f;margin-top:3px;">SKUs need reorder</div>'
-    f'</div>'
-
+    f'<div style="font-size:10px;color:#78350f;margin-top:3px;">SKUs need reorder</div></div>'
     f'<div style="background:#0f0d02;border:1.5px solid #78350f;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">🟡 Low 7–14d</div>'
     f'<div style="font-size:28px;font-weight:800;color:#fde68a;font-family:JetBrains Mono,monospace;line-height:1;">{n_low}</div>'
-    f'<div style="font-size:10px;color:#713f12;margin-top:3px;">SKUs watch closely</div>'
-    f'</div>'
-
+    f'<div style="font-size:10px;color:#713f12;margin-top:3px;">SKUs watch closely</div></div>'
     f'<div style="background:#061a0a;border:1.5px solid #14532d;border-radius:12px;padding:12px 16px;text-align:center;">'
     f'<div style="font-size:9px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;">✅ Healthy &gt; 14d</div>'
     f'<div style="font-size:28px;font-weight:800;color:#bbf7d0;font-family:JetBrains Mono,monospace;line-height:1;">{n_ok}</div>'
-    f'<div style="font-size:10px;color:#14532d;margin-top:3px;">SKUs well stocked</div>'
-    f'</div>'
-
+    f'<div style="font-size:10px;color:#14532d;margin-top:3px;">SKUs well stocked</div></div>'
     '</div>',
     unsafe_allow_html=True
 )
