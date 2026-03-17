@@ -104,28 +104,20 @@ ALLOWED_WH = SOH_WH + [
 ]
 
 # ══════════════════════════════════════════════════════════════════════════════
-# NOTIFICATION CONFIGURATION
-# Add to .streamlit/secrets.toml:
-#
-# [telegram]
-# bot_token = "123456:ABC-DEF..."
-# chat_id   = "-1001234567890"   # group (negative) or personal user ID
-#
-# [email]
-# smtp_host  = "smtp.gmail.com"
-# smtp_port  = 587
-# sender     = "yourapp@gmail.com"
-# password   = "xxxx xxxx xxxx xxxx"   # Gmail App Password
-# recipients = ["ops@yogabar.com", "supply@yogabar.com"]
+# NOTIFICATION CREDENTIALS
+# ── Same bot token + chat ID used in FG_Inventory.py and cfa_telegram_digest.py
+# ── Hardcoded so no secrets.toml needed
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _tg_cfg():
-    try:
-        return st.secrets["telegram"]["bot_token"], str(st.secrets["telegram"]["chat_id"])
-    except Exception:
-        return "", ""
+    """Return (bot_token, chat_id) — hardcoded, same as FG Inventory."""
+    return (
+        "8368375473:AAERuMSZGrdrvYKiGGQl9HIrdNzh-6a8eZQ",
+        "5667118823"
+    )
 
 def _email_cfg():
+    """Return email config dict from st.secrets or None."""
     try:
         return {
             "host":       st.secrets["email"]["smtp_host"],
@@ -175,8 +167,6 @@ def build_telegram_critical(n_crit, n_zero, critical_skus):
 
 def send_telegram(message: str) -> tuple[bool, str]:
     bot_token, chat_id = _tg_cfg()
-    if not bot_token or not chat_id:
-        return False, "Telegram not configured — add [telegram] bot_token & chat_id to secrets.toml"
     url     = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "MarkdownV2"}
     try:
@@ -296,7 +286,7 @@ def send_email(subject: str, html_body: str) -> tuple[bool, str]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DATA LOADING (unchanged)
+# DATA LOADING
 # ══════════════════════════════════════════════════════════════════════════════
 @st.cache_data(ttl=300)
 def load_rm():
@@ -451,7 +441,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# BUILD CRITICAL / REORDER LISTS  (needed for buttons below KPIs)
+# BUILD CRITICAL / REORDER LISTS
 # ══════════════════════════════════════════════════════════════════════════════
 soh_full = soh_sku.copy() if not soh_sku.empty else pd.DataFrame()
 if not soh_full.empty and "Item SKU" in df_raw.columns and "Category" in df_raw.columns:
@@ -476,7 +466,7 @@ n_zero = len(critical_skus[critical_skus["Days of Stock"] <= 1]) if not critical
 n_ok   = int((soh_full["Days of Stock"].fillna(0) > 14).sum()) if not soh_full.empty else 0
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 🔔 NOTIFICATION BUTTONS — placed immediately below KPI cards
+# 🔔 NOTIFICATION BUTTONS — below KPI cards
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown(
     '<div style="background:#0d1117;border:1px solid #1e2535;border-radius:12px;'
@@ -484,7 +474,7 @@ st.markdown(
     '<div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;'
     'letter-spacing:1.2px;margin-bottom:10px;">'
     '🔔 Send Alerts'
-    '<span style="display:inline-block;flex:1;height:1px;background:#1e2535;'
+    '<span style="display:inline-block;height:1px;background:#1e2535;'
     'margin-left:8px;vertical-align:middle;width:calc(100% - 90px);"></span>'
     '</div>',
     unsafe_allow_html=True
@@ -506,7 +496,7 @@ with nb2:
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)   # close alert bar
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Handle clicks ─────────────────────────────────────────────────────────────
 if send_tg_clicked:
@@ -527,7 +517,7 @@ if send_email_clicked:
         st.success(info) if ok else st.error(info)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# INTELLIGENCE PANELS (unchanged)
+# INTELLIGENCE PANELS
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 st.markdown('<div class="sec-div">🔍 Inventory Intelligence</div>', unsafe_allow_html=True)
@@ -666,7 +656,7 @@ with col_reorder:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DETAILED TABLE (unchanged)
+# DETAILED TABLE
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown('<hr style="border:none;border-top:1px solid #161d2e;margin:14px 0;">', unsafe_allow_html=True)
 st.markdown('<div class="sec-div">Detailed Records</div>', unsafe_allow_html=True)
