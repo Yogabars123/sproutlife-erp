@@ -176,11 +176,12 @@ MONTH_COLORS = ["#06b6d4","#a855f7","#f59e0b","#ec4899","#22c55e"]
 MONTH_CSS    = ["m0","m1","m2","m3","m4"]
 LINE_COLORS  = ["#06b6d4","#a855f7","#f59e0b","#ec4899","#22c55e",
                 "#f87171","#60a5fa","#4ade80","#fb923c","#e879f9"]
-FILL_COLORS  = [c.replace("#","rgba(").replace(")","") + ",0.06)" if c.startswith("#") else c
-                for c in ["rgba(6,182,212","rgba(168,85,247","rgba(245,158,11",
-                           "rgba(236,72,153","rgba(34,197,94","rgba(248,113,113",
-                           "rgba(96,165,250","rgba(74,222,128","rgba(251,146,60",
-                           "rgba(232,121,249"]]
+FILL_COLORS  = [
+    "rgba(6,182,212,0.06)","rgba(168,85,247,0.06)","rgba(245,158,11,0.06)",
+    "rgba(236,72,153,0.06)","rgba(34,197,94,0.06)","rgba(248,113,113,0.06)",
+    "rgba(96,165,250,0.06)","rgba(74,222,128,0.06)","rgba(251,146,60,0.06)",
+    "rgba(232,121,249,0.06)"
+]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FORECAST LOADER
@@ -441,18 +442,20 @@ for idx, (sku, row) in enumerate(pivot_use.iterrows()):
     if use_var:
         marker_colors = ["#ef4444" if v < -10 else ("#22c55e" if v > 10 else "#f59e0b") for v in vals]
 
-    fig_trend.add_trace(go.Scatter(
+    _kw = dict(
         x=month_labels_short, y=vals,
         name=sku, mode="lines+markers",
         line=dict(color=clr, width=2.5, shape="spline", smoothing=0.7),
         marker=dict(size=9, color=marker_colors,
                     line=dict(color="#080d1a", width=2), symbol="circle"),
-        fill="tozeroy" if not use_var else None,
-        fillcolor=fill if not use_var else None,
         hovertemplate=(
             f"<b>{sku}</b><br>%{{x}}: <b>%{{y:,.1f}}{'%' if use_var else ' units'}</b><extra></extra>"
         )
-    ))
+    )
+    if not use_var:
+        _kw["fill"]      = "tozeroy"
+        _kw["fillcolor"] = fill
+    fig_trend.add_trace(go.Scatter(**_kw))
 
 fig_trend.update_layout(
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(10,14,26,0.7)",
