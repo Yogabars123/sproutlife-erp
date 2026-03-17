@@ -80,6 +80,29 @@ html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"],
 .sec::after{content:'';flex:1;height:1px;background:var(--border);}
 
 .chart-wrap{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:20px;}
+
+/* ── Trend chart: premium gradient background ─────────────────────────────── */
+.trend-wrap {
+  position: relative;
+  border-radius: 20px;
+  padding: 22px 22px 10px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  border: 1px solid #1e2840;
+  /* layered mesh gradient — deep navy base with faint colour clouds */
+  background:
+    radial-gradient(ellipse at 15% 80%, rgba(6,182,212,0.07)   0%, transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(168,85,247,0.07)  0%, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(30,40,64,0.4)     0%, transparent 70%),
+    linear-gradient(160deg, #080d1a 0%, #060911 60%, #080d1a 100%);
+}
+/* subtle shimmer top border */
+.trend-wrap::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(6,182,212,0.4), rgba(168,85,247,0.4), transparent);
+}
+
 .chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .chart-title{font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;}
 .chart-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
@@ -388,184 +411,111 @@ for i, minfo in enumerate(MONTHS):
 html += '</div>'
 st.markdown(html, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# CHART 1 — Monthly Actual vs Expected
-# ══════════════════════════════════════════════════════════════════════════════
-st.markdown('<div class="sec">📊 Monthly Comparison — Actual vs Expected</div>', unsafe_allow_html=True)
-
-month_totals = (
-    df.groupby("Month")
-    .agg(Actual=("Actual","sum"), Expected=("Expected","sum"))
-    .reindex([m["label"] for m in MONTHS])
-    .reset_index().fillna(0)
-)
-variance_vals = [round(float(a) - float(e), 0)
-                 for a, e in zip(month_totals["Actual"], month_totals["Expected"])]
-
-fig1 = go.Figure()
-fig1.add_trace(go.Bar(
-    x=month_totals["Month"], y=month_totals["Expected"],
-    name="Expected", marker_color="#1e2d45", marker_line_width=0,
-    hovertemplate="<b>%{x}</b><br>Expected: <b>%{y:,.0f}</b><extra></extra>"
-))
-fig1.add_trace(go.Bar(
-    x=month_totals["Month"], y=month_totals["Actual"],
-    name="Actual Consumed", marker_color="#06b6d4", marker_line_width=0, opacity=0.9,
-    hovertemplate="<b>%{x}</b><br>Actual: <b>%{y:,.0f}</b><extra></extra>"
-))
-var_dot_colors = ["#ef4444" if v < 0 else "#22c55e" for v in variance_vals]
-fig1.add_trace(go.Scatter(
-    x=month_totals["Month"], y=variance_vals,
-    name="Variance", mode="lines+markers+text",
-    yaxis="y2",
-    line=dict(color="#f59e0b", width=2.5),
-    marker=dict(size=9, color=var_dot_colors, line=dict(color="#f59e0b", width=2)),
-    text=[f"{'+' if v > 0 else ''}{v:,.0f}" for v in variance_vals],
-    textposition="top center",
-    textfont=dict(size=10, color="#f59e0b", family="JetBrains Mono"),
-    hovertemplate="<b>%{x}</b><br>Variance: <b>%{y:+,.0f}</b><extra></extra>"
-))
-fig1.update_layout(
-    paper_bgcolor="#080b14", plot_bgcolor="#080b14",
-    font=dict(family="Inter", color="#94a3b8", size=11),
-    barmode="overlay", height=340,
-    margin=dict(l=10, r=70, t=10, b=30),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                bgcolor="rgba(0,0,0,0)", font=dict(size=12), itemclick=False),
-    xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(size=13, color="#94a3b8"), linecolor="#161d2e"),
-    yaxis=dict(showgrid=True, gridcolor="#0c1020", zeroline=False,
-               tickfont=dict(size=10, color="#64748b"), tickformat=",",
-               title=dict(text="Qty", font=dict(size=10, color="#475569"))),
-    yaxis2=dict(showgrid=False, zeroline=True, zerolinecolor="#2d3a50",
-                overlaying="y", side="right",
-                tickfont=dict(size=9, color="#f59e0b"),
-                title=dict(text="Variance", font=dict(size=10, color="#f59e0b"))),
-    hoverlabel=dict(bgcolor="#111827", bordercolor="#1e2535", font=dict(color="#e2e8f0", size=12)),
-)
-st.markdown("""
-<div class="chart-wrap">
-  <div class="chart-hdr">
-    <div class="chart-title">Total Actual vs Expected — 5 Months</div>
-    <div class="chart-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#06b6d4;"></div>Actual</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#1e2d45;"></div>Expected</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div>Variance</div>
-    </div>
-  </div>
-""", unsafe_allow_html=True)
-st.plotly_chart(fig1, use_container_width=True, config={"displayModeBar": False})
-st.markdown('</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CHART 2 — Top 10 SKUs horizontal
+# TOP 10 for trend
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown('<div class="sec">🏆 Top 10 SKUs by Consumption — Actual vs Expected</div>', unsafe_allow_html=True)
-
 top10 = (
     df.groupby("Material SKU")
     .agg(Actual=("Actual","sum"), Expected=("Expected","sum"))
     .reset_index()
 )
 top10 = top10[top10["Actual"] > 0].nlargest(10, "Actual").copy()
-top10["Var %"]  = top10.apply(
-    lambda r: round((r["Actual"] / r["Expected"] * 100 - 100), 1) if r["Expected"] > 0 else 0, axis=1)
-top10["Status"] = top10["Var %"].apply(
-    lambda v: "Over" if v > 5 else ("Under" if v < -5 else "On Track"))
-top10["Color"]  = top10["Status"].map({"Over":"#ef4444","Under":"#22c55e","On Track":"#3b82f6"})
-top10["Label"]  = top10.apply(
-    lambda r: f"{'+' if r['Var %']>0 else ''}{r['Var %']:.1f}%  "
-              f"{'▲' if r['Status']=='Over' else ('▼' if r['Status']=='Under' else '●')} {r['Status']}",
-    axis=1)
-
-fig2 = go.Figure()
-fig2.add_trace(go.Bar(
-    y=top10["Material SKU"], x=top10["Expected"],
-    name="Expected", orientation="h",
-    marker_color="#1e2840", marker_line_width=0,
-    hovertemplate="<b>%{y}</b><br>Expected: <b>%{x:,.0f}</b><extra></extra>"
-))
-fig2.add_trace(go.Bar(
-    y=top10["Material SKU"], x=top10["Actual"],
-    name="Actual", orientation="h",
-    marker_color=top10["Color"].tolist(),
-    marker_line_width=0, opacity=0.9,
-    text=top10["Label"].tolist(),
-    textposition="outside",
-    textfont=dict(size=10, color="#94a3b8", family="JetBrains Mono"),
-    hovertemplate="<b>%{y}</b><br>Actual: <b>%{x:,.0f}</b><br>%{text}<extra></extra>"
-))
-fig2.update_layout(
-    paper_bgcolor="#080b14", plot_bgcolor="#080b14",
-    font=dict(family="Inter", color="#94a3b8", size=11),
-    barmode="overlay", height=max(380, len(top10) * 38 + 80),
-    margin=dict(l=10, r=200, t=10, b=20),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                bgcolor="rgba(0,0,0,0)", font=dict(size=12), itemclick=False),
-    xaxis=dict(showgrid=True, gridcolor="#0c1020", zeroline=False,
-               tickfont=dict(size=10, color="#64748b"), tickformat=","),
-    yaxis=dict(showgrid=False, tickfont=dict(size=10, color="#94a3b8"), autorange="reversed"),
-    hoverlabel=dict(bgcolor="#111827", bordercolor="#1e2535", font=dict(color="#e2e8f0", size=12)),
-)
-st.markdown("""
-<div class="chart-wrap">
-  <div class="chart-hdr">
-    <div class="chart-title">Top 10 SKUs — Actual vs Expected</div>
-    <div class="chart-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>Over</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div>Under</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div>On Track</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#1e2840;"></div>Expected</div>
-    </div>
-  </div>
-""", unsafe_allow_html=True)
-st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
-st.markdown('</div>', unsafe_allow_html=True)
+top10_skus = top10["Material SKU"].tolist()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CHART 3 — Top 10 SKU trend lines
+# TREND CHART — smooth spline, rich background
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown('<div class="sec">📉 Top 10 SKUs — Consumption Trend Over 5 Months</div>', unsafe_allow_html=True)
+st.markdown('<div class="sec">📉 Top 10 SKUs — 5-Month Consumption Trend</div>', unsafe_allow_html=True)
 
-top10_skus   = top10["Material SKU"].tolist()
-trend_pivot  = (
+trend_pivot = (
     df[df["Material SKU"].isin(top10_skus)]
     .pivot_table(index="Material SKU", columns="Month", values="Actual", aggfunc="sum")
     .reindex(columns=[m["label"] for m in MONTHS])
     .fillna(0)
 )
-line_colors = ["#06b6d4","#a855f7","#f59e0b","#ec4899","#22c55e",
-               "#f87171","#60a5fa","#4ade80","#fb923c","#e879f9"]
-fig3 = go.Figure()
+
+LINE_COLORS = [
+    "#06b6d4","#a855f7","#f59e0b","#ec4899","#22c55e",
+    "#f87171","#60a5fa","#4ade80","#fb923c","#e879f9"
+]
+FILL_COLORS = [
+    "rgba(6,182,212,0.06)","rgba(168,85,247,0.06)","rgba(245,158,11,0.06)",
+    "rgba(236,72,153,0.06)","rgba(34,197,94,0.06)","rgba(248,113,113,0.06)",
+    "rgba(96,165,250,0.06)","rgba(74,222,128,0.06)","rgba(251,146,60,0.06)",
+    "rgba(232,121,249,0.06)"
+]
+
+fig_trend = go.Figure()
+month_labels_short = [m["short"] for m in MONTHS]
+
 for idx, (sku, row) in enumerate(trend_pivot.iterrows()):
-    clr = line_colors[idx % len(line_colors)]
-    fig3.add_trace(go.Scatter(
-        x=[m["short"] for m in MONTHS], y=row.values.tolist(),
+    clr  = LINE_COLORS[idx % len(LINE_COLORS)]
+    fill = FILL_COLORS[idx % len(FILL_COLORS)]
+    vals = row.values.tolist()
+    fig_trend.add_trace(go.Scatter(
+        x=month_labels_short, y=vals,
         name=sku, mode="lines+markers",
-        line=dict(color=clr, width=2),
-        marker=dict(size=7, color=clr, line=dict(color="#080b14", width=1.5)),
-        hovertemplate=f"<b>{sku}</b><br>%{{x}}: <b>%{{y:,.0f}}</b><extra></extra>"
+        line=dict(color=clr, width=2.5, shape="spline", smoothing=0.7),
+        marker=dict(size=9, color=clr, line=dict(color="#080d1a", width=2), symbol="circle"),
+        fill="tozeroy", fillcolor=fill,
+        hovertemplate=f"<b>{sku}</b><br>%{{x}}: <b>%{{y:,.0f}}</b> units<extra></extra>"
     ))
-fig3.update_layout(
-    paper_bgcolor="#080b14", plot_bgcolor="#080b14",
+
+# Subtle vertical dividers between months
+shapes = [dict(
+    type="line", xref="x", yref="paper",
+    x0=m, x1=m, y0=0, y1=1,
+    line=dict(color="rgba(255,255,255,0.03)", width=1)
+) for m in month_labels_short[1:]]
+
+fig_trend.update_layout(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(10,14,26,0.7)",
     font=dict(family="Inter", color="#94a3b8", size=11),
-    height=320, margin=dict(l=10, r=160, t=10, b=20),
-    legend=dict(yanchor="middle", y=0.5, xanchor="left", x=1.01,
-                bgcolor="rgba(0,0,0,0)", font=dict(size=9, family="JetBrains Mono"),
-                itemclick="toggleothers"),
-    xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(size=12, color="#94a3b8"), linecolor="#161d2e"),
-    yaxis=dict(showgrid=True, gridcolor="#0c1020", zeroline=False,
-               tickfont=dict(size=10, color="#64748b"), tickformat=","),
-    hoverlabel=dict(bgcolor="#111827", bordercolor="#1e2535", font=dict(color="#e2e8f0", size=12)),
+    height=460,
+    margin=dict(l=14, r=190, t=20, b=44),
+    shapes=shapes,
+    legend=dict(
+        yanchor="middle", y=0.5,
+        xanchor="left",   x=1.01,
+        bgcolor="rgba(8,13,26,0.9)",
+        bordercolor="#1e2840", borderwidth=1,
+        font=dict(size=10, family="JetBrains Mono"),
+        itemclick="toggleothers",
+        itemdoubleclick="toggle",
+    ),
+    xaxis=dict(
+        showgrid=False, zeroline=False,
+        tickfont=dict(size=14, color="#94a3b8", family="Inter"),
+        linecolor="#1e2840", ticklen=7, tickcolor="#1e2840",
+    ),
+    yaxis=dict(
+        showgrid=True,
+        gridcolor="rgba(30,40,64,0.5)",
+        gridwidth=1, zeroline=False,
+        tickfont=dict(size=10, color="#475569"),
+        tickformat=",", rangemode="tozero",
+    ),
+    hoverlabel=dict(
+        bgcolor="#0c1020", bordercolor="#1e2840",
+        font=dict(color="#e2e8f0", size=12, family="Inter"),
+    ),
+    hovermode="x unified",
 )
+
 st.markdown("""
-<div class="chart-wrap">
+<div class="trend-wrap">
   <div class="chart-hdr">
-    <div class="chart-title">5-Month Trend — Top 10 SKUs</div>
-    <div style="font-size:10px;color:#334155;font-family:'JetBrains Mono',monospace;">Click SKU in legend to isolate</div>
+    <div class="chart-title">📉  5-Month Consumption Trend — Top 10 SKUs by Volume</div>
+    <div style="font-size:10px;color:#2d3a50;font-family:'JetBrains Mono',monospace;">
+      Click a SKU in legend to isolate &nbsp;·&nbsp; Double-click to reset all
+    </div>
   </div>
 """, unsafe_allow_html=True)
-st.plotly_chart(fig3, use_container_width=True, config={"displayModeBar": False})
+st.plotly_chart(fig_trend, use_container_width=True, config={"displayModeBar": False})
 st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # DETAILED TABLE
