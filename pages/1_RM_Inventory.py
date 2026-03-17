@@ -71,8 +71,7 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
 .legend-bar { display:flex; gap:16px; align-items:center; background:#0d1117; border:1px solid #1e2535; border-radius:10px; padding:8px 14px; margin-bottom:8px; font-size:11px; }
 .ldot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:4px; }
 .app-footer { margin-top:2rem; padding-top:12px; border-top:1px solid #161d2e; text-align:center; font-size:10px; font-weight:600; color:#334155; letter-spacing:1.5px; font-family:JetBrains Mono,monospace; }
-
-/* ── Notification button styles ──────────────────────────────────────────── */
+/* ── Notification button styles ───────────────────────────────────────────── */
 .notif-btn-tg > button {
     background: linear-gradient(135deg,#0a1628,#0d2040) !important;
     border: 1.5px solid #2563eb !important; color: #93c5fd !important;
@@ -89,6 +88,8 @@ div[data-testid="stDataFrame"] { border-radius:12px !important; overflow:hidden 
     width: 100% !important; transition: all .2s !important;
 }
 .notif-btn-email > button:hover { border-color:#4ade80 !important; color:#bbf7d0 !important; background:#0d3518 !important; }
+/* ── Hide streamlit internal traceback shown after st.success/error ───────── */
+[data-testid="stAlertContainer"] + div[data-testid="stCode"] { display:none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -104,7 +105,7 @@ ALLOWED_WH = SOH_WH + [
 ]
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CREDENTIALS — hardcoded, same as FG_Inventory.py
+# CREDENTIALS
 # ══════════════════════════════════════════════════════════════════════════════
 def _tg_cfg():
     return (
@@ -126,55 +127,72 @@ def _email_cfg():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TELEGRAM MESSAGE BUILDER
-# Uses HTML parse_mode (same as FG_Inventory) — NO escaping issues with
-# dots, dashes, brackets or any special characters in SKU codes
+# TELEGRAM MESSAGE — clean table format using monospace alignment
 # ══════════════════════════════════════════════════════════════════════════════
 def build_telegram_critical(n_crit, n_zero, critical_skus):
-    NL = "\n"
+    from datetime import datetime
+    import pytz
+    IST = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(IST).strftime("%d %b %Y  %I:%M %p IST")
+    NL  = "\n"
 
+    # ── Header ────────────────────────────────────────────────────────────────
     lines = [
-        "🚨 <b>YogaBar · Critical RM Stock Alert</b>",
-        "",
-        f"⛔ Stockout Today: <b>{n_zero}</b> SKUs",
-        f"🟠 Critical (&lt;7 days): <b>{n_crit}</b> SKUs",
-        "",
-        "━━━━━━━━━━━━━━━━━━━━━━━━",
-        "<b>SKU  ·  Days Left  ·  SOH  ·  Per Day</b>",
+        "🚨 <b>YogaBar · RM Critical Stock Alert</b>",
+        f"🕐 {now}",
+        "─────────────────────────────",
+        f"⛔ Stockout Today  :  <b>{n_zero} SKUs</b>",
+        f"🟠 Critical &lt;7d   :  <b>{n_crit} SKUs</b>",
+        "─────────────────────────────",
         "",
     ]
 
-    for _, r in critical_skus.iterrows():
-        sku  = str(r["Item SKU"])
-        dos  = float(r["Days of Stock"])
-        soh  = float(r["SOH"])
-        pdr  = float(r["Per Day Req"])
-        name = str(r.get("Item Name", ""))[:35]
-
-        if dos <= 1:   icon = "⛔"
-        elif dos <= 3: icon = "🔴"
-        else:          icon = "🟠"
-
-        lines.append(f"{icon} <code>{sku}</code>  <b>{dos:.1f}d</b>")
-        if name:
-            lines.append(f"   <i>{name}</i>")
-        lines.append(f"   SOH: <b>{soh:,.0f}</b>  Per day: {pdr:.1f}")
+    # ── Stockout section (≤1 day) ─────────────────────────────────────────────
+    stockout = critical_skus[critical_skus["Days of Stock"] <= 1]
+    if not stockout.empty:
+        lines.append("⛔ <b>STOCKOUT — Act Immediately</b>")
+        lines.append("<code>SKU                   DoS    SOH       /day</code>")
+        lines.append("<code>─────────────────────────────────────────</code>")
+        for _, r in stockout.iterrows():
+            sku  = str(r["Item SKU"])[:22].ljust(22)
+            dos  = f"{float(r['Days of Stock']):.1f}d".ljust(6)
+            soh  = f"{float(r['SOH']):,.0f}".rjust(9)
+            pdr  = f"{float(r['Per Day Req']):,.1f}".rjust(8)
+            name = str(r.get("Item Name",""))[:35]
+            lines.append(f"<code>{sku} {dos} {soh} {pdr}</code>")
+            lines.append(f"  <i>{name}</i>")
         lines.append("")
 
-    if len(critical_skus) > 15:
-        lines.append(f"<i>... and {len(critical_skus) - 15} more SKUs</i>")
+    # ── Critical section (1–7 days) ───────────────────────────────────────────
+    near = critical_skus[critical_skus["Days of Stock"] > 1]
+    if not near.empty:
+        lines.append("🔴 <b>Critical — Reorder Now</b>")
+        lines.append("<code>SKU                   DoS    SOH       /day</code>")
+        lines.append("<code>─────────────────────────────────────────</code>")
+        for _, r in near.iterrows():
+            sku  = str(r["Item SKU"])[:22].ljust(22)
+            dos  = f"{float(r['Days of Stock']):.1f}d".ljust(6)
+            soh  = f"{float(r['SOH']):,.0f}".rjust(9)
+            pdr  = f"{float(r['Per Day Req']):,.1f}".rjust(8)
+            name = str(r.get("Item Name",""))[:35]
+            lines.append(f"<code>{sku} {dos} {soh} {pdr}</code>")
+            lines.append(f"  <i>{name}</i>")
+        lines.append("")
+
+    if len(critical_skus) > 20:
+        lines.append(f"<i>... and {len(critical_skus) - 20} more SKUs</i>")
+        lines.append("")
 
     lines += [
-        "━━━━━━━━━━━━━━━━━━━━━━━━",
-        "<i>YogaBar RM Inventory Dashboard</i>"
+        "─────────────────────────────",
+        "🤖 <i>YogaBar RM Inventory Dashboard</i>"
     ]
     return NL.join(lines)
 
 
 def send_telegram(message: str) -> tuple[bool, str]:
     bot_token, chat_id = _tg_cfg()
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    # Split into 4000-char chunks in case message is very long
+    url    = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     chunks = [message[i:i+4000] for i in range(0, len(message), 4000)]
     for chunk in chunks:
         try:
@@ -187,11 +205,11 @@ def send_telegram(message: str) -> tuple[bool, str]:
                 return False, f"Telegram API error {resp.status_code}: {resp.text}"
         except Exception as e:
             return False, f"Telegram send failed: {e}"
-    return True, "✅ Telegram alert sent!"
+    return True, "✅ Telegram alert sent successfully!"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# EMAIL: Critical SKUs table only
+# EMAIL: Critical SKUs table
 # ══════════════════════════════════════════════════════════════════════════════
 def build_email_critical_html(n_crit, n_zero, critical_skus):
     if critical_skus.empty:
@@ -349,7 +367,7 @@ fc_agg  = load_forecast_agg()
 soh_sku = build_soh_sku(df_raw, fc_agg) if not df_raw.empty else pd.DataFrame()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HEADER + REFRESH
+# HEADER
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class="app-header">
@@ -506,25 +524,57 @@ with nb2:
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
+# ── Handle clicks — use placeholder to avoid traceback rendering ──────────────
+tg_placeholder    = st.empty()
+email_placeholder = st.empty()
 
-# ── Handle clicks ──────────────────────────────────────────────────────────
 if send_tg_clicked:
     if n_crit == 0:
-        st.info("ℹ️ No critical SKUs right now — nothing to send.")
+        tg_placeholder.info("ℹ️ No critical SKUs right now — nothing to send.")
     else:
-        msg = build_telegram_critical(n_crit, n_zero, critical_skus)
-        ok, info = send_telegram(msg)
-        st.success(info) if ok else st.error(info)
+        with st.spinner("Sending Telegram alert..."):
+            msg = build_telegram_critical(n_crit, n_zero, critical_skus)
+            ok, info = send_telegram(msg)
+        if ok:
+            tg_placeholder.markdown(
+                '<div style="background:#061a0a;border:1.5px solid #16a34a;border-radius:10px;'
+                'padding:12px 18px;font-size:13px;font-weight:700;color:#4ade80;">'
+                f'✅ Telegram alert sent! · {n_crit} critical SKUs · {n_zero} stockout'
+                '</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            tg_placeholder.markdown(
+                f'<div style="background:#1a0608;border:1.5px solid #dc2626;border-radius:10px;'
+                f'padding:12px 18px;font-size:13px;font-weight:700;color:#f87171;">'
+                f'❌ {info}</div>',
+                unsafe_allow_html=True
+            )
 
 if send_email_clicked:
     if n_crit == 0:
-        st.info("ℹ️ No critical SKUs right now — nothing to send.")
+        email_placeholder.info("ℹ️ No critical SKUs right now — nothing to send.")
     else:
-        subject   = f"[🚨 YogaBar RM Alert] {n_crit} Critical SKUs · {n_zero} Stockout Today"
-        html_body = build_email_critical_html(n_crit, n_zero, critical_skus)
-        ok, info  = send_email(subject, html_body)
-        st.success(info) if ok else st.error(info)
+        with st.spinner("Sending email..."):
+            subject   = f"[🚨 YogaBar RM Alert] {n_crit} Critical SKUs · {n_zero} Stockout Today"
+            html_body = build_email_critical_html(n_crit, n_zero, critical_skus)
+            ok, info  = send_email(subject, html_body)
+        if ok:
+            email_placeholder.markdown(
+                f'<div style="background:#061a0a;border:1.5px solid #16a34a;border-radius:10px;'
+                f'padding:12px 18px;font-size:13px;font-weight:700;color:#4ade80;">'
+                f'✅ {info}</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            email_placeholder.markdown(
+                f'<div style="background:#1a0608;border:1.5px solid #dc2626;border-radius:10px;'
+                f'padding:12px 18px;font-size:13px;font-weight:700;color:#f87171;">'
+                f'❌ {info}</div>',
+                unsafe_allow_html=True
+            )
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # INTELLIGENCE PANELS
