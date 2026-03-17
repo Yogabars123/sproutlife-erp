@@ -269,8 +269,10 @@ def build_data():
         fc_month = fc_dict.get(minfo["month"], pd.DataFrame(columns=["_key","Forecast"]))
         agg = agg.merge(fc_month, on="_key", how="left").drop(columns=["_key"])
         agg["Forecast"]  = agg["Forecast"].fillna(0)
-        agg["Per Day"]   = (agg["Forecast"] / 24).round(2)
-        agg["Expected"]  = (agg["Per Day"] * minfo["days"]).round(0)
+        # ── FIXED: Forecast column IS already the monthly qty (e.g. "March Forecast = 427,438")
+        # ── No need to divide by 24 or multiply by days — use it directly as Expected
+        agg["Expected"]  = agg["Forecast"].round(0)
+        agg["Per Day"]   = (agg["Forecast"] / minfo["days"]).round(2)
         agg["Variance"]  = agg["Actual"] - agg["Expected"]
         agg["Var %"]     = agg.apply(
             lambda r: round((r["Actual"] / r["Expected"] * 100 - 100), 1)
