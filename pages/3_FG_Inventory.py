@@ -9,6 +9,44 @@ from pages.Sidebar_style import inject_sidebar
 from pages.data_loader import load_sheet
 inject_sidebar("FG Inventory")
 
+def build_stn_telegram(stn_possible: "pd.DataFrame", channel: str) -> str:
+    """Build Telegram message for STN Possible SKUs."""
+    import pytz
+    NL  = chr(10)
+    IST = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(IST).strftime("%d %b %Y %I:%M %p IST")
+    n   = len(stn_possible)
+    lines = [
+        f"🚚 <b>YogaBar · STN Transfer Alert</b>",
+        f"📣 Channel: <b>{channel}</b>",
+        "🕐 " + now,
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+    if n == 0:
+        lines.append("✅ No STN transfers required right now.")
+    else:
+        lines.append(f"✅ <b>{n} SKU(s) can be fulfilled via STN from Central WH</b>")
+        lines.append("")
+        for _, r in stn_possible.iterrows():
+            sku      = str(r.get("Item SKU","")).strip()
+            name     = str(r.get("Item Name",""))[:38]
+            shortfall= float(r.get("Shortfall Qty", 0))
+            cen      = float(r.get("Central Stock", 0))
+            stn_qty  = float(r.get("STN Qty", 0))
+            rem      = float(r.get("Remaining Gap", 0))
+            custs    = str(r.get("Customers",""))[:60]
+            lines.append(f"✅ <code>{sku}</code>  {name}")
+            lines.append(f"   Shortfall: <b>{shortfall:,.0f}</b>  Central: <b>{cen:,.0f}</b>  STN Qty: <b>{stn_qty:,.0f}</b>")
+            if rem > 0:
+                lines.append(f"   Remaining gap after STN: <b>{rem:,.0f}</b>")
+            if custs:
+                lines.append(f"   Customers: {custs}")
+            lines.append("")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("🤖 <i>Sent from YogaBar ERP Dashboard</i>")
+    return NL.join(lines)
+
+
 def _tg_send(token: str, chat_id: str, text: str) -> tuple[bool, str]:
     import requests as _req
     url    = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -894,7 +932,47 @@ with tab3:
                 else:
                     n_possible = int((stn_disp["STN Status"].str.startswith("✅")).sum()); n_partial = int((stn_disp["STN Status"].str.startswith("⚠️")).sum()); n_not = int((stn_disp["STN Status"].str.startswith("❌")).sum())
                     st.markdown(f'<div style="background:#060d18;border:1.5px solid #1e3a5f;border-radius:14px;padding:14px 18px;margin-bottom:12px;"><div style="font-size:10px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">🚚 STN Feasibility — Can Central WH cover the shortfall?</div><div style="display:flex;gap:18px;flex-wrap:wrap;"><span style="background:#061a0a;border:1px solid #14532d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;color:#4ade80;">✅ Possible: {n_possible}</span><span style="background:#2d1f00;border:1px solid #78350f;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;color:#fde68a;">⚠️ Partial: {n_partial}</span><span style="background:#2d0a0a;border:1px solid #7f1d1d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;color:#fca5a5;">❌ Not Possible: {n_not}</span></div></div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">🏭 Central WH → STN Feasibility</span><span class="tbl-badge">{len(stn_disp):,} SKUs</span></div>', unsafe_allow_html=True)
+
+                    # ── STN table header + action buttons row ────────────────────────
+                    _stn_h1, _stn_h2, _stn_h3 = st.columns([3, 1, 1])
+                    with _stn_h1:
+                        st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">🏭 Central WH → STN Feasibility</span><span class="tbl-badge">{len(stn_disp):,} SKUs</span></div>', unsafe_allow_html=True)
+
+                    # Build STN Possible Excel for download
+                    _stn_possible_df = stn_disp[stn_disp["STN Status"].str.startswith("✅")].copy()
+                    _buf_stn_possible = io.BytesIO()
+                    with pd.ExcelWriter(_buf_stn_possible, engine="openpyxl") as _wx:
+                        _stn_possible_df.to_excel(_wx, index=False, sheet_name="STN Possible")
+                        stn_disp.to_excel(_wx, index=False, sheet_name="All STN Feasibility")
+
+                    with _stn_h2:
+                        st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
+                        st.download_button(
+                            f"⬇ STN Possible ({n_possible})",
+                            _buf_stn_possible.getvalue(),
+                            f"STN_Possible_{channel}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            help="Only ✅ STN Possible SKUs — 2 sheets: Possible + Full Feasibility",
+                            key=f"stn_possible_dl_{channel}"
+                        )
+
+                    with _stn_h3:
+                        st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
+                        _tg_tok = st.session_state.get("tg_token","")
+                        _tg_cid = st.session_state.get("tg_chat_id","")
+                        if st.button(
+                            f"📬 Telegram STN ({n_possible})",
+                            use_container_width=True,
+                            disabled=(not _tg_tok or not _tg_cid or n_possible == 0),
+                            key=f"tg_stn_btn_{channel}",
+                            help="Send ✅ STN Possible SKUs to Telegram"
+                        ):
+                            _stn_msg = build_stn_telegram(_stn_possible_df, channel)
+                            _ok, _err = _tg_send(_tg_tok, _tg_cid, _stn_msg)
+                            if _ok: st.success(f"✅ STN Possible report sent to Telegram for {channel}!")
+                            else:   st.error(f"❌ Failed: {_err}")
+
                     st.dataframe(stn_disp.style.apply(_stn_colour, axis=1), use_container_width=True, height=min(80 + len(stn_disp) * 36, 460), hide_index=True, column_config={"Tumkur+YB Stock": st.column_config.NumberColumn("Tumkur+YB Stock", format="%.0f"), "Open PO Qty": st.column_config.NumberColumn("Open PO Qty", format="%.0f"), "Shortfall Qty": st.column_config.NumberColumn("Shortfall Qty", format="%.0f"), "Central Stock": st.column_config.NumberColumn("Central Stock", format="%.0f"), "STN Qty": st.column_config.NumberColumn("STN Qty", format="%.0f"), "Remaining Gap": st.column_config.NumberColumn("Remaining Gap", format="%.0f"), "STN Status": st.column_config.TextColumn("STN Status"), "Customers": st.column_config.TextColumn("Customers")})
 
                 if stn_donut_placeholder is not None and not stn_disp.empty:
