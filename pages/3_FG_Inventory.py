@@ -333,80 +333,231 @@ tab1, tab2, tab3, tab4 = st.tabs(["📦  FG Inventory", "📊  CFA Stock vs Open
 
 # ═══ TAB 1 ══════════════════════════════════════════════════════════════════════
 with tab1:
-    _fg3 = df_fg[df_fg["Warehouse"].astype(str).isin(CHANNEL_STOCK_WAREHOUSES)].copy() if "Warehouse" in df_fg.columns else pd.DataFrame()
-    if not _fg3.empty and "Item SKU" in _fg3.columns:
-        _fg3_agg = _fg3.groupby("Item SKU").agg(Item_Name=("Item Name","first"), Category=("Category","first"), FG_Stock=("Qty Available","sum")).reset_index()
-        _fg3_agg.columns = ["Item SKU","Item Name","Category","FG Stock"]
+    # ── Pure FG Stock view: no PO merge, show shelf life + batch drill-down ──────
+
+    # Extra CSS for batch cards
+    st.markdown("""
+    <style>
+    .batch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; margin-top:10px; }
+    .batch-card {
+        background:#0d1117; border:1px solid #1e2535; border-radius:12px;
+        padding:12px 14px; position:relative; overflow:hidden;
+    }
+    .batch-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:12px 12px 0 0; }
+    .batch-card.bc-ok   { border-color:#134e4a; } .batch-card.bc-ok::before   { background:linear-gradient(90deg,#22c55e,#4ade80); }
+    .batch-card.bc-warn { border-color:#78350f; } .batch-card.bc-warn::before { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .batch-card.bc-crit { border-color:#7f1d1d; } .batch-card.bc-crit::before { background:linear-gradient(90deg,#ef4444,#f87171); }
+    .bc-sku  { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:#e2e8f0; margin-bottom:3px; }
+    .bc-name { font-size:11px; color:#64748b; margin-bottom:8px; line-height:1.4; }
+    .bc-row  { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    .bc-key  { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:.8px; min-width:56px; font-weight:600; }
+    .bc-val  { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:#cbd5e1; }
+    .bc-bar-wrap { flex:1; background:#1e2535; border-radius:3px; height:6px; }
+    .bc-bar  { height:6px; border-radius:3px; }
+    .bc-exp  { font-size:10px; color:#475569; margin-top:6px; font-style:italic; }
+    .bc-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; }
+    .bc-badge.ok   { background:#061a0a; color:#4ade80; border:1px solid #14532d; }
+    .bc-badge.warn { background:#2d1800; color:#fbbf24; border:1px solid #78350f; }
+    .bc-badge.crit { background:#2d0a0a; color:#f87171; border:1px solid #7f1d1d; }
+    .t1-summary-bar {
+        display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;
+    }
+    .t1-stat { background:#0d1117; border:1px solid #1e2535; border-radius:10px; padding:12px 14px; text-align:center; }
+    .t1-stat-lbl { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:4px; }
+    .t1-stat-val { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:800; color:#e2e8f0; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # All FG rows across ALL warehouses (not just channel WH)
+    _t1_all = df_fg.copy()
+    if search:
+        _t1_all = _t1_all[_t1_all.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
+    if sel_fg_wh != "All Warehouses" and "Warehouse" in _t1_all.columns:
+        _t1_all = _t1_all[_t1_all["Warehouse"].astype(str) == sel_fg_wh]
+    if sel_shelf in {"Below 90%":90,"Below 80%":80,"Below 70%":70,"Below 50%":50} and "Shelf Life %" in _t1_all.columns:
+        _t1_all = _t1_all[_t1_all["Shelf Life %"] < {"Below 90%":90,"Below 80%":80,"Below 70%":70,"Below 50%":50}[sel_shelf]]
+
+    # Build SKU-level summary (aggregate batches per SKU+warehouse)
+    if not _t1_all.empty and "Item SKU" in _t1_all.columns:
+        _t1_sku = _t1_all.groupby(["Item SKU","Warehouse"]).agg(
+            Item_Name=("Item Name","first"),
+            Category =("Category","first"),
+            FG_Stock =("Qty Available","sum"),
+            Shelf_Avg=("Shelf Life %","mean"),
+            Batches  =("Qty Available","count"),
+        ).reset_index()
+        _t1_sku.columns = ["Item SKU","Warehouse","Item Name","Category","FG Stock","Avg Shelf Life %","Batches"]
+        _t1_sku["Avg Shelf Life %"] = _t1_sku["Avg Shelf Life %"].round(1)
+        _t1_sku = _t1_sku.sort_values("Avg Shelf Life %", ascending=True)
     else:
-        _fg3_agg = pd.DataFrame(columns=["Item SKU","Item Name","Category","FG Stock"])
+        _t1_sku = pd.DataFrame(columns=["Item SKU","Warehouse","Item Name","Category","FG Stock","Avg Shelf Life %","Batches"])
 
-    _t1_sos = pd.DataFrame()
-    if not df_sos.empty:
-        _sku_c  = next((c for c in df_sos.columns if "product sku"  in c.lower()), None)
-        _cust_c = next((c for c in df_sos.columns if "customer" in c.lower() or "party" in c.lower()), None)
-        _qty_c  = next((c for c in df_sos.columns if "order qty"    in c.lower()), None)
-        if _sku_c and _qty_c:
-            _t1_open = df_sos[~df_sos["SO Status"].astype(str).str.strip().str.lower().isin(CLOSED_STATUSES)].copy() if "SO Status" in df_sos.columns else df_sos.copy()
-            _t1_open["_sku"]      = _t1_open[_sku_c].astype(str).str.strip()
-            _t1_open["_customer"] = _t1_open[_cust_c].astype(str).str.strip() if _cust_c else "Unknown"
-            _t1_open["_po_qty"]   = pd.to_numeric(_t1_open[_qty_c], errors="coerce").fillna(0)
-            _t1_cust_map = {}
-            if not df_mapper.empty:
-                _mc = next((c for c in df_mapper.columns if "customer" in c.lower() or "party" in c.lower()), None)
-                _ch = next((c for c in df_mapper.columns if "channel"  in c.lower()), None)
-                if _mc and _ch:
-                    _t1_cust_map = dict(zip(df_mapper[_mc].astype(str).str.strip(), df_mapper[_ch].astype(str).str.strip()))
-            _t1_open["_channel"] = _t1_open["_customer"].map(_t1_cust_map).fillna("Unknown")
-            _t1_sos = _t1_open.groupby(["_sku","_customer","_channel"]).agg(PO_Qty=("_po_qty","sum"), Orders=("_po_qty","count")).reset_index()
-            _t1_sos.columns = ["Item SKU","Customer Name","Channel","PO Quantity","# Orders"]
+    # Summary stats
+    _t1_total_stock  = _t1_sku["FG Stock"].sum() if not _t1_sku.empty else 0
+    _t1_total_skus   = _t1_sku["Item SKU"].nunique() if not _t1_sku.empty else 0
+    _t1_n_crit       = int((_t1_sku["Avg Shelf Life %"] < 30).sum()) if not _t1_sku.empty else 0
+    _t1_n_warn       = int(((_t1_sku["Avg Shelf Life %"] >= 30) & (_t1_sku["Avg Shelf Life %"] < 70)).sum()) if not _t1_sku.empty else 0
+    _t1_n_multi      = int((_t1_sku["Batches"] > 1).sum()) if not _t1_sku.empty else 0
 
-    if not _t1_sos.empty and not _fg3_agg.empty:
-        _t1_merged = _t1_sos.merge(_fg3_agg, on="Item SKU", how="left")
-    elif not _fg3_agg.empty:
-        _t1_merged = _fg3_agg.copy(); _t1_merged["Customer Name"] = ""; _t1_merged["Channel"] = ""; _t1_merged["PO Quantity"] = 0; _t1_merged["# Orders"] = 0
+    st.markdown(f"""
+    <div class="t1-summary-bar">
+      <div class="t1-stat"><div class="t1-stat-lbl">Total FG Stock</div><div class="t1-stat-val">{_t1_total_stock:,.0f}</div></div>
+      <div class="t1-stat"><div class="t1-stat-lbl">Unique SKUs</div><div class="t1-stat-val">{_t1_total_skus:,}</div></div>
+      <div class="t1-stat"><div class="t1-stat-lbl">⚠ Shelf &lt; 30%</div><div class="t1-stat-val" style="color:#f87171;">{_t1_n_crit}</div></div>
+      <div class="t1-stat"><div class="t1-stat-lbl">Multi-Batch SKUs</div><div class="t1-stat-val" style="color:#fbbf24;">{_t1_n_multi}</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if _t1_sku.empty:
+        st.warning("⚠️ No FG Inventory records match current filters.")
     else:
-        _t1_merged = pd.DataFrame(columns=["Item Name","Item SKU","Category","FG Stock","Customer Name","PO Quantity","Diff","Channel"])
+        # ── Session state for selected SKU batch drill-down ────────────────
+        if "t1_sel_sku" not in st.session_state:
+            st.session_state["t1_sel_sku"] = None
 
-    if not _t1_merged.empty:
-        _t1_merged["Item Name"]   = _t1_merged["Item Name"].fillna(_t1_merged["Item SKU"])
-        _t1_merged["Category"]    = _t1_merged.get("Category", pd.Series("")).fillna("")
-        _t1_merged["FG Stock"]    = _t1_merged.get("FG Stock", pd.Series(0)).fillna(0)
-        _t1_merged["PO Quantity"] = _t1_merged.get("PO Quantity", pd.Series(0)).fillna(0)
-        _t1_merged["Diff"]        = _t1_merged["FG Stock"] - _t1_merged["PO Quantity"]
+        # Batch lookup: {(Item SKU, Warehouse): [batch rows]}
+        _t1_batch_lookup = {}
+        if "Item SKU" in df_fg.columns:
+            for (sku, wh), grp in df_fg.groupby(["Item SKU","Warehouse"]):
+                batches = []
+                for _, r in grp.iterrows():
+                    exp = r.get("Expiry Date", None)
+                    batches.append({
+                        "Batch No":    str(r.get("Batch No","—")) if "Batch No" in df_fg.columns else "—",
+                        "Qty":         float(r.get("Qty Available", 0)),
+                        "Shelf Life %": round(float(r.get("Shelf Life %", 0)), 1),
+                        "Expiry Date": exp.strftime("%d-%b-%Y") if pd.notna(exp) else "—",
+                        "MFG Date":    r["MFG Date"].strftime("%d-%b-%Y") if "MFG Date" in r.index and pd.notna(r.get("MFG Date")) else "—",
+                    })
+                _t1_batch_lookup[(str(sku).strip(), str(wh).strip())] = batches
 
-    _t1_view = _t1_merged.copy() if not _t1_merged.empty else pd.DataFrame()
-    if not _t1_view.empty:
-        if search:
-            _t1_view = _t1_view[_t1_view.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)]
-        if sel_channel != "All Channels" and "Channel" in _t1_view.columns:
-            _t1_view = _t1_view[_t1_view["Channel"].astype(str) == sel_channel]
+        # ── Colour function for shelf life ────────────────────────────────
+        def _t1_shelf_colour(row):
+            sl = row.get("Avg Shelf Life %", 100)
+            if pd.isna(sl): return [""] * len(row)
+            if sl < 30:  return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
+            if sl < 70:  return ["background-color:#2d1f00;color:#fde68a"] * len(row)
+            return ["background-color:#061410;color:#d1fae5"] * len(row)
 
-    _t1_cols = ["Item Name","Item SKU","Category","FG Stock","Customer Name","PO Quantity","Diff","Channel"]
-    _t1_cols = [c for c in _t1_cols if c in (_t1_view.columns if not _t1_view.empty else [])]
+        # ── Table header + export ─────────────────────────────────────────
+        _buf_t1 = io.BytesIO()
+        with pd.ExcelWriter(_buf_t1, engine="openpyxl") as _w:
+            _t1_sku.to_excel(_w, index=False, sheet_name="FG Inventory")
+        _th1, _th2 = st.columns([4, 1])
+        with _th1:
+            st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📋 FG Inventory · Shelf Life</span><span class="tbl-badge">{len(_t1_sku):,} rows</span></div>', unsafe_allow_html=True)
+        with _th2:
+            st.download_button("⬇ Export", _buf_t1.getvalue(), "FG_Inventory.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
 
-    def _colour_t1(row):
-        d = row.get("Diff", 0)
-        if pd.isna(d): return [""] * len(row)
-        if d < 0:      return ["background-color:#2d0a0a;color:#fca5a5"] * len(row)
-        tot = row.get("FG Stock", 1)
-        if tot > 0 and d / max(tot,1) < 0.15: return ["background-color:#2d1f00;color:#fde68a"] * len(row)
-        return ["background-color:#061410;color:#d1fae5"] * len(row)
+        # ── Legend ────────────────────────────────────────────────────────
+        st.markdown("""
+        <div style="display:flex;gap:18px;align-items:center;background:#0d1117;border:1px solid #1e2535;
+                    border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;flex-wrap:wrap;">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:5px;"></span><span style="color:#f87171;font-weight:600;">Shelf Life &lt; 30% — urgent</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:5px;"></span><span style="color:#fbbf24;font-weight:600;">Shelf Life 30–70% — monitor</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;margin-right:5px;"></span><span style="color:#4ade80;font-weight:600;">Shelf Life &gt; 70% — healthy</span></span>
+          <span style="margin-left:auto;color:#475569;font-family:'JetBrains Mono',monospace;font-size:11px;">Click a row → see all batches</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-    buf1 = io.BytesIO()
-    with pd.ExcelWriter(buf1, engine="openpyxl") as w:
-        (_t1_view[_t1_cols] if not _t1_view.empty else pd.DataFrame(columns=_t1_cols)).to_excel(w, index=False, sheet_name="FG Inventory")
-    hdr1, hdr2 = st.columns([4,1])
-    with hdr1: st.markdown(f'<div class="tbl-hdr"><span class="tbl-lbl">📋 FG Inventory vs Open Orders</span><span class="tbl-badge">{len(_t1_view):,} rows</span></div>', unsafe_allow_html=True)
-    with hdr2: st.download_button("⬇  Export", buf1.getvalue(), "FG_Inventory.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    st.markdown("<div style='margin-bottom:6px'></div>", unsafe_allow_html=True)
-    if _t1_view.empty or not _t1_cols:
-        st.warning("⚠️ No records match the current filters.")
-    else:
-        st.dataframe(_t1_view[_t1_cols].style.apply(_colour_t1, axis=1), use_container_width=True, height=560, hide_index=True,
-            column_config={"FG Stock": st.column_config.NumberColumn("FG Stock", format="%.0f", help="Tumkur New + YB FG"),
-                           "PO Quantity": st.column_config.NumberColumn("PO Quantity", format="%.0f"),
-                           "Diff": st.column_config.NumberColumn("Diff", format="%.0f"),
-                           "# Orders": st.column_config.NumberColumn("# Orders", format="%d")})
+        # ── Dataframe — selectable rows ────────────────────────────────────
+        _disp_cols = ["Item Name","Item SKU","Category","Warehouse","FG Stock","Avg Shelf Life %","Batches"]
+        _disp_cols = [c for c in _disp_cols if c in _t1_sku.columns]
+
+        _t1_event = st.dataframe(
+            _t1_sku[_disp_cols].style.apply(_t1_shelf_colour, axis=1),
+            use_container_width=True, height=420, hide_index=True,
+            on_select="rerun", selection_mode="single-row", key="t1_fg_table",
+            column_config={
+                "FG Stock":       st.column_config.NumberColumn("FG Stock",       format="%.0f"),
+                "Avg Shelf Life %": st.column_config.ProgressColumn("Shelf Life %", min_value=0, max_value=100, format="%.1f%%"),
+                "Batches":        st.column_config.NumberColumn("# Batches",      format="%d",
+                                  help="Number of batch entries for this SKU+Warehouse"),
+            }
+        )
+
+        # ── Batch drill-down panel ─────────────────────────────────────────
+        _sel_rows = _t1_event.selection.get("rows", []) if hasattr(_t1_event, "selection") else []
+        if _sel_rows:
+            _sel_r   = _t1_sku[_disp_cols].iloc[_sel_rows[0]]
+            _sel_sku = str(_sel_r["Item SKU"]).strip()
+            _sel_wh  = str(_sel_r["Warehouse"]).strip()
+            _sel_key = (_sel_sku, _sel_wh)
+            if st.session_state.get("t1_sel_sku") != _sel_key:
+                st.session_state["t1_sel_sku"] = _sel_key
+                st.rerun()
+
+        _cur_key  = st.session_state.get("t1_sel_sku")
+        _batches  = _t1_batch_lookup.get(_cur_key, []) if _cur_key else []
+
+        if _cur_key and _batches:
+            _sel_sku_lbl = _cur_key[0]
+            _sel_wh_lbl  = _cur_key[1]
+            _sel_name    = _t1_sku[_t1_sku["Item SKU"] == _sel_sku_lbl]["Item Name"].iloc[0] if not _t1_sku[_t1_sku["Item SKU"] == _sel_sku_lbl].empty else ""
+            n_batches    = len(_batches)
+
+            st.markdown(f"""
+            <div style="background:#060d18;border:1.5px solid #5bc8c0;border-radius:14px;
+                        padding:14px 18px;margin:12px 0 10px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div>
+                        <div style="font-size:10px;color:#5bc8c0;font-weight:700;text-transform:uppercase;
+                                    letter-spacing:1.2px;margin-bottom:3px;">📦 Batch Breakdown</div>
+                        <div style="font-size:14px;color:#f1f5f9;font-weight:800;">{_sel_name}</div>
+                        <div style="font-size:11px;color:#818cf8;font-family:'JetBrains Mono',monospace;
+                                    margin-top:2px;">{_sel_sku_lbl} · {_sel_wh_lbl}</div>
+                    </div>
+                    <div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;
+                                padding:6px 14px;font-size:12px;color:#60a5fa;
+                                font-family:'JetBrains Mono',monospace;font-weight:700;">
+                        {n_batches} batch{'es' if n_batches > 1 else ''}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Render batch cards in a responsive grid
+            cards_html = '<div class="batch-grid">'
+            for b in sorted(_batches, key=lambda x: x["Shelf Life %"]):
+                sl   = float(b["Shelf Life %"])
+                qty  = float(b["Qty"])
+                bno  = str(b["Batch No"])
+                exp  = str(b["Expiry Date"])
+                mfg  = str(b["MFG Date"])
+                bar_w = max(2, int(sl))
+                if sl >= 70:
+                    cls = "bc-ok";   bar_c = "#22c55e"; badge_cls = "ok";   badge_txt = f"✔ {sl:.1f}%"
+                elif sl >= 30:
+                    cls = "bc-warn"; bar_c = "#f59e0b"; badge_cls = "warn"; badge_txt = f"⚠ {sl:.1f}%"
+                else:
+                    cls = "bc-crit"; bar_c = "#ef4444"; badge_cls = "crit"; badge_txt = f"⛔ {sl:.1f}%"
+
+                cards_html += f"""
+                <div class="batch-card {cls}">
+                    <div class="bc-row" style="justify-content:space-between;">
+                        <span class="bc-val" style="font-size:13px;">{bno}</span>
+                        <span class="bc-badge {badge_cls}">{badge_txt}</span>
+                    </div>
+                    <div class="bc-row" style="margin-top:8px;">
+                        <span class="bc-key">Qty</span>
+                        <span class="bc-val" style="color:#e2e8f0;">{qty:,.0f}</span>
+                    </div>
+                    <div class="bc-row">
+                        <span class="bc-key">Shelf</span>
+                        <div class="bc-bar-wrap">
+                            <div class="bc-bar" style="width:{bar_w}%;background:{bar_c};"></div>
+                        </div>
+                    </div>
+                    <div class="bc-exp">MFG: {mfg} &nbsp;·&nbsp; Exp: {exp}</div>
+                </div>"""
+            cards_html += '</div>'
+            st.markdown(cards_html + '</div>', unsafe_allow_html=True)
+
+        elif _cur_key and not _batches:
+            st.markdown('<div style="background:#060d18;border:1px dashed #1e2535;border-radius:10px;padding:12px 18px;margin:10px 0;text-align:center;color:#334155;font-size:12px;">No batch data found for selected SKU.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="background:#060d18;border:1px dashed #1e2535;border-radius:10px;padding:12px 18px;margin:10px 0;text-align:center;color:#334155;font-size:12px;font-family:\'JetBrains Mono\',monospace;">☝ Select a row above to view individual batch shelf life &amp; expiry details</div>', unsafe_allow_html=True)
 
 # ═══ TAB 2 — CFA STOCK vs OPEN ORDERS (SAP/Oracle Enterprise UI) ══════════════
 # ═══ TAB 2 — CFA STOCK vs OPEN ORDERS ══════════════════════════════════════════
