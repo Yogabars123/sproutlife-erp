@@ -171,225 +171,20 @@ def inject_sidebar(current_page: str = ""):
         st.markdown('<div class="snav-footer">© 2025 YogaBar</div>', unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
-    # GLOBAL READABILITY CSS — injected on every page that calls inject_sidebar
-    # Improves font size, contrast, table legibility, metrics, and inputs
+    # GLOBAL READABILITY CSS — safe, scoped selectors only
+    # NEVER targets bare div/span — those break Streamlit's internal layout
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    /* ── 1. Base body text — bigger and brighter ── */
-    html, body,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stMain"],
-    [data-testid="stMainBlockContainer"],
-    .main, .stMarkdown, p, div {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 14px !important;
-        color: #e2e8f0 !important;
-        line-height: 1.6 !important;
-    }
-
-    /* ── 2. Headings — significantly larger and brighter ── */
-    h1 { font-size: 26px !important; font-weight: 800 !important; color: #f1f5f9 !important; margin-bottom: 8px !important; }
-    h2 { font-size: 20px !important; font-weight: 700 !important; color: #f1f5f9 !important; }
-    h3 { font-size: 17px !important; font-weight: 700 !important; color: #e2e8f0 !important; }
-    h4 { font-size: 15px !important; font-weight: 600 !important; color: #cbd5e1 !important; }
-
-    /* ── 3. Streamlit metric widget — bigger values and labels ── */
-    [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #0d1117, #111827) !important;
-        border: 1px solid #1e2535 !important;
-        border-radius: 12px !important;
-        padding: 14px 18px !important;
-    }
-    [data-testid="stMetricLabel"] > div,
-    [data-testid="stMetricLabel"] p {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #64748b !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
-    }
-    [data-testid="stMetricValue"] > div,
-    [data-testid="stMetricValue"] p {
-        font-size: 28px !important;
-        font-weight: 800 !important;
-        color: #f1f5f9 !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        letter-spacing: -1px !important;
-    }
-    [data-testid="stMetricDelta"] > div,
-    [data-testid="stMetricDelta"] p,
-    [data-testid="stMetricDelta"] svg {
-        font-size: 12px !important;
-        font-weight: 700 !important;
-    }
-
-    /* ── 4. Dataframe / table text — bigger and clearer ── */
-    [data-testid="stDataFrame"] *,
-    [data-testid="stDataFrame"] td,
-    [data-testid="stDataFrame"] th,
-    [data-testid="stDataFrame"] div[role="gridcell"],
-    [data-testid="stDataFrame"] div[role="columnheader"] {
-        font-size: 13px !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        color: #e2e8f0 !important;
-    }
-    [data-testid="stDataFrame"] div[role="columnheader"],
-    [data-testid="stDataFrame"] div[role="columnheader"] * {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: #94a3b8 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.8px !important;
-        background: #0a0f1a !important;
-    }
-    /* Zebra rows for readability */
-    [data-testid="stDataFrame"] div[role="row"]:nth-child(even) {
-        background: rgba(30, 37, 53, 0.4) !important;
-    }
-
-    /* ── 5. Selectbox / dropdown — readable text ── */
-    [data-testid="stSelectbox"] div[data-baseweb="select"] *,
-    [data-testid="stSelectbox"] span,
-    [data-testid="stSelectbox"] div {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #e2e8f0 !important;
-    }
-
-    /* ── 6. Text input ── */
-    [data-testid="stTextInput"] input {
-        font-size: 13px !important;
-        color: #f1f5f9 !important;
-        font-weight: 500 !important;
-    }
-    [data-testid="stTextInput"] input::placeholder {
-        font-size: 13px !important;
-        color: #475569 !important;
-    }
-
-    /* ── 7. Buttons ── */
-    .stButton > button,
-    .stDownloadButton > button {
-        font-size: 13px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.3px !important;
-    }
-
-    /* ── 8. Tab labels — bigger and more visible ── */
-    [data-testid="stTabs"] [data-baseweb="tab"] {
-        font-size: 13px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.3px !important;
-        padding: 10px 20px !important;
-    }
-    [data-testid="stTabs"] [aria-selected="true"] {
-        font-size: 13px !important;
-        font-weight: 800 !important;
-    }
-
-    /* ── 9. Expander header text ── */
-    [data-testid="stExpander"] summary,
-    [data-testid="stExpander"] summary *,
-    [data-testid="stExpander"] summary p {
-        font-size: 13px !important;
-        font-weight: 700 !important;
-        color: #cbd5e1 !important;
-    }
-    [data-testid="stExpander"] summary:hover,
-    [data-testid="stExpander"] summary:hover * {
-        color: #5bc8c0 !important;
-    }
-
-    /* ── 10. Radio buttons ── */
-    [data-testid="stRadio"] label,
-    [data-testid="stRadio"] label * {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #cbd5e1 !important;
-    }
-    [data-testid="stRadio"] label:hover * {
-        color: #5bc8c0 !important;
-    }
-
-    /* ── 11. Toggle ── */
-    [data-testid="stToggle"] label,
-    [data-testid="stToggle"] label * {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #cbd5e1 !important;
-    }
-
-    /* ── 12. Multiselect ── */
-    [data-testid="stMultiSelect"] span,
-    [data-testid="stMultiSelect"] div {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #e2e8f0 !important;
-    }
-
-    /* ── 13. Info / warning / error / success boxes ── */
-    [data-testid="stAlert"] p,
-    [data-testid="stAlert"] div,
-    [data-testid="stNotification"] p {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        line-height: 1.6 !important;
-    }
-
-    /* ── 14. Caption / small helper text ── */
-    [data-testid="stCaptionContainer"] p,
-    small, .stCaption {
-        font-size: 12px !important;
-        color: #64748b !important;
-        font-weight: 500 !important;
-    }
-
-    /* ── 15. Plotly chart axis labels / legends ── */
-    .js-plotly-plot .plotly text {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 12px !important;
-        fill: #94a3b8 !important;
-    }
-
-    /* ── 16. Number / date inputs ── */
-    [data-testid="stNumberInput"] input,
-    [data-testid="stDateInput"] input {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #f1f5f9 !important;
-    }
-
-    /* ── 17. Slider label and value ── */
-    [data-testid="stSlider"] label p,
-    [data-testid="stSlider"] [data-testid="stTickBar"] {
-        font-size: 12px !important;
-        font-weight: 600 !important;
-        color: #94a3b8 !important;
-    }
-
-    /* ── 18. Widget labels (general) — hidden by some pages but styled here ── */
-    [data-testid="stWidgetLabel"] p {
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        color: #64748b !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.8px !important;
-    }
-
-    /* ── 19. Scrollbar — thin and styled ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0d1117; }
-    ::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
-
-    /* ── 20. General markdown text brightness ── */
-    .stMarkdown p, .stMarkdown li, .stMarkdown span {
+    /* ── 1. Only target visible paragraph text, NOT bare div ── */
+    .stMarkdown p,
+    .stMarkdown li {
         font-size: 14px !important;
         color: #cbd5e1 !important;
         line-height: 1.7 !important;
+        font-family: 'Inter', sans-serif !important;
     }
     .stMarkdown strong, .stMarkdown b {
         color: #f1f5f9 !important;
@@ -404,52 +199,123 @@ def inject_sidebar(current_page: str = ""):
         border-radius: 4px !important;
     }
 
-    /* ── 21. Section dividers used across pages ── */
-    .sec-div {
+    /* ── 2. Metric widgets ── */
+    [data-testid="stMetricLabel"] p {
         font-size: 11px !important;
-        font-weight: 800 !important;
-        color: #475569 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1.5px !important;
-        padding: 12px 0 8px !important;
-    }
-
-    /* ── 22. Tbl header labels ── */
-    .tbl-lbl {
-        font-size: 11px !important;
-        font-weight: 800 !important;
-        color: #94a3b8 !important;
-        letter-spacing: 1.2px !important;
-    }
-    .tbl-badge {
-        font-size: 12px !important;
         font-weight: 700 !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
     }
-
-    /* ── 23. KPI box values and labels ── */
-    .kpi-label {
-        font-size: 10px !important;
+    [data-testid="stMetricValue"] p {
+        font-size: 26px !important;
         font-weight: 800 !important;
-        letter-spacing: 1.4px !important;
-    }
-    .kpi-value {
-        font-size: 28px !important;
-        font-weight: 800 !important;
+        color: #f1f5f9 !important;
+        font-family: 'JetBrains Mono', monospace !important;
         letter-spacing: -1px !important;
     }
-    .kpi-sub {
+
+    /* ── 3. Dataframe — only role-based selectors, safe ── */
+    [data-testid="stDataFrame"] div[role="gridcell"] {
+        font-size: 13px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stDataFrame"] div[role="columnheader"] {
         font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
+        letter-spacing: 0.8px !important;
+    }
+
+    /* ── 4. Input elements — text inside only ── */
+    [data-testid="stTextInput"] input {
+        font-size: 13px !important;
+        color: #f1f5f9 !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stTextInput"] input::placeholder {
+        color: #475569 !important;
+    }
+    [data-testid="stNumberInput"] input {
+        font-size: 13px !important;
+        color: #f1f5f9 !important;
         font-weight: 500 !important;
     }
 
-    /* ── 24. Column config text in dataframes ── */
-    [data-testid="stDataFrame"] canvas {
+    /* ── 5. Buttons ── */
+    .stButton > button {
         font-size: 13px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.3px !important;
+    }
+    .stDownloadButton > button {
+        font-size: 13px !important;
+        font-weight: 700 !important;
     }
 
-    /* ── 25. Tooltip / popover text ── */
-    [data-testid="stTooltipIcon"] {
-        color: #64748b !important;
+    /* ── 6. Tab labels — text only ── */
+    [data-testid="stTabs"] [data-baseweb="tab"] p,
+    [data-testid="stTabs"] [data-baseweb="tab"] span {
+        font-size: 13px !important;
+        font-weight: 700 !important;
     }
+
+    /* ── 7. Expander summary text ── */
+    [data-testid="stExpander"] summary p {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #cbd5e1 !important;
+    }
+
+    /* ── 8. Radio / toggle / checkbox labels ── */
+    [data-testid="stRadio"] label p,
+    [data-testid="stCheckbox"] label p,
+    [data-testid="stToggle"] label p {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #cbd5e1 !important;
+    }
+
+    /* ── 9. Alert / info / warning boxes ── */
+    [data-testid="stAlert"] p {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        line-height: 1.6 !important;
+    }
+
+    /* ── 10. Caption text ── */
+    [data-testid="stCaptionContainer"] p {
+        font-size: 12px !important;
+        color: #64748b !important;
+        font-weight: 500 !important;
+    }
+
+    /* ── 11. Widget labels ── */
+    [data-testid="stWidgetLabel"] p {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+    }
+
+    /* ── 12. Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+    /* ── 13. Custom classes used across pages — safe, no layout impact ── */
+    .kpi-label  { font-size: 10px !important; font-weight: 800 !important; letter-spacing: 1.4px !important; }
+    .kpi-value  { font-size: 27px !important; font-weight: 800 !important; letter-spacing: -1px !important; }
+    .kpi-sub    { font-size: 11px !important; font-weight: 500 !important; }
+    .tbl-lbl    { font-size: 11px !important; font-weight: 800 !important; color: #94a3b8 !important; letter-spacing: 1.2px !important; }
+    .tbl-badge  { font-size: 12px !important; font-weight: 700 !important; }
+    .sec-div    { font-size: 11px !important; font-weight: 800 !important; letter-spacing: 1.5px !important; }
+    .formula-bar { font-size: 12px !important; }
+    .hdr-title  { font-size: 17px !important; font-weight: 800 !important; color: #f1f5f9 !important; }
+    .hdr-sub    { font-size: 12px !important; color: #94a3b8 !important; }
+    .live-pill  { font-size: 11px !important; font-weight: 700 !important; }
     </style>
     """, unsafe_allow_html=True)
