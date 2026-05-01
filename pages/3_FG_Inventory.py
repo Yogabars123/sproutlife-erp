@@ -10,9 +10,9 @@ from pages.data_loader import load_sheet
 inject_sidebar("FG Inventory")
 
 def build_stn_telegram(stn_possible: "pd.DataFrame", channel: str) -> str:
-    import pytz
+    from datetime import timezone, timedelta
     NL  = chr(10)
-    IST = pytz.timezone("Asia/Kolkata")
+    IST = timezone(timedelta(hours=5, minutes=30))
     now = datetime.now(IST).strftime("%d %b %Y %I:%M %p IST")
     n   = len(stn_possible)
     lines = [
@@ -60,9 +60,9 @@ def _tg_send(token: str, chat_id: str, text: str) -> tuple[bool, str]:
     return True, ""
 
 def build_cfa_telegram(merged: "pd.DataFrame", central_stock: dict) -> str:
-    import pytz
+    from datetime import timezone, timedelta
     NL  = chr(10)
-    IST = pytz.timezone("Asia/Kolkata")
+    IST = timezone(timedelta(hours=5, minutes=30))
     now = datetime.now(IST).strftime("%d %b %Y %I:%M %p IST")
     shortfall = merged[merged["Diff"] < 0].copy().sort_values("Diff")
     total     = len(shortfall)
@@ -1050,9 +1050,9 @@ with tab2:
                             _shortfall_df.to_excel(_wx, index=False, sheet_name="Shortfall SKUs")
                         _buf_tg.seek(0)
 
-                        # Caption message
-                        import pytz
-                        _IST = pytz.timezone("Asia/Kolkata")
+                        # Caption message — use stdlib only, no pytz needed
+                        from datetime import timezone, timedelta
+                        _IST = timezone(timedelta(hours=5, minutes=30))
                         _now = datetime.now(_IST).strftime("%d %b %Y %I:%M %p IST")
                         _n_short = int((df_export["Diff"] < 0).sum())
                         _caption = (
